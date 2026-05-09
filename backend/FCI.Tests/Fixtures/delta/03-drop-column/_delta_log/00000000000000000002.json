@@ -1,0 +1,4 @@
+{"metaData":{"id":"patient-encounters","format":{"provider":"delta"},"schemaString":"{\"type\":\"struct\",\"fields\":[{\"name\":\"encounter_id\",\"type\":\"string\",\"nullable\":false,\"metadata\":{}},{\"name\":\"patient_id\",\"type\":\"string\",\"nullable\":false,\"metadata\":{}},{\"name\":\"encounter_date\",\"type\":\"date\",\"nullable\":false,\"metadata\":{}},{\"name\":\"facility_id\",\"type\":\"string\",\"nullable\":false,\"metadata\":{}}]}","partitionColumns":["encounter_date"]}}
+{"remove":{"path":"part-00001.parquet"}}
+{"add":{"path":"part-00002.parquet"}}
+{"commitInfo":{"timestamp":"2026-05-03T09:45:00Z"}}

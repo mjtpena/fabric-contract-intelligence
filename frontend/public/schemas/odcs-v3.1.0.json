@@ -1,0 +1,7 @@
+{
+  "$comment": "PLACEHOLDER. Replace with the official ODCS v3.1.0 JSON Schema from https://github.com/bitol-io/open-data-contract-standard during Sprint 2.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datachain.consulting/schemas/odcs/v3.1.0",
+  "title": "Open Data Contract Standard v3.1.0 (placeholder)",
+  "type": "object"
+}

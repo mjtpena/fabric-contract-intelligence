@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  frontend:
+    name: Frontend (lint + build + test)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test -- --reporter=dot
+
+  backend:
+    name: Backend (build + test + format)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore FCI.sln
+      - run: dotnet format FCI.sln --verify-no-changes --no-restore
+      - run: dotnet build FCI.sln --no-restore --configuration Release
+      - run: dotnet test FCI.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/**/test-results.trx
+          retention-days: 7
+
+  contracts:
+    name: Validate sample contracts (ODCS v3.1.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install datacontract-cli
+      - name: Lint each example
+        run: |
+          set -e
+          for f in contracts/examples/*.yaml; do
+            echo "→ datacontract lint $f"
+            datacontract lint "$f"
+          done
+
+  bicep:
+    name: Validate Bicep templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Bicep CLI
+        run: az bicep install
+      - name: Lint main.bicep
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null

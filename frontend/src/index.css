@@ -1,0 +1,4 @@
+html, body, #root { height: 100%; margin: 0; }
+body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+a { color: inherit; }
+code { background: rgba(0,0,0,0.06); padding: 0 4px; border-radius: 3px; }

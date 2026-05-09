@@ -1,0 +1,4 @@
+{"protocol":{"minReaderVersion":1,"minWriterVersion":2}}
+{"metaData":{"id":"patient-encounters","format":{"provider":"delta"},"schemaString":"{\"type\":\"struct\",\"fields\":[{\"name\":\"encounter_id\",\"type\":\"string\",\"nullable\":false,\"metadata\":{}},{\"name\":\"patient_id\",\"type\":\"string\",\"nullable\":false,\"metadata\":{}},{\"name\":\"encounter_date\",\"type\":\"date\",\"nullable\":false,\"metadata\":{}},{\"name\":\"diagnosis_code\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}}]}","partitionColumns":["encounter_date"]}}
+{"add":{"path":"part-00000.parquet"}}
+{"commitInfo":{"timestamp":"2026-05-01T00:00:00Z"}}

@@ -1,0 +1,113 @@
+# FCI Sample Contract — Retail Sales Transactions
+# File: contracts/examples/retail-sales.contract.yaml
+# ODCS v3.1.0
+
+apiVersion: v3.1.0
+kind: DataContract
+id: urn:datachain:fci:retail:sales_transactions:v1
+name: Retail Sales Transactions Contract
+version: 1.0.0
+status: active
+
+info:
+  title: Retail Sales Transactions
+  description: >
+    Governs the sales_transactions Delta table in the Retail Analytics Lakehouse. Source of
+    truth for revenue dashboards and demand-forecasting models.
+  owner: retail-data-team@example.com
+  contact:
+    - name: Retail Data Platform
+      email: retail-platform@example.com
+      role: producer
+    - name: Finance Analytics
+      email: finance-analytics@example.com
+      role: consumer
+
+servers:
+  - name: fabric-production
+    type: onelake
+    host: onelake.dfs.fabric.microsoft.com
+    path: abfss://retail@onelake.dfs.fabric.microsoft.com/RetailLakehouse.Lakehouse/Tables/sales_transactions
+
+schema:
+  - name: transaction_id
+    type: STRING
+    required: true
+    unique: true
+    description: Unique POS transaction identifier (UUID).
+    pii: false
+  - name: store_id
+    type: STRING
+    required: true
+    description: Originating store code.
+    pii: false
+  - name: customer_id
+    type: STRING
+    required: false
+    description: Loyalty customer id (nullable for anonymous purchases).
+    pii: true
+  - name: transaction_ts
+    type: TIMESTAMP
+    required: true
+    description: Transaction timestamp in UTC.
+    pii: false
+  - name: sku
+    type: STRING
+    required: true
+    description: Product SKU at time of sale.
+    pii: false
+  - name: quantity
+    type: INTEGER
+    required: true
+    description: Units sold.
+    pii: false
+  - name: unit_price
+    type: DECIMAL
+    required: true
+    description: Per-unit price in AUD.
+    pii: false
+  - name: total_amount
+    type: DECIMAL
+    required: true
+    description: Line total = quantity * unit_price (after discount).
+    pii: false
+  - name: payment_method
+    type: STRING
+    required: true
+    description: One of CASH | CARD | DIGITAL_WALLET | GIFT_CARD.
+    pii: false
+
+quality:
+  - type: nullRate
+    column: transaction_id
+    threshold: 0.0
+    severity: error
+  - type: uniqueness
+    column: transaction_id
+    threshold: 1.0
+    severity: error
+  - type: nullRate
+    column: total_amount
+    threshold: 0.0
+    severity: error
+  - type: custom_sql
+    sql: 'SELECT COUNT(*) FROM sales_transactions WHERE total_amount < 0'
+    threshold: 0
+    severity: error
+  - type: regex
+    column: payment_method
+    pattern: '^(CASH|CARD|DIGITAL_WALLET|GIFT_CARD)$'
+    threshold: 1.0
+    severity: error
+
+freshness:
+  maxAgeHours: 6
+  severity: error
+
+sla:
+  - property: availability
+    value: 99.9
+    unit: percent
+  - property: latency
+    value: 6
+    unit: hours

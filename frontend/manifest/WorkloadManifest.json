@@ -1,0 +1,45 @@
+{
+  "$schema": "https://learn.microsoft.com/fabric/workload-development-kit/manifest-schema/workload-manifest.schema.json",
+  "name": "Datachain.FabricContractIntelligence",
+  "version": "0.1.0",
+  "displayName": "Fabric Contract Intelligence",
+  "description": "Author, version and enforce ODCS v3.1.0 data contracts at the Delta layer.",
+  "publisher": "Datachain Consulting Pty Ltd",
+  "marketplace": {
+    "tier": "community",
+    "supportedRegions": ["australiaeast", "westeurope", "eastus"]
+  },
+  "items": [
+    {
+      "name": "Contract",
+      "displayName": "Data Contract",
+      "description": "An ODCS v3.1.0 data contract for a Delta table.",
+      "icon": "assets/contract.svg",
+      "editor": { "path": "/contracts/editor" }
+    },
+    {
+      "name": "ContractPolicy",
+      "displayName": "Contract Policy",
+      "description": "Enforcement policy + Activator routing for a contract.",
+      "icon": "assets/policy.svg",
+      "editor": { "path": "/contracts/policies" }
+    },
+    {
+      "name": "ContractReport",
+      "displayName": "Contract Report",
+      "description": "Read-only enforcement run history for a contract.",
+      "icon": "assets/report.svg",
+      "editor": { "path": "/contracts/runs" }
+    }
+  ],
+  "extensionPoints": {
+    "lakehouseContextMenu": [
+      {
+        "name": "createContractFromTable",
+        "displayName": "Create data contract…",
+        "icon": "assets/contract.svg",
+        "action": { "path": "/contracts/new", "params": { "source": "lakehouse" } }
+      }
+    ]
+  }
+}

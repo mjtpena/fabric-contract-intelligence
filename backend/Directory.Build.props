@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+    <AnalysisMode>Default</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;NU1902;NU1903;NU1603;CA1848;CA1826;CA1000;CA1062;CA2007;CA1031;CA1305;CA1304;CA1308;CA2254;CA1822;CA1716;CA1051</NoWarn>
+    <RootNamespace>FCI</RootNamespace>
+    <Company>Datachain Consulting Pty Ltd</Company>
+    <Product>Fabric Contract Intelligence</Product>
+    <Copyright>Copyright © 2026 Datachain Consulting Pty Ltd</Copyright>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,14 @@
+# Default owners for everything in the repo
+*                       @datachain/fci-core
+
+# Backend boundaries
+/backend/FCI.Engine/    @datachain/fci-core @datachain/fci-engine
+/backend/FCI.AI/        @datachain/fci-core @datachain/fci-ai
+/backend/FCI.Data/      @datachain/fci-core @datachain/fci-data
+
+# Frontend
+/frontend/              @datachain/fci-core @datachain/fci-frontend
+
+# Infra & CI
+/infra/                 @datachain/fci-core @datachain/fci-platform
+/.github/               @datachain/fci-core @datachain/fci-platform

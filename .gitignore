@@ -1,0 +1,68 @@
+# Node
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.dll
+*.pdb
+TestResults/
+coverage/
+*.coverlet.json
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.template.json
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+*.key
+*.pem
+*.pfx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bicep build output
+infra/**/main.json
+*.bicepbuild
+
+# Terraform (if ever introduced)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Docs working artefacts
+*.docx#
+~$*.docx
+spec.txt
+tables.txt
+
+# Hangfire SQLite local
+*.sqlite
+*.db
+
+# Coverage
+coverage.cobertura.xml
+*.opencover.xml
+
+# tsc -b artifacts (typecheck)
+frontend/*.tsbuildinfo
+frontend/dist-types/
+frontend/vite.config.d.ts
+frontend/vite.config.js
