@@ -1,12 +1,12 @@
-# Fabric Contract Intelligence (FCI)
+# Orqentis
 
 > Data contracts, enforced at the Delta layer. Native to Microsoft Fabric.
 
-[![CI](https://github.com/datachain/fabric-contract-intelligence/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+[![CI](https://github.com/mjtpena/fabric-contract-intelligence/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
-FCI is a native Microsoft Fabric ISV workload that brings **ODCS v3.1.0**-compliant data
+Orqentis is a native Microsoft Fabric ISV workload that brings **ODCS v3.1.0**-compliant data
 contract definition, version control, enforcement, and AI-powered suggestions to the Fabric
-platform. FCI fills a provably unoccupied gap: no existing tool enforces data contracts
+platform. Orqentis fills a provably unoccupied gap: no existing tool enforces data contracts
 natively at the Delta table layer inside Microsoft Fabric.
 
 ## Tiers
@@ -29,7 +29,7 @@ See `docs/spec.md` §3.2 for the full matrix.
 
 A React 18 / Fluent UI v9 micro-frontend hosted inside the Fabric portal iframe via the
 Fabric Extensibility SDK, talking to a .NET 8 API in Azure App Service. The
-**FCI Enforcement Engine** reads OneLake Delta transaction logs using OBO-delegated tokens,
+**Orqentis Enforcement Engine** reads OneLake Delta transaction logs using OBO-delegated tokens,
 diffs live schema against ODCS contracts, evaluates quality + freshness rules, and persists
 results to PostgreSQL. AI features (contract suggestion, breach scoring, NL query) are
 brokered via Azure OpenAI with an Anthropic Claude fallback. Breach alerts fire through
@@ -37,10 +37,10 @@ brokered via Azure OpenAI with an Anthropic Claude fallback. Breach alerts fire 
 
 ```
 Fabric Portal (iframe)
-  └── React frontend ─────────────────► FCI.Api (App Service)
-                                         ├── FCI.Engine ──► OneLake Delta tables (OBO)
-                                         ├── FCI.AI ─────► Azure OpenAI / Claude
-                                         ├── FCI.Data ───► PostgreSQL
+  └── React frontend ─────────────────► Orqentis.Api (App Service)
+                                         ├── Orqentis.Engine ──► OneLake Delta tables (OBO)
+                                         ├── Orqentis.AI ─────► Azure OpenAI / Claude
+                                         ├── Orqentis.Data ───► PostgreSQL
                                          └── Activator ──► Fabric Activator
 ```
 
@@ -54,11 +54,11 @@ fabric-contract-intelligence/
 ├── .github/                Copilot instructions, workflows, templates
 ├── frontend/               React 18 + Vite + Fluent UI v9
 ├── backend/                .NET 8 solution
-│   ├── FCI.Api/            ASP.NET Core Web API
-│   ├── FCI.Engine/         Enforcement Engine class library
-│   ├── FCI.AI/             AI Agent class library
-│   ├── FCI.Data/           EF Core + PostgreSQL
-│   └── FCI.Tests/          xUnit test projects
+│   ├── Orqentis.Api/            ASP.NET Core Web API
+│   ├── Orqentis.Engine/         Enforcement Engine class library
+│   ├── Orqentis.AI/             AI Agent class library
+│   ├── Orqentis.Data/           EF Core + PostgreSQL
+│   └── Orqentis.Tests/          xUnit test projects
 ├── infra/                  Azure Bicep IaC
 ├── contracts/examples/     Sample ODCS v3.1.0 contracts
 └── docs/                   Architecture, API, agent guide, full spec
@@ -74,16 +74,16 @@ fabric-contract-intelligence/
 cd frontend; npm install
 
 # 2. Restore backend
-cd ..\backend; dotnet restore FCI.sln
+cd ..\backend; dotnet restore Orqentis.sln
 
 # 3. Apply DB migrations (requires local PostgreSQL or container)
-dotnet ef database update --project FCI.Data --startup-project FCI.Api
+dotnet ef database update --project Orqentis.Data --startup-project Orqentis.Api
 
 # 4. Run frontend (in one shell)
 cd ..\frontend; npm run dev
 
 # 5. Run backend (in another shell)
-cd ..\backend\FCI.Api; dotnet run
+cd ..\backend\Orqentis.Api; dotnet run
 ```
 
 The Fabric workload manifest (`frontend/manifest/WorkloadManifest.json`) is published to a
@@ -99,7 +99,7 @@ The build order, file paths, interfaces, and acceptance criteria are all pre-spe
 **Core rules** (full list in `docs/agent-guide.md` §16.1):
 
 1. Never hardcode connection strings, API keys, or tenant IDs. All secrets via Key Vault / env vars.
-2. Always write unit tests alongside implementation. ≥85% line coverage on `FCI.Engine` and `FCI.AI`.
+2. Always write unit tests alongside implementation. ≥85% line coverage on `Orqentis.Engine` and `Orqentis.AI`.
 3. Never bypass `OdcsContractValidator`. A YAML that fails validation must not be saved as `active`.
 4. AI LLM calls require a 15-second timeout and a graceful fallback (empty template / null score).
 5. All Delta table access uses the **OBO** token of the calling user. Never an app-level credential.

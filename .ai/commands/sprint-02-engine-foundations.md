@@ -16,7 +16,7 @@ Sprint 1 (scaffold) merged.
 
 ## Files to create / modify
 
-### `backend/FCI.Engine/Delta/`
+### `backend/Orqentis.Engine/Delta/`
 
 - `DeltaTableSnapshot.cs` — record exposing `Version`, `Schema`, `PartitionColumns`, `LastModifiedUtc`.
 - `DeltaSchema.cs` — record: `IReadOnlyList<DeltaColumn>`.
@@ -27,7 +27,7 @@ Sprint 1 (scaffold) merged.
   `metaData` action in the log JSONs.
 - `TransactionLogParser.cs` — internal helper parsing the JSONL commit files.
 
-### `backend/FCI.Engine/Odcs/`
+### `backend/Orqentis.Engine/Odcs/`
 
 - `ContractDefinition.cs` — record matching ODCS v3.1.0 sections we use (`apiVersion`,
   `kind`, `id`, `name`, `version`, `status`, `info`, `servers`, `schema`, `quality`,
@@ -38,10 +38,10 @@ Sprint 1 (scaffold) merged.
   https://github.com/bitol-io/open-data-contract-standard. Embed as resource.
 - `OdcsContractSerializer.cs` — `ContractDefinition` → YAML (used when saving AI-generated drafts).
 
-### Tests (`backend/FCI.Tests/FCI.Engine.Tests/`)
+### Tests (`backend/Orqentis.Tests/Orqentis.Engine.Tests/`)
 
 - `Delta/TransactionLogParserTests.cs` — parses fixture files in
-  `backend/FCI.Tests/Fixtures/delta/01-create/`, `02-add-column/`, `03-drop-column/`.
+  `backend/Orqentis.Tests/Fixtures/delta/01-create/`, `02-add-column/`, `03-drop-column/`.
 - `Delta/SchemaExtractorTests.cs` — covers `metaData`, `add`, `remove`, partition columns.
 - `Odcs/OdcsContractParserTests.cs` — round-trip the healthcare sample contract.
 - `Odcs/OdcsContractValidatorTests.cs` — known-good (healthcare) passes; known-bad
@@ -50,7 +50,7 @@ Sprint 1 (scaffold) merged.
 ## Interface signatures
 
 ```csharp
-namespace FCI.Engine.Delta;
+namespace Orqentis.Engine.Delta;
 
 public interface IDeltaLogReader
 {
@@ -70,7 +70,7 @@ public sealed record DeltaTableSnapshot
 ```
 
 ```csharp
-namespace FCI.Engine.Odcs;
+namespace Orqentis.Engine.Odcs;
 
 public interface IOdcsContractValidator
 {
@@ -91,12 +91,12 @@ public sealed record OdcsValidationError(string JsonPath, string Message);
 - [ ] `OdcsContractValidator` returns `[]` for the healthcare contract.
 - [ ] `OdcsContractValidator` returns a list including a `JsonPath="$.apiVersion"` error
       for a contract missing `apiVersion`.
-- [ ] Unit test coverage on `FCI.Engine` ≥ 85 %.
+- [ ] Unit test coverage on `Orqentis.Engine` ≥ 85 %.
 - [ ] No new warnings on `dotnet build`.
 
 ## Test plan
 
-- Fixtures committed under `backend/FCI.Tests/Fixtures/delta/{scenario}/_delta_log/000…0.json`.
+- Fixtures committed under `backend/Orqentis.Tests/Fixtures/delta/{scenario}/_delta_log/000…0.json`.
 - A private `FakeDeltaLakeServer` spins up over `WireMock.Net` to serve fixture bytes;
   `DeltaLogReader` is wired against it via a `HttpClient` dependency.
 - Property-based tests with `Bogus` for Schema → ContractDefinition mappings.

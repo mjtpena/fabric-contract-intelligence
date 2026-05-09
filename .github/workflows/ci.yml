@@ -41,10 +41,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - run: dotnet restore FCI.sln
-      - run: dotnet format FCI.sln --verify-no-changes --no-restore
-      - run: dotnet build FCI.sln --no-restore --configuration Release
-      - run: dotnet test FCI.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+      - run: dotnet restore Orqentis.sln
+      - run: dotnet format Orqentis.sln --verify-no-changes --no-restore
+      - run: dotnet build Orqentis.sln --no-restore --configuration Release
+      - run: dotnet test Orqentis.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,4 +1,4 @@
-# `.ai/` — AI Agent Knowledge Base for FCI
+# `.ai/` — AI Agent Knowledge Base for Orqentis
 
 This folder is consumed by GitHub Copilot, Copilot Agent Mode, Claude Code, Cursor, and any
 other AI coding assistant working on this repo. It mirrors the structure used by the parent
@@ -9,7 +9,7 @@ other AI coding assistant working on this repo. It mirrors the structure used by
 ```
 .ai/
 ├── context/              ← background knowledge an agent needs before coding
-│   ├── fci.md            ← FCI domain language (ODCS, Delta, contracts, runs, policies)
+│   ├── orqentis.md            ← Orqentis domain language (ODCS, Delta, contracts, runs, policies)
 │   ├── fabric.md         ← Microsoft Fabric platform model (workload, item, manifest, OBO)
 │   ├── architecture.md   ← layered architecture, allowed dependencies, data flow
 │   └── conventions.md    ← code style, naming, error handling, logging, testing

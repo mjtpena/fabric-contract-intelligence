@@ -1,5 +1,5 @@
 // =====================================================================================
-// Fabric Contract Intelligence — main Bicep
+// Orqentis — main Bicep
 // Spec §14.2. Region-pinned to Australia East. Subscription-scope deployment optional;
 // this template is resourceGroup-scoped (deploy with: az deployment group create ...).
 // =====================================================================================
@@ -12,15 +12,15 @@ param environment string
 @description('Azure region. Default: australiaeast.')
 param location string = 'australiaeast'
 
-@description('Short name prefix for resources, e.g. "fci".')
+@description('Short name prefix for resources, e.g. "orqentis".')
 @maxLength(10)
-param namePrefix string = 'fci'
+param namePrefix string = 'orqentis'
 
 @description('Object id of the Entra ID group that should have Key Vault Administrator on the vault.')
 param keyVaultAdminGroupObjectId string
 
 @description('PostgreSQL admin username. The password is generated and stored in Key Vault.')
-param pgAdminUsername string = 'fciadmin'
+param pgAdminUsername string = 'orqentisadmin'
 
 @secure()
 @description('PostgreSQL admin password. Pass via parameter file referencing Key Vault.')
@@ -30,8 +30,8 @@ param pgAdminPassword string
 param tags object = {
   application: 'fabric-contract-intelligence'
   environment: environment
-  owner: 'datachain'
-  costCenter: 'fci'
+  owner: 'orqentis'
+  costCenter: 'orqentis'
 }
 
 var resourceSuffix = uniqueString(resourceGroup().id, environment)

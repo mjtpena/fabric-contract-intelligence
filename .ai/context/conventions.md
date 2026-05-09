@@ -1,4 +1,4 @@
-# FCI Coding Conventions
+# Orqentis Coding Conventions
 
 ## Naming
 
@@ -29,7 +29,7 @@
 - `sealed class` by default; only `unsealed` when sub-classing is part of the contract.
 - Prefer expression-bodied members for one-liners.
 - Avoid `var` for primitives; use it for obvious types from constructors.
-- `Result<T>` (in `FCI.Engine.Common`) for expected failures. Throw only for programmer error.
+- `Result<T>` (in `Orqentis.Engine.Common`) for expected failures. Throw only for programmer error.
 - All async methods accept `CancellationToken ct = default` as the last parameter.
 
 ## Logging (Serilog)
@@ -57,9 +57,9 @@ _logger.LogInformation(
 - xUnit + Moq + FluentAssertions. Naming: `MethodName_Condition_ExpectedResult`.
   e.g. `RunAsync_LiveSchemaMissingColumn_ReturnsFailedSchemaRule`.
 - One Arrange/Act/Assert block per test, separated by blank lines and `// Arrange` etc. comments.
-- Test fixtures under `backend/FCI.Tests/Fixtures/`. Sample Delta logs as JSON files in
-  `backend/FCI.Tests/Fixtures/delta/`. Sample contracts in `backend/FCI.Tests/Fixtures/contracts/`.
-- Coverage thresholds enforced in CI: `FCI.Engine` ≥ 85 %, `FCI.AI` ≥ 85 %, others ≥ 60 %.
+- Test fixtures under `backend/Orqentis.Tests/Fixtures/`. Sample Delta logs as JSON files in
+  `backend/Orqentis.Tests/Fixtures/delta/`. Sample contracts in `backend/Orqentis.Tests/Fixtures/contracts/`.
+- Coverage thresholds enforced in CI: `Orqentis.Engine` ≥ 85 %, `Orqentis.AI` ≥ 85 %, others ≥ 60 %.
 
 ## React / TS style
 

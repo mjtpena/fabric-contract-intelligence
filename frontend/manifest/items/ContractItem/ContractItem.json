@@ -1,0 +1,52 @@
+{
+  "name": "Contract",
+  "displayName": "ContractItem_DisplayName",
+  "displayNamePlural": "ContractItem_DisplayName_Plural",
+  "version": "1.100",
+  "editor": {
+    "path": "/contracts/editor"
+  },
+  "icon": {
+    "name": "assets/images/ContractItem_Icon.png"
+  },
+  "activeIcon": {
+    "name": "assets/images/ContractItem_Icon.png"
+  },
+  "quickActionItems": [
+    {
+      "name": "RunContractNow",
+      "displayName": "ContractItem_RunNow_DisplayName",
+      "icon": {
+        "name": "assets/images/ContractItem_Icon.png"
+      },
+      "tooltip": "ContractItem_RunNow_Tooltip"
+    }
+  ],
+  "contextMenuItems": [
+    {
+      "name": "OpenContractDetail",
+      "displayName": "ContractItem_OpenDetail_DisplayName",
+      "icon": {
+        "name": "assets/images/ContractItem_Icon.png"
+      },
+      "tooltip": "ContractItem_OpenDetail_Tooltip"
+    }
+  ],
+  "editorTab": {
+    "onDeactivate": "item.tab.onDeactivate",
+    "canDeactivate": "item.tab.canDeactivate",
+    "canDestroy": "item.tab.canDestroy",
+    "onDestroy": "item.tab.onDestroy",
+    "onDelete": "item.tab.onDelete"
+  },
+  "supportedInMonitoringHub": false,
+  "supportedInDatahubL1": true,
+  "createItemDialogConfig": {
+    "onCreationFailure": {
+      "action": "item.onCreationFailure"
+    },
+    "onCreationSuccess": {
+      "action": "item.onCreationSuccess"
+    }
+  }
+}

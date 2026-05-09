@@ -19,7 +19,7 @@ resource swa 'Microsoft.Web/staticSites@2024-04-01' = {
 
 resource backendLink 'Microsoft.Web/staticSites/linkedBackends@2024-04-01' = if (environment == 'production') {
   parent: swa
-  name: 'fci-api'
+  name: 'orqentis-api'
   properties: { backendResourceId: apiBackendResourceId, region: location }
 }
 

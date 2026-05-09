@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>{{WORKLOAD_NAME}}</id>
+    <version>{{WORKLOAD_VERSION}}</version>
+    <authors>Orqentis</authors>
+    <owners>Orqentis</owners>
+    <description>Orqentis workload manifest package.</description>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+  </metadata>
+  <files>
+    <file src="{{MANIFEST_BUILD_ROOT}}\BE\**" target="BE" />
+    <file src="{{MANIFEST_BUILD_ROOT}}\FE\*.json" target="FE" />
+    <file src="{{MANIFEST_BUILD_ROOT}}\FE\assets\**" target="FE\assets" />
+  </files>
+</package>

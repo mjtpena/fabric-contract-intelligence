@@ -18,12 +18,12 @@ None.
 - Repo metadata: `README.md`, `LICENSE` (MIT), `.gitignore`, `.editorconfig`, `CODEOWNERS`,
   `.github/pull_request_template.md`.
 - Agent guidance: `.github/copilot-instructions.md`, `.ai/README.md`,
-  `.ai/context/{fci,fabric,architecture,conventions}.md`, `.ai/commands/sprint-*.md`.
+  `.ai/context/{orqentis,fabric,architecture,conventions}.md`, `.ai/commands/sprint-*.md`.
 - Frontend skeleton: `frontend/package.json`, `tsconfig*.json`, `vite.config.ts`,
   `index.html`, `src/{App.tsx,index.tsx,App.css}`, `manifest/WorkloadManifest.json`,
   `public/schemas/odcs-v3.1.0.json` placeholder.
-- Backend skeleton: `backend/FCI.sln` referencing five projects:
-  `FCI.Api`, `FCI.Engine`, `FCI.AI`, `FCI.Data`, and a single test project `FCI.Tests`.
+- Backend skeleton: `backend/Orqentis.sln` referencing five projects:
+  `Orqentis.Api`, `Orqentis.Engine`, `Orqentis.AI`, `Orqentis.Data`, and a single test project `Orqentis.Tests`.
   Each project has its `.csproj` targeting `net8.0`, a `Class1.cs`-style placeholder, and
   a folder structure matching spec §4.3.
 - Core interfaces (placeholders, fully-typed): `IEnforcementOrchestrator`,
@@ -31,8 +31,8 @@ None.
   `IContractStore`, `IOneLakeTokenBroker`, `IContractSuggestionAgent`, `IBreachImpactScorer`.
 - Core record types: `ContractDefinition`, `EnforcementResult`, `RuleResult`, `SchemaDiff`,
   `EnforcementStatus`, `RuleStatus`. (Used by everyone; never modify lightly.)
-- `Result<T>` in `FCI.Engine.Common`.
-- EF Core `FciDbContext` skeleton with all five entities and a query-filter for soft delete.
+- `Result<T>` in `Orqentis.Engine.Common`.
+- EF Core `OrqentisDbContext` skeleton with all five entities and a query-filter for soft delete.
 - Initial SQL migration `V001__initial_schema.sql` implementing spec §5.1 verbatim.
 - Bicep: `infra/main.bicep` orchestrating modules `app-service-plan`, `app-service`,
   `static-web-apps`, `postgresql`, `keyvault`, `openai`, `monitoring`. Param files for
@@ -45,12 +45,12 @@ None.
 
 ## Acceptance criteria
 
-- [x] `cd backend && dotnet restore FCI.sln && dotnet build FCI.sln` succeeds.
+- [x] `cd backend && dotnet restore Orqentis.sln && dotnet build Orqentis.sln` succeeds.
 - [x] `cd frontend && npm install && npm run build` succeeds.
 - [x] `cd infra && az bicep build --file main.bicep` succeeds (pending CI dry-run).
 - [x] `datacontract lint contracts/examples/healthcare.contract.yaml` returns 0 errors
       (validated externally; CI step added).
-- [x] `psql -f backend/FCI.Data/Migrations/V001__initial_schema.sql` against an empty
+- [x] `psql -f backend/Orqentis.Data/Migrations/V001__initial_schema.sql` against an empty
       Postgres 16 DB creates all 5 tables.
 
 ## Out-of-scope

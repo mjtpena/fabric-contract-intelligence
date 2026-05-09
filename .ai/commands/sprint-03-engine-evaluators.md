@@ -16,18 +16,18 @@ Sprint 2 merged. `IDeltaLogReader`, `ISchemaExtractor`, `IOdcsContractParser`,
 
 ## Files to create / modify
 
-### `backend/FCI.Engine/Evaluation/`
+### `backend/Orqentis.Engine/Evaluation/`
 
 - `ISchemaRuleEvaluator.cs` + `SchemaRuleEvaluator.cs` — implements the five `schema.*` rules.
 - `IFreshnessEvaluator.cs` + `FreshnessEvaluator.cs` — implements `freshness.max_age`.
-- `RuleResult.cs` — already in `FCI.Engine/Models/` from Sprint 1; extend if needed.
+- `RuleResult.cs` — already in `Orqentis.Engine/Models/` from Sprint 1; extend if needed.
 - `SchemaDiff.cs` — record describing `AddedColumns`, `RemovedColumns`, `TypeChanges`,
   `NullabilityChanges`, `PartitionChange`.
 
-### `backend/FCI.Engine/`
+### `backend/Orqentis.Engine/`
 
 - `IEnforcementOrchestrator.cs` + `EnforcementOrchestrator.cs` — composes the engine.
-- `EnforcementResult.cs` — already in `FCI.Engine/Models/`; ensure it matches spec §9.3.
+- `EnforcementResult.cs` — already in `Orqentis.Engine/Models/`; ensure it matches spec §9.3.
 - `EnforcementStatus.cs` (`Passed | Warned | Failed | Error`).
 
 ### Tests

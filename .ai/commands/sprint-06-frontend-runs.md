@@ -49,14 +49,14 @@ Add a dedicated job in `.github/workflows/deploy-staging.yml`:
 
 ```yaml
 - name: Run integration tests
-  run: dotnet test backend/FCI.Tests/FCI.Integration.Tests --logger:trx
+  run: dotnet test backend/Orqentis.Tests/Orqentis.Integration.Tests --logger:trx
   env:
     FABRIC_TEST_TENANT_ID: ${{ secrets.FABRIC_TEST_TENANT_ID }}
     FABRIC_TEST_WORKSPACE_ID: ${{ secrets.FABRIC_TEST_WORKSPACE_ID }}
     FABRIC_TEST_CAPACITY_ID: ${{ secrets.FABRIC_TEST_CAPACITY_ID }}
 ```
 
-Tests live under `backend/FCI.Tests/FCI.Integration.Tests/`:
+Tests live under `backend/Orqentis.Tests/Orqentis.Integration.Tests/`:
 
 - `EndToEnd_HealthcareContract_PassesAllRules` — hits a seeded test Lakehouse table.
 - `EndToEnd_SchemaDrift_FailsCorrectRule` — uses a deliberately drifted test table.
@@ -71,7 +71,7 @@ Tests live under `backend/FCI.Tests/FCI.Integration.Tests/`:
 - [ ] FR-007: Enforcement run UI renders all sections from §5.2 result JSON.
 - [ ] FR-017: Diff editor shows side-by-side YAML between any two contract versions.
 - [ ] Integration test suite green against a real Fabric test capacity.
-- [ ] FCI workload published to at least one private-preview Fabric tenant.
+- [ ] Orqentis workload published to at least one private-preview Fabric tenant.
 - [ ] Lighthouse a11y score ≥ 90 on Editor and Run pages.
 
 ## Out-of-scope

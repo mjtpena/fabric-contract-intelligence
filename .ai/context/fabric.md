@@ -1,6 +1,6 @@
-# Microsoft Fabric Platform Context (for FCI)
+# Microsoft Fabric Platform Context (for Orqentis)
 
-This file gives an agent just enough Fabric platform knowledge to build FCI correctly.
+This file gives an agent just enough Fabric platform knowledge to build Orqentis correctly.
 For depth, see https://learn.microsoft.com/fabric/extensibility-toolkit.
 
 ## What is Fabric?
@@ -24,7 +24,7 @@ Workloads consist of:
 - A **Workload Manifest** (`WorkloadManifest.json`) declaring item types, icons, capabilities,
   and routes. Published via Self-Service Workload Publishing in the Fabric admin portal.
 
-FCI declares four item types: `Contract`, `ContractPolicy`, `ContractRun`, `ContractReport`.
+Orqentis declares four item types: `Contract`, `ContractPolicy`, `ContractRun`, `ContractReport`.
 
 ## Workload SDK essentials
 
@@ -45,9 +45,9 @@ unit-tested without the SDK loaded.
 The Fabric portal hands the workload an **Entra ID access token** scoped to the workload's
 Entra app registration. Backend behaviour:
 
-1. Frontend calls FCI API with `Authorization: Bearer {fabricToken}`.
+1. Frontend calls Orqentis API with `Authorization: Bearer {fabricToken}`.
 2. `FabricAuthMiddleware` validates the JWT (issuer = `https://sts.windows.net/{tenant}/`,
-   audience = FCI API app id).
+   audience = Orqentis API app id).
 3. For OneLake access, the API performs an **OBO exchange**:
    `OnBehalfOfCredential(clientId, clientSecret, fabricToken)` → token with
    `https://storage.azure.com/.default` scope.
@@ -57,7 +57,7 @@ For Fabric REST control-plane calls, exchange instead for `https://api.fabric.mi
 
 ## Activator (Reflex)
 
-Fabric **Activator** (formerly Reflex) is a built-in alerting service. FCI does not deliver
+Fabric **Activator** (formerly Reflex) is a built-in alerting service. Orqentis does not deliver
 notifications itself — it triggers Activator rules and lets Activator route to Teams,
 Email, or webhooks. Trigger endpoint:
 
@@ -73,13 +73,13 @@ See `docs/spec.md` §11.
 
 ## Where Fabric is *not* a thing
 
-- Fabric does not provide a managed contract enforcement service. (That is FCI's wedge.)
-- Fabric does not provide an ODCS parser. (FCI ships one in `FCI.Engine.Odcs`.)
+- Fabric does not provide a managed contract enforcement service. (That is Orqentis's wedge.)
+- Fabric does not provide an ODCS parser. (Orqentis ships one in `Orqentis.Engine.Odcs`.)
 - Fabric does not host arbitrary backend services for ISVs — backends live in the ISV's Azure.
 
 ## Toolkit alignment
 
-FCI is *built on* the Microsoft Fabric Extensibility Toolkit but uses its own repo layout
+Orqentis is *built on* the Microsoft Fabric Extensibility Toolkit but uses its own repo layout
 (see `docs/spec.md` §4.3) optimised for an ISV product. We borrow these toolkit patterns:
 
 - The `.ai/` and `.github/copilot-instructions.md` agent guidance pattern.

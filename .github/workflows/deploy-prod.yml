@@ -11,7 +11,7 @@ permissions:
 
 env:
   AZURE_LOCATION: australiaeast
-  RESOURCE_GROUP: rg-fci-production-aue
+  RESOURCE_GROUP: rg-orqentis-production-aue
 
 jobs:
   deploy:
@@ -51,12 +51,12 @@ jobs:
         with: { dotnet-version: '8.0.x' }
       - name: Build & publish API
         working-directory: backend
-        run: dotnet publish FCI.Api/FCI.Api.csproj -c Release -o publish
+        run: dotnet publish Orqentis.Api/Orqentis.Api.csproj -c Release -o publish
 
       - name: Deploy API (slot swap)
         uses: azure/webapps-deploy@v3
         with:
-          app-name: fci-production-api
+          app-name: orqentis-production-api
           slot-name: staging
           package: backend/publish
 
@@ -67,6 +67,17 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Package workload manifest
+        shell: pwsh
+        run: .\scripts\Publish-Workload.ps1 -SkipBuild
+
+      - name: Upload workload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-workload-package
+          path: frontend/dist/manifest/*.nupkg
+          retention-days: 30
 
       - name: Deploy frontend (Static Web Apps)
         uses: Azure/static-web-apps-deploy@v1

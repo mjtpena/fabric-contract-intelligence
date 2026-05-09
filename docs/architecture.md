@@ -1,4 +1,4 @@
-# FCI — Architecture
+# Orqentis — Architecture
 
 This document is the long-form architecture reference. It expands `.ai/context/architecture.md`
 (which is the short, agent-friendly version). When the two diverge, **this document wins**
@@ -36,20 +36,20 @@ The five backend projects:
 
 | Project | Responsibility | Notes |
 |---|---|---|
-| `FCI.Api` | ASP.NET Core Web API. Controllers, middleware, DI wiring. | Only project that knows about HTTP. |
-| `FCI.Engine` | Pure enforcement logic. Delta log reading, ODCS parsing, rule evaluation. | No DB, no HTTP frameworks. Stateless. |
-| `FCI.AI` | LLM integrations and prompt assets. | Polly + provider abstraction. |
-| `FCI.Data` | EF Core + PostgreSQL. Entities, migrations, repository pattern. | No business logic. |
-| `FCI.Tests` | xUnit + Moq + FluentAssertions. Subdivided by project under test. | Includes `FCI.Integration.Tests`. |
+| `Orqentis.Api` | ASP.NET Core Web API. Controllers, middleware, DI wiring. | Only project that knows about HTTP. |
+| `Orqentis.Engine` | Pure enforcement logic. Delta log reading, ODCS parsing, rule evaluation. | No DB, no HTTP frameworks. Stateless. |
+| `Orqentis.AI` | LLM integrations and prompt assets. | Polly + provider abstraction. |
+| `Orqentis.Data` | EF Core + PostgreSQL. Entities, migrations, repository pattern. | No business logic. |
+| `Orqentis.Tests` | xUnit + Moq + FluentAssertions. Subdivided by project under test. | Includes `Orqentis.Integration.Tests`. |
 
-Forbidden cycles: `FCI.Engine` must never reference `FCI.Data`. The Engine is a black box
+Forbidden cycles: `Orqentis.Engine` must never reference `Orqentis.Data`. The Engine is a black box
 that takes inputs and returns outputs.
 
 ## 3. Data flow — enforcement run
 
 Verbatim from spec §4.2:
 
-1. User triggers enforcement (manual or scheduled) via FCI workload item UI.
+1. User triggers enforcement (manual or scheduled) via Orqentis workload item UI.
 2. Frontend calls `POST /api/contracts/{id}/runs`.
 3. API authenticates and performs OBO exchange to OneLake.
 4. `IEnforcementOrchestrator.RunAsync` reads the Delta transaction log (`_delta_log/*.json`).
@@ -81,11 +81,11 @@ between in-process services and dropped after each request.
 
 - `tenants.fabric_tenant_id` = Entra `tid` claim. `UNIQUE NOT NULL`.
 - All other tables carry `tenant_id UUID FK`.
-- `FciDbContext` applies a global query filter
+- `OrqentisDbContext` applies a global query filter
   `HasQueryFilter(x => x.TenantId == _tenantContext.CurrentTenantId)`.
 - `TenantResolutionMiddleware` populates `_tenantContext` from the JWT `tid`.
 - Tenant id is **never** taken from the request body.
-- Cross-tenant data joins are forbidden in normal code paths; admin endpoints (Datachain
+- Cross-tenant data joins are forbidden in normal code paths; admin endpoints (Orqentis
   internal) bypass the filter via `IgnoreQueryFilters()` and require a hard-coded admin
   Entra group.
 
@@ -94,7 +94,7 @@ between in-process services and dropped after each request.
 PostgreSQL Flexible Server, version 16. Schema: `public`. All tables follow the spec §5.1
 shape (snake_case, UUID PKs, `TIMESTAMPTZ`, soft-delete via `deleted_at`).
 
-Migrations are **append-only SQL files** in `backend/FCI.Data/Migrations/V0NN__name.sql`,
+Migrations are **append-only SQL files** in `backend/Orqentis.Data/Migrations/V0NN__name.sql`,
 applied via [DbUp](https://dbup.readthedocs.io/) at API startup (idempotent). EF Core is
 used only as a query/save runtime; we do not let EF generate migrations because we want
 the SQL under explicit human review.
@@ -104,11 +104,11 @@ the SQL under explicit human review.
 - **Logs:** Serilog → Azure Log Analytics. Structured JSON. Always include `CorrelationId`,
   `TenantId`, `UserUpn`, plus domain-specific (`ContractId`, `RunId`).
 - **Metrics:** `System.Diagnostics.Metrics` → App Insights.
-  - `FCI.Enforcement.run_duration_ms` (histogram, tag: outcome)
-  - `FCI.Enforcement.run_outcome_total` (counter, tag: status)
-  - `FCI.AI.call_latency_ms` (histogram, tag: provider, feature)
-  - `FCI.AI.fallback_total` (counter, tag: from, to)
-  - `FCI.Activator.dispatch_latency_ms` (histogram)
+  - `Orqentis.Enforcement.run_duration_ms` (histogram, tag: outcome)
+  - `Orqentis.Enforcement.run_outcome_total` (counter, tag: status)
+  - `Orqentis.AI.call_latency_ms` (histogram, tag: provider, feature)
+  - `Orqentis.AI.fallback_total` (counter, tag: from, to)
+  - `Orqentis.Activator.dispatch_latency_ms` (histogram)
 - **Traces:** OpenTelemetry auto-instrumentation for ASP.NET Core, EF Core, HttpClient.
   We never log request bodies that may contain ODCS YAML with sensitive table names; only
   metadata (length, hash) at `Information`. Full bodies at `Debug`, off in prod.
@@ -117,12 +117,12 @@ the SQL under explicit human review.
 
 | Failure | Detection | Behaviour |
 |---|---|---|
-| OneLake 401/403 | OBO scope mismatch | 502 to caller; `FCI_OneLake_Auth_Failed` event |
+| OneLake 401/403 | OBO scope mismatch | 502 to caller; `Orqentis_OneLake_Auth_Failed` event |
 | OneLake 5xx / timeout | Polly retry 3× | If still failing → run status `error` |
 | Postgres unreachable | EF `DbException` | Health check fails; orchestrator returns 503 |
 | Azure OpenAI 429 | Polly retry exponential | Eventually fall back to Claude |
 | Anthropic 5xx | Polly retry | Fall back to empty template / null score |
-| Activator 5xx | Polly 5× retry | Drop alert; emit `FCI_Activator_Drop`; run still ok |
+| Activator 5xx | Polly 5× retry | Drop alert; emit `Orqentis_Activator_Drop`; run still ok |
 
 ## 9. Performance budgets (spec §13)
 

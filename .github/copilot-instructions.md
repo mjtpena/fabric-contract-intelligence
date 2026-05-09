@@ -1,12 +1,12 @@
-# GitHub Copilot Instructions — Fabric Contract Intelligence (FCI)
+# GitHub Copilot Instructions — Orqentis
 
 > **READ THIS FILE BEFORE WRITING ANY CODE.** This is the single source of truth that
 > overrides any default Copilot behaviour. If a rule here conflicts with a generic
 > suggestion, the rule here wins.
 
-## 1. What FCI is
+## 1. What Orqentis is
 
-FCI is a **native Microsoft Fabric ISV workload** built on the
+Orqentis is a **native Microsoft Fabric ISV workload** built on the
 [Microsoft Fabric Extensibility Toolkit](https://github.com/microsoft/fabric-extensibility-toolkit)
 that enforces **ODCS v3.1.0** data contracts at the **Delta table layer** inside OneLake.
 
@@ -23,7 +23,7 @@ Full spec: [`docs/spec.md`](../docs/spec.md). Architecture: [`docs/architecture.
 Always reference these in this order:
 
 1. **`.github/copilot-instructions.md`** ← this file
-2. **`.ai/context/fci.md`** — domain language (ODCS, Delta, Activator)
+2. **`.ai/context/orqentis.md`** — domain language (ODCS, Delta, Activator)
 3. **`.ai/context/fabric.md`** — Fabric platform model (workload, item, manifest)
 4. **`.ai/context/architecture.md`** — layered architecture, boundaries, allowed dependencies
 5. **`.ai/context/conventions.md`** — code style, naming, error handling, logging
@@ -39,11 +39,11 @@ These are taken from the spec §16.1 and apply to every PR.
 2. **No secrets in code, ever.** Connection strings, API keys, tenant IDs, client secrets:
    all must come from `IConfiguration` (.NET) backed by Azure Key Vault, or from `import.meta.env`
    (Vite) backed by `.env.template`. Never commit `.env` or `appsettings.Development.json`.
-3. **Tests alongside implementation.** Every public method in `FCI.Engine` and `FCI.AI` needs
+3. **Tests alongside implementation.** Every public method in `Orqentis.Engine` and `Orqentis.AI` needs
    xUnit tests. Target: **≥85 % line coverage** on those two projects. Use Moq + FluentAssertions.
 4. **Never bypass `OdcsContractValidator`.** If a YAML does not validate against the ODCS
    v3.1.0 JSON Schema, it MUST NOT be persisted with `status='active'`. The validator is
-   authoritative; the schema lives at `backend/FCI.Engine/Odcs/Schema/odcs-v3.1.0.json`.
+   authoritative; the schema lives at `backend/Orqentis.Engine/Odcs/Schema/odcs-v3.1.0.json`.
 5. **AI calls require timeout + fallback.** All LLM calls use a 15-second `CancellationToken`
    timeout. On failure, return an empty template (suggestion) or `null` (score) — never throw
    to the caller. Wrap with Polly retry (3 attempts, exponential backoff) before falling back.
@@ -55,7 +55,7 @@ These are taken from the spec §16.1 and apply to every PR.
    downstream calls (Fabric REST, Activator, OpenAI), logged on every Serilog entry, and
    echoed in every API response header.
 8. **Soft delete only.** No `DELETE FROM` statements. Set `deleted_at = NOW()`. Default query
-   filter on `FciDbContext` excludes soft-deleted rows.
+   filter on `OrqentisDbContext` excludes soft-deleted rows.
 9. **UTC timestamps.** Use `DateTimeOffset` in C#, ISO-8601 strings in JSON DTOs. Never
    `DateTime` without explicit `Kind`.
 
@@ -65,10 +65,10 @@ The repo layout in `docs/spec.md` §4.3 is **exact**. Do not invent new top-leve
 
 | What | Where |
 |---|---|
-| New backend controller | `backend/FCI.Api/Controllers/{Name}Controller.cs` |
-| New EF entity | `backend/FCI.Data/Entities/{Name}.cs` + DbSet + new migration |
-| New Engine evaluator | `backend/FCI.Engine/Evaluation/{Name}Evaluator.cs` + interface |
-| New AI agent | `backend/FCI.AI/{Name}Agent.cs`; prompt at `backend/FCI.AI/Prompts/{Name}.txt` |
+| New backend controller | `backend/Orqentis.Api/Controllers/{Name}Controller.cs` |
+| New EF entity | `backend/Orqentis.Data/Entities/{Name}.cs` + DbSet + new migration |
+| New Engine evaluator | `backend/Orqentis.Engine/Evaluation/{Name}Evaluator.cs` + interface |
+| New AI agent | `backend/Orqentis.AI/{Name}Agent.cs`; prompt at `backend/Orqentis.AI/Prompts/{Name}.txt` |
 | New React page | `frontend/src/pages/{Name}Page.tsx`; route in `frontend/src/App.tsx` |
 | New API client method | `frontend/src/api/{domain}Client.ts` |
 | New TS model | `frontend/src/models/{Name}.ts` (mirror backend DTO 1:1) |
@@ -79,10 +79,10 @@ The repo layout in `docs/spec.md` §4.3 is **exact**. Do not invent new top-leve
 
 ### Backend (.NET 8)
 
-- **DI registration** in `FCI.Api/Program.cs` only. Class libraries expose
-  `AddFciEngine(IServiceCollection)` extension methods. No service location.
+- **DI registration** in `Orqentis.Api/Program.cs` only. Class libraries expose
+  `AddOrqentisEngine(IServiceCollection)` extension methods. No service location.
 - **Records for DTOs**, classes for EF entities. `required` properties on records.
-- **`Result<T>`** pattern (see `FCI.Engine/Common/Result.cs`) instead of throwing for
+- **`Result<T>`** pattern (see `Orqentis.Engine/Common/Result.cs`) instead of throwing for
   expected failure. Throwing is reserved for programmer error / unrecoverable.
 - **Async all the way.** No `.Result` / `.Wait()`. Pass `CancellationToken ct = default`.
 - **Logging:** `_logger.LogInformation("Verb-Noun {ContractId} {RunId}", ...)` with structured

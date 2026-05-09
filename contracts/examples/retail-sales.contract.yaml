@@ -1,10 +1,10 @@
-# FCI Sample Contract — Retail Sales Transactions
+# Orqentis Sample Contract — Retail Sales Transactions
 # File: contracts/examples/retail-sales.contract.yaml
 # ODCS v3.1.0
 
 apiVersion: v3.1.0
 kind: DataContract
-id: urn:datachain:fci:retail:sales_transactions:v1
+id: urn:orqentis:orqentis:retail:sales_transactions:v1
 name: Retail Sales Transactions Contract
 version: 1.0.0
 status: active

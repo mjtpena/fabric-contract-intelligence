@@ -1,0 +1,52 @@
+using Orqentis.Data;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
+namespace Orqentis.Api.Services;
+
+/// <summary>Readiness check for the configured data store.</summary>
+public sealed class OrqentisDatabaseHealthCheck : IHealthCheck
+{
+    private readonly OrqentisDbContext _dbContext;
+
+    public OrqentisDatabaseHealthCheck(OrqentisDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    /// <inheritdoc />
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false)
+            ? HealthCheckResult.Healthy("Database reachable.")
+            : HealthCheckResult.Unhealthy("Database unavailable.");
+    }
+}
+
+/// <summary>Readiness check for Key Vault configuration presence.</summary>
+public sealed class KeyVaultConfigurationHealthCheck : IHealthCheck
+{
+    private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
+
+    public KeyVaultConfigurationHealthCheck(IConfiguration configuration, IWebHostEnvironment environment)
+    {
+        _configuration = configuration;
+        _environment = environment;
+    }
+
+    /// <inheritdoc />
+    public Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var vaultUri = _configuration["KeyVault:VaultUri"];
+        if (!string.IsNullOrWhiteSpace(vaultUri) || !_environment.IsProduction())
+        {
+            return Task.FromResult(HealthCheckResult.Healthy("Key Vault configuration accepted."));
+        }
+
+        return Task.FromResult(HealthCheckResult.Degraded("KeyVault:VaultUri is not configured."));
+    }
+}

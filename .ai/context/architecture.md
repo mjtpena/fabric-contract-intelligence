@@ -1,4 +1,4 @@
-# FCI Architecture (for AI agents)
+# Orqentis Architecture (for AI agents)
 
 > Source of truth: `docs/architecture.md` and `docs/spec.md` §4. This file is the
 > *agent-friendly* summary.
@@ -9,19 +9,19 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │ Fabric Portal (browser)                                          │
 │ ┌──────────────────────────────────────────────────────────────┐ │
-│ │ FCI Frontend  (React 18 in Fabric iframe)                    │ │
+│ │ Orqentis Frontend  (React 18 in Fabric iframe)                    │ │
 │ │   pages/, components/, hooks/useFabricSdk, store/zustand     │ │
 │ └────────────────────────┬─────────────────────────────────────┘ │
 └──────────────────────────┼───────────────────────────────────────┘
                            │ HTTPS + Bearer Fabric token
 ┌──────────────────────────▼───────────────────────────────────────┐
-│ FCI.Api  (Azure App Service P2v3, .NET 8)                        │
+│ Orqentis.Api  (Azure App Service P2v3, .NET 8)                        │
 │   Controllers, Middleware (FabricAuth, Correlation, Tenant)      │
 └──┬─────────────────┬─────────────────┬──────────────────────────┘
    │                 │                 │
    ▼                 ▼                 ▼
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐
-│FCI.Engine│  │ FCI.AI   │  │ FCI.Data │  │ Activator    │
+│Orqentis.Engine│  │ Orqentis.AI   │  │ Orqentis.Data │  │ Activator    │
 │ Delta /  │  │ OpenAI / │  │ EF Core  │  │ Fabric REST  │
 │ ODCS /   │  │ Claude   │  │ Postgres │  │ (REST out)   │
 │ Eval     │  │          │  │          │  │              │
@@ -38,16 +38,16 @@
 ## 2. Allowed dependencies (enforced via `dotnet test` architectural fitness later)
 
 ```
-FCI.Api      ──► FCI.Engine, FCI.AI, FCI.Data, FCI.Common
-FCI.Engine   ──► FCI.Common               (Delta, Odcs, Evaluation are internal)
-FCI.AI       ──► FCI.Common, FCI.Engine.Models  (only the models, never Engine impl)
-FCI.Data     ──► FCI.Common
-FCI.Tests/*  ──► the project under test + FCI.Common
+Orqentis.Api      ──► Orqentis.Engine, Orqentis.AI, Orqentis.Data, Orqentis.Common
+Orqentis.Engine   ──► Orqentis.Common               (Delta, Odcs, Evaluation are internal)
+Orqentis.AI       ──► Orqentis.Common, Orqentis.Engine.Models  (only the models, never Engine impl)
+Orqentis.Data     ──► Orqentis.Common
+Orqentis.Tests/*  ──► the project under test + Orqentis.Common
 ```
 
-`FCI.Common` (small): shared `Result<T>`, correlation context, ODCS DTOs.
+`Orqentis.Common` (small): shared `Result<T>`, correlation context, ODCS DTOs.
 
-**Forbidden:** `FCI.Engine` referencing `FCI.Data`. The engine is pure: it takes inputs
+**Forbidden:** `Orqentis.Engine` referencing `Orqentis.Data`. The engine is pure: it takes inputs
 (parsed contract + token), returns outputs (`EnforcementResult`). Persistence is the API
 layer's job.
 
@@ -77,7 +77,7 @@ layer's job.
 
 ## 5. Multi-tenancy
 
-Tenants are isolated by `tenant_id UUID FK` on every row, plus the `FciDbContext` global
+Tenants are isolated by `tenant_id UUID FK` on every row, plus the `OrqentisDbContext` global
 query filter:
 
 ```csharp
@@ -97,15 +97,15 @@ on a scoped service. **Never accept `tenant_id` from request bodies.** Always de
 | Anthropic 5xx | Polly retry → fallback | Same as above |
 | Activator API 5xx | Polly retry (5×) | Run completes successfully; alert dropped + logged at Error level |
 
-All fallbacks are observable via App Insights custom events (`FCI_AI_Fallback`,
-`FCI_Activator_Drop`, etc.).
+All fallbacks are observable via App Insights custom events (`Orqentis_AI_Fallback`,
+`Orqentis_Activator_Drop`, etc.).
 
 ## 7. Observability
 
 - **Logs:** Serilog → Azure Log Analytics. JSON formatter. Structured properties:
   `CorrelationId`, `TenantId`, `ContractId`, `RunId`, `UserUpn`.
 - **Metrics:** App Insights via `System.Diagnostics.Metrics`. Custom meters:
-  `FCI.Enforcement` (`run_duration_ms`, `run_outcome`), `FCI.AI` (`call_latency_ms`,
+  `Orqentis.Enforcement` (`run_duration_ms`, `run_outcome`), `Orqentis.AI` (`call_latency_ms`,
   `fallback_count`).
 - **Traces:** OpenTelemetry auto-instrumentation for ASP.NET Core, EF Core, HttpClient.
   Traces include the OBO exchange but never the token bytes.
@@ -113,16 +113,16 @@ All fallbacks are observable via App Insights custom events (`FCI_AI_Fallback`,
 ## 8. Deployment topology
 
 ```
-Azure subscription (Datachain)
-└── RG: rg-fci-{env}-aue
+Azure subscription (Orqentis)
+└── RG: rg-orqentis-{env}-aue
     ├── App Service Plan (Linux, P2v3 prod / B2 staging)
-    │   └── App Service "fci-api-{env}"  (.NET 8)
-    ├── Static Web App "fci-frontend-{env}" (React build artifact)
-    ├── PostgreSQL Flexible Server "fci-pg-{env}"  (PG 16)
-    ├── Key Vault "kv-fci-{env}"
-    ├── Azure OpenAI "oai-fci-{env}" (GPT-4o deployment)
-    ├── Application Insights "appi-fci-{env}"
-    └── Log Analytics Workspace "log-fci-{env}"
+    │   └── App Service "orqentis-api-{env}"  (.NET 8)
+    ├── Static Web App "orqentis-workload-{env}" (React build artifact)
+    ├── PostgreSQL Flexible Server "orqentis-pg-{env}"  (PG 16)
+    ├── Key Vault "kv-orqentis-{env}"
+    ├── Azure OpenAI "oai-orqentis-{env}" (GPT-4o deployment)
+    ├── Application Insights "appi-orqentis-{env}"
+    └── Log Analytics Workspace "log-orqentis-{env}"
 ```
 
 Region: **Australia East** for AU customers (data residency in spec §13).

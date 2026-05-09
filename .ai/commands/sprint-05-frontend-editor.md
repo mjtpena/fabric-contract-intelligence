@@ -17,7 +17,7 @@ Sprint 4 merged (real API endpoints behind `/contracts` and `/contracts/{id}`).
 ### Manifest
 
 - `frontend/manifest/WorkloadManifest.json`
-  - `workloadId`: `Datachain.FabricContractIntelligence`
+  - `workloadId`: `Orqentis.FabricContractIntelligence`
   - Item types: `Contract`, `ContractPolicy`, `ContractReport` (each with iconSmall/iconLarge,
     edit URL, capabilities)
 - `frontend/manifest/items/ContractItem/ContractItem.json` + `.xml` (per toolkit pattern)

@@ -15,7 +15,7 @@ Sprints 7 (policies in DB), 8 (breach scoring populates Activator context).
 
 ## Files to create / modify
 
-### `backend/FCI.Api/Services/`
+### `backend/Orqentis.Api/Services/`
 
 - `IActivatorClient.cs` + `ActivatorClient.cs` — Polly-wrapped HTTP client for Fabric Activator.
 - `IBreachAlertDispatcher.cs` + `BreachAlertDispatcher.cs` — chooses path based on policy:
@@ -76,7 +76,7 @@ Authorization: Bearer {fabricToken}
 ## Acceptance criteria
 
 - [ ] FR-012: Activator triggered within 30 s of run FAIL completion (median); failures
-      surfaced as a `FCI_Activator_Drop` event in App Insights, never thrown.
+      surfaced as a `Orqentis_Activator_Drop` event in App Insights, never thrown.
 - [ ] FR-018: Enterprise tenant sees contracts from all linked workspaces in a unified list.
 - [ ] FR-024: a tenant configured with a Slack webhook receives a formatted Slack message
       on FAIL when Activator is not configured.

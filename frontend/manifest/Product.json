@@ -1,0 +1,116 @@
+{
+  "name": "Product",
+  "version": "1.100",
+  "displayName": "Workload_Display_Name",
+  "fullDisplayName": "Workload_Full_Display_Name",
+  "description": "Workload_Description",
+  "favicon": "assets/images/Workload_Icon.png",
+  "icon": {
+    "name": "assets/images/Workload_Icon.png"
+  },
+  "homePage": {
+    "learningMaterials": [
+      {
+        "title": "Workload_Hub_GetStarted_1_Title",
+        "introduction": "Workload_Hub_GetStarted_1_Sub_Title",
+        "description": "Workload_Hub_GetStarted_1_Description",
+        "image": "assets/images/Workload_Hub_GetStarted_1.png",
+        "link": "https://github.com/mjtpena/fabric-contract-intelligence"
+      }
+    ],
+    "newSection": {
+      "customActions": []
+    },
+    "recommendedItemTypes": ["Contract"]
+  },
+  "createExperience": {
+    "description": "Workload_Description",
+    "cards": [
+      {
+        "title": "ContractItem_DisplayName",
+        "description": "ContractItem_Description",
+        "icon": {
+          "name": "assets/images/ContractItem_Icon.png"
+        },
+        "icon_small": {
+          "name": "assets/images/ContractItem_Icon.png"
+        },
+        "availableIn": ["home", "create-hub", "workspace-plus-new", "workspace-plus-new-teams"],
+        "itemType": "Contract",
+        "createItemDialogConfig": {
+          "onCreationFailure": {
+            "action": "item.onCreationFailure"
+          },
+          "onCreationSuccess": {
+            "action": "item.onCreationSuccess"
+          }
+        }
+      },
+      {
+        "title": "ContractPolicyItem_DisplayName",
+        "description": "ContractPolicyItem_Description",
+        "icon": {
+          "name": "assets/images/ContractPolicyItem_Icon.png"
+        },
+        "icon_small": {
+          "name": "assets/images/ContractPolicyItem_Icon.png"
+        },
+        "availableIn": ["home", "create-hub", "workspace-plus-new", "workspace-plus-new-teams"],
+        "itemType": "ContractPolicy",
+        "createItemDialogConfig": {
+          "onCreationFailure": {
+            "action": "item.onCreationFailure"
+          },
+          "onCreationSuccess": {
+            "action": "item.onCreationSuccess"
+          }
+        }
+      },
+      {
+        "title": "ContractReportItem_DisplayName",
+        "description": "ContractReportItem_Description",
+        "icon": {
+          "name": "assets/images/ContractReportItem_Icon.png"
+        },
+        "icon_small": {
+          "name": "assets/images/ContractReportItem_Icon.png"
+        },
+        "availableIn": ["home", "create-hub", "workspace-plus-new", "workspace-plus-new-teams"],
+        "itemType": "ContractReport",
+        "createItemDialogConfig": {
+          "onCreationFailure": {
+            "action": "item.onCreationFailure"
+          },
+          "onCreationSuccess": {
+            "action": "item.onCreationSuccess"
+          }
+        }
+      }
+    ]
+  },
+  "productDetail": {
+    "publisher": "Orqentis",
+    "slogan": "Workload_Hub_Slogan",
+    "description": "Workload_Hub_Description",
+    "image": {
+      "mediaType": 0,
+      "source": "assets/images/Workload_Hub_Banner.png"
+    },
+    "slideMedia": [
+      {
+        "mediaType": 0,
+        "source": "assets/images/Workload_Hub_SlideMedia_1.png"
+      }
+    ],
+    "supportLink": {
+      "documentation": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
+      "certification": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
+      "help": { "url": "https://github.com/mjtpena/fabric-contract-intelligence/issues" },
+      "privacy": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
+      "terms": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
+      "license": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" }
+    }
+  },
+  "itemJobTypes": ["storeData"],
+  "compatibleItemTypes": ["Lakehouse"]
+}

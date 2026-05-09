@@ -15,20 +15,20 @@ Sprints 3 (orchestrator), 4 (API), 6 (UI to display results).
 
 ## Files to create / modify
 
-### `backend/FCI.Engine/Evaluation/`
+### `backend/Orqentis.Engine/Evaluation/`
 
 - `IQualityRuleEvaluator.cs` + `QualityRuleEvaluator.cs`
 - `IFabricSqlClient.cs` + `FabricSqlClient.cs` — Polly-wrapped HTTP client to Fabric SQL endpoint.
 - `RuleSqlBuilder.cs` — converts a quality rule into a single aggregated SELECT.
 
-### `backend/FCI.Api/Services/`
+### `backend/Orqentis.Api/Services/`
 
 - `Scheduling/IEnforcementScheduler.cs` + `HangfireEnforcementScheduler.cs`
 - `Scheduling/ScheduledRunJob.cs` — invoked by Hangfire; calls orchestrator with a
   service-principal-on-behalf-of-user pattern documented in `architecture.md`.
 - Add Hangfire wiring to `Program.cs`: `services.AddHangfire(c => c.UsePostgreSqlStorage(...))`.
 
-### `backend/FCI.Api/Controllers/`
+### `backend/Orqentis.Api/Controllers/`
 
 - `PoliciesController.cs` (new):
   - `GET    /policies`
@@ -80,7 +80,7 @@ user-supplied values (parser rejects rules containing unbound `{...}` placeholde
 - [ ] FR-011: a policy with `*/2 * * * *` triggers within ±2 minutes of schedule.
 - [ ] FR-016: regex rule applies threshold as pass-rate (not just any-match).
 - [ ] FR-022: custom_sql rule rejects unparameterised `${...}` patterns.
-- [ ] Coverage on `FCI.Engine.Evaluation` ≥ 90 %.
+- [ ] Coverage on `Orqentis.Engine.Evaluation` ≥ 90 %.
 
 ## Out-of-scope
 

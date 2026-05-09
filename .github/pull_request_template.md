@@ -17,7 +17,7 @@ Spec: <!-- e.g. §9.4, §12 FR-004 -->
 
 ## Non-negotiable rules checklist (`.github/copilot-instructions.md` §3)
 - [ ] No secrets, connection strings, API keys, or tenant IDs hardcoded
-- [ ] Unit tests added; coverage on `FCI.Engine` / `FCI.AI` ≥ 85 %
+- [ ] Unit tests added; coverage on `Orqentis.Engine` / `Orqentis.AI` ≥ 85 %
 - [ ] No bypass of `OdcsContractValidator` for active contracts
 - [ ] AI calls (if any) have 15s timeout + graceful fallback
 - [ ] OneLake access uses OBO delegated tokens only

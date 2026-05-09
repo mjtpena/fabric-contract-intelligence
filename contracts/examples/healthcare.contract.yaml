@@ -1,6 +1,6 @@
 apiVersion: v3.1.0
 kind: DataContract
-id: urn:datachain:fci:healthcare:patient_encounters:v1
+id: urn:orqentis:orqentis:healthcare:patient_encounters:v1
 name: Patient Encounters Contract
 version: 1.0.0
 status: active
@@ -38,6 +38,7 @@ schema:
         logicalType: date
         physicalType: DATE
         required: true
+        partitionKeyPosition: 1
         description: Date of clinical encounter (YYYY-MM-DD)
         customProperties:
           - property: pii
@@ -65,7 +66,7 @@ slaProperties:
     value: 25
     unit: hours
 customProperties:
-  - property: fciInfo
+  - property: orqentisInfo
     value:
       title: Patient Encounters
       description: Governs the patient_encounters Delta table in the PORS Clinical Lakehouse. This table is the primary source for downstream analytics and AI models.
@@ -77,7 +78,7 @@ customProperties:
         - name: Analytics Team
           email: analytics@example.com
           role: consumer
-  - property: fciQuality
+  - property: orqentisQuality
     value:
       - type: nullRate
         column: encounter_id
@@ -96,7 +97,7 @@ customProperties:
         pattern: '^[A-Z][0-9]{2}(.[0-9]{1,4})?$'
         threshold: 0.95
         severity: warning
-  - property: fciFreshness
+  - property: orqentisFreshness
     value:
       maxAgeHours: 25
       severity: warning

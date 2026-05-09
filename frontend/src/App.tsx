@@ -1,72 +1,72 @@
-import { Routes, Route, Link } from 'react-router-dom';
-import { Title1, Body1, Subtitle2, makeStyles, tokens } from '@fluentui/react-components';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Body1, Title1, makeStyles, tokens } from '@fluentui/react-components';
+import { ContractDetailPage } from './pages/ContractDetailPage';
+import { ContractEditorPage } from './pages/ContractEditorPage';
+import { ContractListPage } from './pages/ContractListPage';
+import { EnforcementRunPage } from './pages/EnforcementRunPage';
+import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
 
 const useStyles = makeStyles({
   root: {
-    padding: tokens.spacingHorizontalXXL,
-    fontFamily: tokens.fontFamilyBase,
+    minHeight: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXXL}`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    gap: tokens.spacingHorizontalL,
+  },
+  titleBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
   },
   nav: {
     display: 'flex',
     gap: tokens.spacingHorizontalL,
-    marginBlock: tokens.spacingVerticalL,
+    fontWeight: tokens.fontWeightSemibold,
   },
-  card: {
-    marginTop: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalL,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
+  content: {
+    flex: 1,
+    fontFamily: tokens.fontFamilyBase,
+    minHeight: 0,
   },
 });
 
-function Home() {
-  const styles = useStyles();
-  return (
-    <section className={styles.card}>
-      <Subtitle2>Welcome</Subtitle2>
-      <Body1>
-        Fabric Contract Intelligence — scaffold ready. Sprint runbooks live in <code>.ai/commands/</code>.
-        Implement Sprint 5 (Frontend Editor) to replace this placeholder.
-      </Body1>
-    </section>
-  );
-}
-
-function ContractsPlaceholder() {
-  const styles = useStyles();
-  return (
-    <section className={styles.card}>
-      <Subtitle2>Contracts</Subtitle2>
-      <Body1>TODO(sprint-05): list contracts here.</Body1>
-    </section>
-  );
-}
-
-function RunsPlaceholder() {
-  const styles = useStyles();
-  return (
-    <section className={styles.card}>
-      <Subtitle2>Enforcement Runs</Subtitle2>
-      <Body1>TODO(sprint-06): list enforcement runs here.</Body1>
-    </section>
-  );
-}
-
 export default function App() {
   const styles = useStyles();
+
   return (
     <main className={styles.root}>
-      <Title1>Fabric Contract Intelligence</Title1>
-      <nav className={styles.nav}>
-        <Link to="/">Home</Link>
-        <Link to="/contracts">Contracts</Link>
-        <Link to="/runs">Runs</Link>
-      </nav>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/contracts" element={<ContractsPlaceholder />} />
-        <Route path="/runs" element={<RunsPlaceholder />} />
-      </Routes>
+      <header className={styles.header}>
+        <div className={styles.titleBlock}>
+          <Title1>Orqentis</Title1>
+          <Body1>Author, validate and manage ODCS v3.1.0 contracts inside Fabric.</Body1>
+        </div>
+        <nav className={styles.nav}>
+          <Link to="/contracts">Contracts</Link>
+          <Link to="/workspace/settings">Workspace settings</Link>
+        </nav>
+      </header>
+      <div className={styles.content}>
+        <Routes>
+          <Route path="/" element={<Navigate replace to="/contracts" />} />
+          <Route path="/contracts" element={<ContractListPage />} />
+          <Route path="/contracts/new" element={<ContractEditorPage />} />
+          <Route path="/contracts/editor" element={<ContractEditorPage />} />
+          <Route path="/contracts/runs" element={<EnforcementRunPage />} />
+          <Route path="/contracts/:id" element={<ContractDetailPage />} />
+          <Route path="/contracts/:id/edit" element={<ContractEditorPage />} />
+          <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
+          <Route path="/workspace/settings" element={<WorkspaceSettingsPage />} />
+          <Route path="*" element={<Navigate replace to="/contracts" />} />
+        </Routes>
+      </div>
     </main>
   );
 }

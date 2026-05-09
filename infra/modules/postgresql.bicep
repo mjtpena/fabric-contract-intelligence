@@ -32,7 +32,7 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
 
 resource db 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
   parent: server
-  name: 'fci'
+  name: 'orqentis'
   properties: { charset: 'UTF8', collation: 'en_US.UTF8' }
 }
 

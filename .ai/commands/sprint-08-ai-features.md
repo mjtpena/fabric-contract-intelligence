@@ -18,7 +18,7 @@ Sprints 4 (API), 7 (full enforcement results to score).
 
 ## Files to create / modify
 
-### `backend/FCI.AI/`
+### `backend/Orqentis.AI/`
 
 - `IContractSuggestionAgent.cs` + `ContractSuggestionAgent.cs`
 - `IBreachImpactScorer.cs` + `BreachImpactScorer.cs`
@@ -28,7 +28,7 @@ Sprints 4 (API), 7 (full enforcement results to score).
 - `Prompts/ContractSuggestion.txt` — verbatim from spec §10.2.
 - `Prompts/BreachImpact.txt`, `Prompts/Remediation.txt`, `Prompts/NaturalLanguageQuery.txt`.
 
-### `backend/FCI.Api/Controllers/`
+### `backend/Orqentis.Api/Controllers/`
 
 - `AiController.cs`:
   - `POST /ai/suggest-contract`  → `IContractSuggestionAgent`
@@ -88,7 +88,7 @@ to a `breach_score_breakdown` JSONB column (add a migration this sprint).
 - [ ] FR-015: every failed rule yields ≥ 1 remediation suggestion that mentions the
       specific column name.
 - [ ] FR-019: NL query returns relevant contracts; explanation rendered alongside.
-- [ ] Test coverage on `FCI.AI` ≥ 85 %.
+- [ ] Test coverage on `Orqentis.AI` ≥ 85 %.
 - [ ] No prompt strings hard-coded in `.cs` — all in `Prompts/*.txt`.
 
 ## Out-of-scope

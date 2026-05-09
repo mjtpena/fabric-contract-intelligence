@@ -1,14 +1,14 @@
 # Default owners for everything in the repo
-*                       @datachain/fci-core
+*                       @orqentis/orqentis-core
 
 # Backend boundaries
-/backend/FCI.Engine/    @datachain/fci-core @datachain/fci-engine
-/backend/FCI.AI/        @datachain/fci-core @datachain/fci-ai
-/backend/FCI.Data/      @datachain/fci-core @datachain/fci-data
+/backend/Orqentis.Engine/    @orqentis/orqentis-core @orqentis/orqentis-engine
+/backend/Orqentis.AI/        @orqentis/orqentis-core @orqentis/orqentis-ai
+/backend/Orqentis.Data/      @orqentis/orqentis-core @orqentis/orqentis-data
 
 # Frontend
-/frontend/              @datachain/fci-core @datachain/fci-frontend
+/frontend/              @orqentis/orqentis-core @orqentis/orqentis-frontend
 
 # Infra & CI
-/infra/                 @datachain/fci-core @datachain/fci-platform
-/.github/               @datachain/fci-core @datachain/fci-platform
+/infra/                 @orqentis/orqentis-core @orqentis/orqentis-platform
+/.github/               @orqentis/orqentis-core @orqentis/orqentis-platform

@@ -1,4 +1,4 @@
-# FCI Product Specification (Reference Copy)
+# Orqentis Product Specification (Reference Copy)
 
 > The authoritative product spec is `FabricContractIntelligence_Spec_v1.0.docx` at the
 > repo root. This file is a Markdown extraction of it for in-IDE reference and AI agent
@@ -40,15 +40,15 @@ when a section needs detail.
 Most agents only need:
 
 - **§4.3** — exact repo layout. The scaffold matches this 1:1.
-- **§5.1** — PostgreSQL DDL. Implemented in `backend/FCI.Data/Migrations/V001__initial_schema.sql`.
-- **§5.2** — `result_json` shape. Implemented in `backend/FCI.Engine/Models/EnforcementResult.cs`.
+- **§5.1** — PostgreSQL DDL. Implemented in `backend/Orqentis.Data/Migrations/V001__initial_schema.sql`.
+- **§5.2** — `result_json` shape. Implemented in `backend/Orqentis.Engine/Models/EnforcementResult.cs`.
 - **§6.2** — sample healthcare ODCS contract. Stored at `contracts/examples/healthcare.contract.yaml`.
 - **§7** — REST API surface. Mirrored in `docs/api.md`.
 - **§9.3** — `IEnforcementOrchestrator` interface. Implemented in
-  `backend/FCI.Engine/IEnforcementOrchestrator.cs`.
+  `backend/Orqentis.Engine/IEnforcementOrchestrator.cs`.
 - **§9.4** — rule evaluation matrix. Authoritative for `SchemaRuleEvaluator`.
 - **§10.2** — Contract Suggestion system prompt. Stored at
-  `backend/FCI.AI/Prompts/ContractSuggestion.txt`.
+  `backend/Orqentis.AI/Prompts/ContractSuggestion.txt`.
 - **§10.3** — breach impact scoring rubric. Stored in `BreachImpactScorer.cs` weights.
 - **§12** — FR-IDs. Each PR should cite the FR-IDs it satisfies.
 - **§16.1** — non-negotiable rules. Mirrored in `.github/copilot-instructions.md` §3.

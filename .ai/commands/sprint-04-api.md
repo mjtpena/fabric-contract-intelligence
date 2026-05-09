@@ -11,11 +11,11 @@ validation, OBO token exchange, the `IEnforcementOrchestrator` from Sprints 2/3,
 
 ## Pre-requisites
 
-Sprints 2, 3 merged. `FCI.Data` migrations applied to a dev Postgres (Sprint 1 deliverable).
+Sprints 2, 3 merged. `Orqentis.Data` migrations applied to a dev Postgres (Sprint 1 deliverable).
 
 ## Files to create / modify
 
-### `backend/FCI.Api/Auth/`
+### `backend/Orqentis.Api/Auth/`
 
 - `FabricAuthMiddleware.cs` — validates Entra Bearer JWT (issuer, audience, signature).
 - `IOneLakeTokenBroker.cs` + `OneLakeTokenBroker.cs` — performs OBO via `OnBehalfOfCredential`.
@@ -23,7 +23,7 @@ Sprints 2, 3 merged. `FCI.Data` migrations applied to a dev Postgres (Sprint 1 d
 - `EnterpriseAttribute.cs` — action filter that 402s Community tenants for paid features.
 - `CorrelationMiddleware.cs` — generates / propagates `X-Correlation-Id`.
 
-### `backend/FCI.Api/Controllers/`
+### `backend/Orqentis.Api/Controllers/`
 
 - `ContractsController.cs` — endpoints from spec §7 table:
   - `GET    /contracts`
@@ -42,12 +42,12 @@ Sprints 2, 3 merged. `FCI.Data` migrations applied to a dev Postgres (Sprint 1 d
   - `GET /workspaces/{id}/tables`
 - `HealthController.cs` — `/health/live`, `/health/ready` (no auth).
 
-### `backend/FCI.Api/Services/`
+### `backend/Orqentis.Api/Services/`
 
 - `IContractStore.cs` + `ContractStore.cs` — EF-backed CRUD + version snapshotting.
   Every `PUT` creates a `contract_versions` row.
 
-### `backend/FCI.Api/Program.cs`
+### `backend/Orqentis.Api/Program.cs`
 
 Wire up:
 
@@ -56,12 +56,12 @@ Wire up:
 - Authorization (default policy: authenticated user)
 - Middleware order: `UseSerilogRequestLogging` → `UseCorrelation` → `UseAuthentication`
   → `UseAuthorization` → `UseTenantResolution` → `MapControllers`
-- DI: `services.AddFciEngine()`, `AddFciData(connectionString)`, `AddFciAuth(...)`
+- DI: `services.AddOrqentisEngine()`, `AddOrqentisData(connectionString)`, `AddOrqentisAuth(...)`
 - CORS: only `https://app.fabric.microsoft.com` and the Static Web App origin
 - Health checks for Postgres + Key Vault
 - ProblemDetails (RFC 7807) for all errors
 
-### Tests (`backend/FCI.Tests/FCI.Api.Tests/`)
+### Tests (`backend/Orqentis.Tests/Orqentis.Api.Tests/`)
 
 - `Controllers/ContractsControllerTests.cs` — uses `WebApplicationFactory<Program>` +
   Testcontainers Postgres.
@@ -71,7 +71,7 @@ Wire up:
 
 ## DTOs (mirror to TS in Sprint 5)
 
-Place in `backend/FCI.Api/Dtos/`. Records, all `required`, ISO-8601 timestamps as `string`.
+Place in `backend/Orqentis.Api/Dtos/`. Records, all `required`, ISO-8601 timestamps as `string`.
 
 ```csharp
 public sealed record ContractSummaryDto(
