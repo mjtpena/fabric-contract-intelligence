@@ -103,10 +103,14 @@ jobs:
         shell: bash
         run: |
           host=$(az staticwebapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].defaultHostname" -o tsv)
+          app_id=$(az staticwebapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].id" -o tsv)
           if [ -z "$host" ]; then
             echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://fabric.orqentis.com" >> "$GITHUB_ENV"
           else
             echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://$host" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$app_id" ]; then
+            echo "ORQENTIS_WORKLOAD_FRONTEND_APP_ID=$app_id" >> "$GITHUB_ENV"
           fi
 
       - name: Package workload manifest
