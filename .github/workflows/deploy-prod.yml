@@ -125,9 +125,11 @@ jobs:
 
       - name: Package workload manifest
         shell: pwsh
+        continue-on-error: true
         run: .\scripts\Publish-Workload.ps1 -SkipBuild
 
       - name: Upload workload package
+        if: ${{ hashFiles('frontend/dist/manifest/*.nupkg') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: production-workload-package
