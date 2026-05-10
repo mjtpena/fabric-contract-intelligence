@@ -1,7 +1,6 @@
 param namePrefix string
 param environment string
 param location string
-param suffix string
 param appServicePlanId string
 param keyVaultUri string
 param appInsightsConnectionString string
@@ -11,7 +10,7 @@ param openAiEndpoint string
 param tags object
 
 resource app 'Microsoft.Web/sites@2024-04-01' = {
-  name: '${namePrefix}-${environment}-api-${suffix}'
+  name: '${namePrefix}-${environment}-api'
   location: location
   tags: tags
   kind: 'app,linux'

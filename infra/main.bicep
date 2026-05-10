@@ -101,7 +101,6 @@ module api 'modules/app-service.bicep' = {
     namePrefix: namePrefix
     environment: environment
     location: location
-    suffix: resourceSuffix
     appServicePlanId: appPlan.outputs.planId
     keyVaultUri: keyvault.outputs.vaultUri
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString

@@ -5,13 +5,15 @@ param suffix string
 param apiBackendResourceId string
 param tags object
 
+var swaLocation = location == 'australiaeast' ? 'eastasia' : location
+
 resource swa 'Microsoft.Web/staticSites@2024-04-01' = {
   name: '${namePrefix}-${environment}-swa-${suffix}'
-  location: location
+  location: swaLocation
   tags: tags
   sku: { name: environment == 'production' ? 'Standard' : 'Free', tier: environment == 'production' ? 'Standard' : 'Free' }
   properties: {
-    repositoryUrl: ''
+    repositoryUrl: 'https://github.com/mjtpena/fabric-contract-intelligence'
     branch: 'main'
     buildProperties: { skipGithubActionWorkflowGeneration: true }
   }
