@@ -2,7 +2,7 @@
   "$schema": "https://learn.microsoft.com/fabric/workload-development-kit/manifest-schema/workload-manifest.schema.json",
   "workloadId": "Org.Orqentis",
   "name": "Org.Orqentis",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "displayName": "Orqentis",
   "description": "Orqentis data contract enforcement platform.",
   "publisher": "Orqentis",
