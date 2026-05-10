@@ -109,6 +109,16 @@ jobs:
           npm ci
           npm run build
 
+      - name: Resolve frontend URL for workload package
+        shell: bash
+        run: |
+          host=$(az staticwebapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].defaultHostname" -o tsv)
+          if [ -z "$host" ]; then
+            echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://fabric.orqentis.com" >> "$GITHUB_ENV"
+          else
+            echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://$host" >> "$GITHUB_ENV"
+          fi
+
       - name: Package workload manifest
         shell: pwsh
         run: .\scripts\Publish-Workload.ps1 -SkipBuild
