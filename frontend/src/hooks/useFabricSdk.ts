@@ -5,6 +5,7 @@ import {
   WorkloadClient,
 } from '@ms-fabric/workload-client';
 import { useAppStore } from '@/store/appStore';
+import { parseFabricPathContext } from '@/utils/fabricPathContext';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -132,11 +133,12 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
 
   initializationPromise = (async () => {
     const searchParams = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
+    const pathContext = typeof window === 'undefined' ? null : parseFabricPathContext(window.location.pathname);
     const fallbackRuntime: FabricSdkRuntime = {
       isHosted: false,
-      itemId: searchParams.get('itemId'),
+      itemId: searchParams.get('itemId') ?? pathContext?.itemId ?? null,
       themeMode: getFallbackThemeMode(),
-      workspaceId: searchParams.get('workspaceId') ?? '',
+      workspaceId: searchParams.get('workspaceId') ?? pathContext?.workspaceId ?? '',
     };
 
     if (!workloadClient) {
@@ -149,9 +151,9 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
 
       return {
         isHosted: true,
-        itemId: searchParams.get('itemId'),
+        itemId: searchParams.get('itemId') ?? pathContext?.itemId ?? null,
         themeMode: getThemeMode(theme.colorScheme, theme.name),
-        workspaceId: searchParams.get('workspaceId') ?? '',
+        workspaceId: searchParams.get('workspaceId') ?? pathContext?.workspaceId ?? '',
       };
     } catch {
       return fallbackRuntime;

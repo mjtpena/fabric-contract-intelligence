@@ -7,6 +7,7 @@ import App from './App';
 
 const {
   getAccessTokenMock,
+  loadItemDefinitionMock,
   notifyErrorMock,
   notifyInfoMock,
   notifySuccessMock,
@@ -15,6 +16,7 @@ const {
   saveItemDefinitionMock,
 } = vi.hoisted(() => ({
   getAccessTokenMock: vi.fn().mockResolvedValue(''),
+  loadItemDefinitionMock: vi.fn().mockResolvedValue(null),
   notifyErrorMock: vi.fn().mockResolvedValue(undefined),
   notifyInfoMock: vi.fn().mockResolvedValue(undefined),
   notifySuccessMock: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +33,7 @@ vi.mock('./hooks/useFabricSdk', () => ({
     isHosted: false,
     isReady: true,
     itemId: null,
+    loadItemDefinition: loadItemDefinitionMock,
     notifyError: notifyErrorMock,
     notifyInfo: notifyInfoMock,
     notifySuccess: notifySuccessMock,
@@ -89,5 +92,22 @@ describe('App', () => {
     expect(screen.getByText('Contract library')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Contracts' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Workspace settings' })).toBeInTheDocument();
+  });
+
+  it('resolves Fabric workspace deep links to the contract editor', () => {
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <MemoryRouter
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+          initialEntries={[
+            '/groups/8e15a176-ac93-4ed2-9540-818214ab1199/Org.Orqentis.Contract/64aad0c5-cb6e-443b-b20c-995b95d6f1e3?experience=fabric-developer',
+          ]}
+        >
+          <App />
+        </MemoryRouter>
+      </FluentProvider>,
+    );
+
+    expect(screen.getByText('Start drafting')).toBeInTheDocument();
   });
 });

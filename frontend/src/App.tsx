@@ -1,4 +1,4 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { Body1, Title1, makeStyles, tokens } from '@fluentui/react-components';
 import { ContractDetailPage } from './pages/ContractDetailPage';
 import { ContractEditorPage } from './pages/ContractEditorPage';
@@ -10,6 +10,7 @@ import { AISuggestPage } from './pages/AISuggestPage';
 import { NLQueryPage } from './pages/NLQueryPage';
 import { PolicyEditorPage } from './pages/PolicyEditorPage';
 import { AlertsDashboardPage } from './pages/AlertsDashboardPage';
+import { resolveWorkloadRouteForItemType } from './utils/fabricPathContext';
 
 const useStyles = makeStyles({
   root: {
@@ -81,9 +82,31 @@ function WorkloadLayout() {
   );
 }
 
+function FabricDeepLinkRoute() {
+  const { id, itemType } = useParams();
+  const route = resolveWorkloadRouteForItemType(itemType ?? '');
+
+  if (!route) {
+    return <Navigate to="/contracts" replace />;
+  }
+
+  if (!id) {
+    return <Navigate to={route} replace />;
+  }
+
+  if (route === '/contracts/runs') {
+    return <Navigate to={`/contracts/runs?contractId=${encodeURIComponent(id)}`} replace />;
+  }
+
+  return <Navigate to={`${route}?id=${encodeURIComponent(id)}`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
+      {/* Fabric deep-link route shape when opening items from workspace list */}
+      <Route path="/groups/:workspaceId/:itemType/:id/*" element={<FabricDeepLinkRoute />} />
+
       {/* Public landing page at / */}
       <Route path="/" element={<LandingPage />} />
 
@@ -94,6 +117,7 @@ export default function App() {
       {/* Legacy fallback: policy/report item routes Fabric may deep-link to */}
       <Route path="/contracts/editor" element={<ContractEditorPage />} />
       <Route path="/contracts/runs" element={<EnforcementRunPage />} />
+      <Route path="*" element={<Navigate to="/contracts" replace />} />
     </Routes>
   );
 }
