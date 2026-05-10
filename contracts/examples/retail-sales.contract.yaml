@@ -52,12 +52,12 @@ schema:
         required: true
         description: Units sold.
       - name: unit_price
-        logicalType: decimal
+        logicalType: number
         physicalType: DECIMAL
         required: true
         description: Per-unit price in AUD.
       - name: total_amount
-        logicalType: decimal
+        logicalType: number
         physicalType: DECIMAL
         required: true
         description: Line total after discount.
