@@ -1,7 +1,4 @@
-/**
- * Typed API client for the Orqentis backend. Sprint-04/05 will flesh this out.
- * Always send the X-Correlation-Id and bearer token from the workload-client.
- */
+/** Lightweight backend connectivity probe used by shell/runtime diagnostics. */
 export interface OrqentisApiOptions {
   baseUrl: string;
   /** Function returning a fresh user-bearer token. Implement via workload-client. */
@@ -18,6 +15,4 @@ export class OrqentisApi {
     if (!res.ok) throw new Error(`ping failed: ${res.status}`);
     return res.json();
   }
-
-  // TODO(sprint-04): listContracts, getContract, createContract, etc.
 }
