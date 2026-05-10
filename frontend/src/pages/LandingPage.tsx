@@ -450,22 +450,22 @@ export function LandingPage() {
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
   const productShots = [
     {
-      src: '/images/screenshots/contract-library.png',
-      alt: 'Contract library page in Orqentis',
-      title: 'Contract library',
-      text: 'Browse contracts, enforce runs, and open contract details from the central workload surface.',
+      src: '/images/screenshots/fabric-workload-hub.png',
+      alt: 'Orqentis workload entry inside Microsoft Fabric',
+      title: 'Fabric workload hub',
+      text: 'Orqentis surfaced directly in Microsoft Fabric so teams launch contract workflows from the native portal.',
     },
     {
-      src: '/images/screenshots/ai-suggest-workflow.png',
-      alt: 'AI suggest page in Orqentis',
-      title: 'AI suggest workflow',
-      text: 'Generate ODCS-compliant drafts with AI assistance, then refine and save directly in the editor flow.',
+      src: '/images/screenshots/fabric-workspace-view.png',
+      alt: 'Fabric workspace view with Orqentis showcase workspace',
+      title: 'Fabric workspace context',
+      text: 'Contract operations run in the same workspace model as the rest of your Fabric estate for consistent governance.',
     },
     {
-      src: '/images/screenshots/alerts-dashboard.png',
-      alt: 'Alerts dashboard page in Orqentis',
-      title: 'Alerts dashboard',
-      text: 'Review breach alerts and routing outcomes to triage contract issues and close remediation loops.',
+      src: '/images/screenshots/fabric-home-experience.png',
+      alt: 'Microsoft Fabric home experience',
+      title: 'End-to-end in Fabric',
+      text: 'From home navigation to workload execution, the experience stays inside Fabric rather than a separate external app.',
     },
   ];
 
@@ -595,11 +595,11 @@ export function LandingPage() {
       {/* Browser captures */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <section className={styles.section}>
-          <div className={styles.sectionLabel}>Live product capture</div>
-          <Title2 className={styles.sectionTitle}>Screenshots from a real browser session</Title2>
+          <div className={styles.sectionLabel}>Fabric portal capture</div>
+          <Title2 className={styles.sectionTitle}>Screenshots from authenticated Microsoft Fabric sessions</Title2>
           <div className={styles.sectionSub}>
-            Captured from an active Chrome run and updated with this release to reflect the current workload
-            experience.
+            Captured in signed-in Chrome sessions against app.fabric.microsoft.com to reflect the real in-portal
+            workload experience.
           </div>
           <div className={styles.screenshotGrid}>
             {productShots.map((shot) => (
