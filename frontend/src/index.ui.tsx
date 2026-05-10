@@ -1,23 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { FluentProvider, webDarkTheme, webLightTheme } from '@fluentui/react-components';
-import { BrowserRouter } from 'react-router-dom';
 import type { InitParams } from '@ms-fabric/workload-client';
-import App from './App';
-import { useFabricSdk } from './hooks/useFabricSdk';
+import AppShell from './components/AppShell';
 import './index.css';
-
-function AppShell() {
-  const { themeMode } = useFabricSdk();
-
-  return (
-    <FluentProvider theme={themeMode === 'dark' ? webDarkTheme : webLightTheme}>
-      <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        <App />
-      </BrowserRouter>
-    </FluentProvider>
-  );
-}
 
 /**
  * UI iframe initialization — called by bootstrap() when Fabric loads this app
