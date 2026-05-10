@@ -24,7 +24,7 @@ resource gpt4o 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
     capacity: environment == 'production' ? 50 : 10
   }
   properties: {
-    model: { format: 'OpenAI', name: 'gpt-4o', version: '2024-08-06' }
+    model: { format: 'OpenAI', name: 'gpt-4o', version: '2024-11-20' }
   }
 }
 
