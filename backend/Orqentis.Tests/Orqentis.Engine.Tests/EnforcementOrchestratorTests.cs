@@ -1,13 +1,12 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Orqentis.Engine;
 using Orqentis.Engine.Common;
 using Orqentis.Engine.Delta;
 using Orqentis.Engine.Evaluation;
 using Orqentis.Engine.Models;
 using Orqentis.Engine.Odcs;
-
-using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 
 namespace Orqentis.Tests.Orqentis.Engine.Tests;
 

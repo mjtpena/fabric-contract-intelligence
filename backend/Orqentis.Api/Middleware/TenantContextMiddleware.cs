@@ -1,8 +1,7 @@
-using Orqentis.Api.Auth;
-
-using Orqentis.Data;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Orqentis.Api.Auth;
+using Orqentis.Data;
 
 namespace Orqentis.Api.Middleware;
 

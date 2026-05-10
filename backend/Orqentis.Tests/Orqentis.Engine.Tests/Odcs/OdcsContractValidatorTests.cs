@@ -1,8 +1,7 @@
-using Orqentis.Engine.Odcs;
-using Orqentis.Tests.Fixtures;
-
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Orqentis.Engine.Odcs;
+using Orqentis.Tests.Fixtures;
 
 namespace Orqentis.Tests.Orqentis.Engine.Tests.Odcs;
 

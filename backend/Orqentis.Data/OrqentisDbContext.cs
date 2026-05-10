@@ -1,5 +1,5 @@
-using Orqentis.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Orqentis.Data.Entities;
 
 namespace Orqentis.Data;
 

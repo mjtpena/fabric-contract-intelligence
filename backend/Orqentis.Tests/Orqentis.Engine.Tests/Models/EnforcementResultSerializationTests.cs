@@ -1,8 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Orqentis.Engine.Models;
-
 using FluentAssertions;
+using Orqentis.Engine.Models;
 
 namespace Orqentis.Tests.Orqentis.Engine.Tests.Models;
 

@@ -1,7 +1,7 @@
-using Orqentis.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Orqentis.Data;
 
 namespace Orqentis.Api.Auth;
 
@@ -22,16 +22,16 @@ public sealed class EnterpriseAttribute : Attribute, IAsyncAuthorizationFilter
         context.HttpContext.Response.StatusCode = StatusCodes.Status402PaymentRequired;
 
         if (await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
-            {
-                HttpContext = context.HttpContext,
-                ProblemDetails =
+        {
+            HttpContext = context.HttpContext,
+            ProblemDetails =
                 {
                     Status = StatusCodes.Status402PaymentRequired,
                     Title = "Enterprise tier required.",
                     Detail = "This endpoint is only available to enterprise tenants.",
                     Type = "https://httpstatuses.com/402",
                 },
-            }).ConfigureAwait(false))
+        }).ConfigureAwait(false))
         {
             context.Result = new EmptyResult();
             return;

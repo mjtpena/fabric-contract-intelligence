@@ -31,6 +31,7 @@ export function ItemEditorDefaultView({
   return <ViewNavigationContext.Provider value={value}>{children}</ViewNavigationContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useViewNavigation() {
   const context = useContext(ViewNavigationContext);
 

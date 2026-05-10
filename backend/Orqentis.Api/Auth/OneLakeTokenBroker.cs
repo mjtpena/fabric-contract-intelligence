@@ -1,7 +1,7 @@
 using Azure.Core;
 using Azure.Identity;
-using Orqentis.Data;
 using Microsoft.Extensions.Options;
+using Orqentis.Data;
 
 namespace Orqentis.Api.Auth;
 

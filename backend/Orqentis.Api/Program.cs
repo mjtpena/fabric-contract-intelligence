@@ -1,16 +1,16 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Orqentis.Api.Auth;
-using Orqentis.Api.Middleware;
-using Orqentis.Api.Services;
-using Orqentis.AI;
-using Orqentis.Data;
-using Orqentis.Engine;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Orqentis.AI;
+using Orqentis.Api.Auth;
+using Orqentis.Api.Middleware;
+using Orqentis.Api.Services;
+using Orqentis.Data;
+using Orqentis.Engine;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);

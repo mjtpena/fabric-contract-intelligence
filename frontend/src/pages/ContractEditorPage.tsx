@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
   Button,
@@ -220,7 +220,7 @@ function EditorWorkspace({
     }
   }, [draft, navigateTo]);
 
-  const saveDraft = async (nextStatus?: string) => {
+  const saveDraft = useCallback(async (nextStatus?: string) => {
     if (!draft) {
       return;
     }
@@ -248,44 +248,44 @@ function EditorWorkspace({
       return;
     }
 
+    try {
+      const savedContract =
+        nextStatus === 'active'
+          ? await actions.activate(preparedDraft)
+          : await actions.save(preparedDraft);
+
+      await sdk.notifySuccess(
+        'Contract saved',
+        nextStatus === 'active'
+          ? 'The contract was saved and activated.'
+          : 'The contract draft was saved successfully.',
+      );
+
+      const persistedState: PersistedEditorState = {
+        contractId: savedContract.id,
+        draft: {
+          ...preparedDraft,
+          id: savedContract.id,
+        },
+      };
+
       try {
-        const savedContract =
-          nextStatus === 'active'
-            ? await actions.activate(preparedDraft)
-            : await actions.save(preparedDraft);
-
-        await sdk.notifySuccess(
-          'Contract saved',
-          nextStatus === 'active'
-            ? 'The contract was saved and activated.'
-            : 'The contract draft was saved successfully.',
+        await sdk.saveItemDefinition(JSON.stringify(persistedState));
+      } catch {
+        await sdk.notifyInfo(
+          'Item state not synced',
+          'Contract data was saved, but Fabric item metadata could not be updated.',
         );
-
-        const persistedState: PersistedEditorState = {
-          contractId: savedContract.id,
-          draft: {
-            ...preparedDraft,
-            id: savedContract.id,
-          },
-        };
-
-        try {
-          await sdk.saveItemDefinition(JSON.stringify(persistedState));
-        } catch {
-          await sdk.notifyInfo(
-            'Item state not synced',
-            'Contract data was saved, but Fabric item metadata could not be updated.',
-          );
-        }
-
-        navigateToDetail(savedContract.id);
-      } catch (saveError) {
-        const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
-        await sdk.notifyError('Save failed', message);
       }
-  };
 
-  const handleRunNow = async () => {
+      navigateToDetail(savedContract.id);
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
+      await sdk.notifyError('Save failed', message);
+    }
+  }, [actions, client, draft, navigateToDetail, onValidationChange, sdk, validationResult]);
+
+  const handleRunNow = useCallback(async () => {
     if (!draft?.id) {
       await sdk.notifyInfo('Save required', 'Save the contract before requesting a run.');
       return;
@@ -299,7 +299,7 @@ function EditorWorkspace({
       const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
       await sdk.notifyError('Run failed', message);
     }
-  };
+  }, [actions, draft?.id, navigateToRun, sdk]);
 
   const additionalToolbars = useMemo<RibbonToolbar[]>(
     () => [
@@ -348,7 +348,7 @@ function EditorWorkspace({
         },
       }),
     ],
-    [draft, navigateToDetail],
+    [draft, handleRunNow, navigateToDetail, saveDraft],
   );
 
   return (

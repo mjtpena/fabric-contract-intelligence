@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Orqentis.Data;
 using Orqentis.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace Orqentis.Api.Services;
 

@@ -1,7 +1,6 @@
+using FluentAssertions;
 using Orqentis.Engine.Delta;
 using Orqentis.Tests.Fixtures;
-
-using FluentAssertions;
 
 namespace Orqentis.Tests.Orqentis.Engine.Tests.Delta;
 

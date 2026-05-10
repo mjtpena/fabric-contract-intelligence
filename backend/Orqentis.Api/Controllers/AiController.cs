@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Mvc;
+using Orqentis.AI;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
-using Orqentis.AI;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Orqentis.Api.Controllers;
 

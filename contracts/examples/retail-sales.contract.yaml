@@ -24,7 +24,7 @@ info:
       role: consumer
 
 servers:
-  - name: fabric-production
+  - server: fabric-production
     type: onelake
     host: onelake.dfs.fabric.microsoft.com
     path: abfss://retail@onelake.dfs.fabric.microsoft.com/RetailLakehouse.Lakehouse/Tables/sales_transactions

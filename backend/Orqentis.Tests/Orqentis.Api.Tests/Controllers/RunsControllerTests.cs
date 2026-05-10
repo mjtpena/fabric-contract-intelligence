@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Orqentis.AI;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
-using Orqentis.AI;
 using Orqentis.Data;
 using Orqentis.Engine;
 using Orqentis.Tests.Orqentis.Api.Tests.Infrastructure;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Orqentis.Tests.Orqentis.Api.Tests.Controllers;
 

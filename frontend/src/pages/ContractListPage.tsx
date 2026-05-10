@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
   Button,
@@ -122,6 +122,23 @@ export function ContractListPage() {
     ? federatedContracts
     : contracts;
 
+  const handleRunNow = useCallback(async (contractId: string) => {
+    try {
+      const run = await runNow(contractId);
+      await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
+      if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+        const response = await opsClient.listFederatedContracts();
+        setFederatedContracts(response.contracts);
+      } else {
+        await refresh();
+      }
+      navigate(`/contracts/${contractId}/runs/${run.runId}`);
+    } catch (runError) {
+      const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
+      await sdk.notifyError('Run failed', message);
+    }
+  }, [navigate, opsClient, refresh, runNow, sdk, tier, workspaceScope]);
+
   const columns = useMemo(
     () =>
       [
@@ -167,25 +184,8 @@ export function ContractListPage() {
           renderHeaderCell: () => 'Actions',
         }),
       ],
-    [navigate, styles.rowActions],
+    [handleRunNow, navigate, styles.rowActions],
   );
-
-  const handleRunNow = async (contractId: string) => {
-    try {
-      const run = await runNow(contractId);
-      await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
-      if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
-        const response = await opsClient.listFederatedContracts();
-        setFederatedContracts(response.contracts);
-      } else {
-        await refresh();
-      }
-      navigate(`/contracts/${contractId}/runs/${run.runId}`);
-    } catch (runError) {
-      const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
-      await sdk.notifyError('Run failed', message);
-    }
-  };
 
   return (
     <section className={styles.root}>

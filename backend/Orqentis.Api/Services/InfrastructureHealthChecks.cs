@@ -1,5 +1,5 @@
-using Orqentis.Data;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Orqentis.Data;
 
 namespace Orqentis.Api.Services;
 

@@ -1,8 +1,7 @@
-using Orqentis.Engine.Delta;
-using Orqentis.Tests.Fixtures;
-
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Orqentis.Engine.Delta;
+using Orqentis.Tests.Fixtures;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;

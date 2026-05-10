@@ -6,7 +6,7 @@ import App from './App';
 import { useFabricSdk } from './hooks/useFabricSdk';
 import './index.css';
 
-function AppShell() {
+export function AppShell() {
   const { themeMode } = useFabricSdk();
 
   return (

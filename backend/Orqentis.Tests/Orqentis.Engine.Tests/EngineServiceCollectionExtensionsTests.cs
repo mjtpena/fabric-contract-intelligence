@@ -1,10 +1,9 @@
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Orqentis.Engine;
 using Orqentis.Engine.Delta;
 using Orqentis.Engine.Evaluation;
 using Orqentis.Engine.Odcs;
-
-using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Orqentis.Tests.Orqentis.Engine.Tests;
 
