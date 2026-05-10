@@ -57,6 +57,8 @@ public sealed class EnforcementRun
     [Column("status")] public string Status { get; set; } = "running";
     [Column("delta_table_version")] public long? DeltaTableVersion { get; set; }
     [Column("breach_score")] public decimal? BreachScore { get; set; }
+    [Column("breach_score_breakdown")] public string? BreachScoreBreakdown { get; set; }
+    [Column("activator_triggered")] public bool ActivatorTriggered { get; set; }
     [Column("result_json")] public string ResultJson { get; set; } = "{}";
     [Column("correlation_id")] public string CorrelationId { get; set; } = string.Empty;
 }
@@ -71,6 +73,17 @@ public sealed class ContractPolicy
     [Column("action_type")] public string ActionType { get; set; } = "notify";
     [Column("action_config_json")] public string ActionConfigJson { get; set; } = "{}";
     [Column("enabled")] public bool Enabled { get; set; } = true;
+    [Column("created_at")] public DateTimeOffset CreatedAt { get; set; }
+    [Column("updated_at")] public DateTimeOffset UpdatedAt { get; set; }
+}
+
+[Table("workspace_links")]
+public sealed class WorkspaceLink
+{
+    [Column("link_id")] public Guid LinkId { get; set; }
+    [Column("tenant_id")] public Guid TenantId { get; set; }
+    [Column("workspace_id")] public Guid WorkspaceId { get; set; }
+    [Column("linked_workspace_id")] public Guid LinkedWorkspaceId { get; set; }
     [Column("created_at")] public DateTimeOffset CreatedAt { get; set; }
     [Column("updated_at")] public DateTimeOffset UpdatedAt { get; set; }
 }

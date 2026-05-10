@@ -33,6 +33,11 @@ import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractDetail, ContractDraft, ContractValidationResult } from '@/models/Contract';
 
+interface PersistedEditorState {
+  contractId: string | null;
+  draft: ContractDraft | null;
+}
+
 const useStyles = makeStyles({
   layout: {
     display: 'flex',
@@ -76,7 +81,9 @@ export function ContractEditorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const sdk = useFabricSdk();
-  const contractId = routeId ?? searchParams.get('id');
+  const [persistedEditorState, setPersistedEditorState] = useState<PersistedEditorState | null>(null);
+  const [itemDefinitionLoaded, setItemDefinitionLoaded] = useState(false);
+  const contractId = routeId ?? searchParams.get('id') ?? persistedEditorState?.contractId ?? null;
 
   const client = useMemo(
     () =>
@@ -95,12 +102,46 @@ export function ContractEditorPage() {
   const [validationResult, setValidationResult] = useState<ContractValidationResult | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    void sdk.loadItemDefinition()
+      .then((persisted) => {
+        if (cancelled || !persisted) {
+          setItemDefinitionLoaded(true);
+          return;
+        }
+
+        setPersistedEditorState(parsePersistedEditorState(persisted));
+        setItemDefinitionLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setItemDefinitionLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sdk]);
+
+  useEffect(() => {
     if (!contract) {
       return;
     }
 
     setDraft(toDraft(contract));
   }, [contract]);
+
+  useEffect(() => {
+    if (contract || draft || !itemDefinitionLoaded || !persistedEditorState?.draft) {
+      return;
+    }
+
+    setDraft(persistedEditorState.draft);
+  }, [contract, draft, itemDefinitionLoaded, persistedEditorState]);
 
   return (
     <ItemEditorDefaultView initialView={getInitialView(contract)}>
@@ -207,24 +248,41 @@ function EditorWorkspace({
       return;
     }
 
-    try {
-      const savedContract =
-        nextStatus === 'active'
-          ? await actions.activate(preparedDraft)
-          : await actions.save(preparedDraft);
+      try {
+        const savedContract =
+          nextStatus === 'active'
+            ? await actions.activate(preparedDraft)
+            : await actions.save(preparedDraft);
 
-      await sdk.notifySuccess(
-        'Contract saved',
-        nextStatus === 'active'
-          ? 'The contract was saved and activated.'
-          : 'The contract draft was saved successfully.',
-      );
+        await sdk.notifySuccess(
+          'Contract saved',
+          nextStatus === 'active'
+            ? 'The contract was saved and activated.'
+            : 'The contract draft was saved successfully.',
+        );
 
-      navigateToDetail(savedContract.id);
-    } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
-      await sdk.notifyError('Save failed', message);
-    }
+        const persistedState: PersistedEditorState = {
+          contractId: savedContract.id,
+          draft: {
+            ...preparedDraft,
+            id: savedContract.id,
+          },
+        };
+
+        try {
+          await sdk.saveItemDefinition(JSON.stringify(persistedState));
+        } catch {
+          await sdk.notifyInfo(
+            'Item state not synced',
+            'Contract data was saved, but Fabric item metadata could not be updated.',
+          );
+        }
+
+        navigateToDetail(savedContract.id);
+      } catch (saveError) {
+        const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
+        await sdk.notifyError('Save failed', message);
+      }
   };
 
   const handleRunNow = async () => {
@@ -461,4 +519,40 @@ function toDraft(contract: ContractDetail): ContractDraft {
 
 function isGuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parsePersistedEditorState(raw: string): PersistedEditorState | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<PersistedEditorState>;
+    const contractId = typeof parsed.contractId === 'string' ? parsed.contractId : null;
+    const draft = isPersistedDraft(parsed.draft) ? parsed.draft : null;
+
+    if (!contractId && !draft) {
+      return null;
+    }
+
+    return {
+      contractId,
+      draft,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isPersistedDraft(value: unknown): value is ContractDraft {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const draft = value as Partial<ContractDraft>;
+  return typeof draft.name === 'string'
+    && typeof draft.description === 'string'
+    && typeof draft.status === 'string'
+    && typeof draft.version === 'string'
+    && typeof draft.odcsYaml === 'string'
+    && typeof draft.ownerEmail === 'string'
+    && typeof draft.targetTablePath === 'string'
+    && typeof draft.targetLakehouseId === 'string'
+    && typeof draft.commitMessage === 'string';
 }

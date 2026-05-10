@@ -8,6 +8,30 @@ namespace Orqentis.Tests.Orqentis.Api.Tests.Controllers;
 public sealed class ContractsControllerTests
 {
     [Fact]
+    public async Task CreateAsync_AiGenerateMode_CreatesContractForEnterpriseTenant()
+    {
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateAuthenticatedClient(TestIdentifiers.EnterpriseEntraTenantId);
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/v1/contracts",
+            new CreateContractRequest
+            {
+                Mode = "ai_generate",
+                Name = "AI Generated Contract",
+                Description = "AI generated contract",
+                OwnerEmail = "owner@example.com",
+                TargetTablePath = "abfss://showcase@onelake.dfs.fabric.microsoft.com/ShowcaseLakehouse.Lakehouse/Tables/owid_co2_demo",
+                TargetLakehouseId = TestIdentifiers.LakehouseId,
+            });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<ContractDto>();
+        created.Should().NotBeNull();
+        created!.AiSuggested.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ContractLifecycle_CreateUpdateVersionDelete_WorksEndToEnd()
     {
         using var factory = new ApiWebApplicationFactory();

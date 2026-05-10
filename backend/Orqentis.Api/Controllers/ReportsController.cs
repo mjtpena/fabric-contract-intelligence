@@ -1,27 +1,79 @@
 using Orqentis.Api.Auth;
+using Orqentis.Api.Dtos;
+using Orqentis.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Orqentis.Api.Controllers;
 
-/// <summary>Enterprise-only placeholder report endpoints.</summary>
+/// <summary>Enterprise-only report endpoints.</summary>
 [ApiController]
 [Route("v1/reports")]
 [Enterprise]
 public sealed class ReportsController : ControllerBase
 {
-    /// <summary>Placeholder summary report endpoint.</summary>
-    [HttpGet("summary")]
-    [ProducesResponseType(StatusCodes.Status501NotImplemented)]
-    public IActionResult SummaryAsync() => Problem(
-        statusCode: StatusCodes.Status501NotImplemented,
-        title: "Not implemented.",
-        detail: "Reporting is scheduled for a later sprint.");
+    private readonly OrqentisDbContext _dbContext;
+    private readonly ITenantContext _tenantContext;
 
-    /// <summary>Placeholder audit report endpoint.</summary>
+    public ReportsController(OrqentisDbContext dbContext, ITenantContext tenantContext)
+    {
+        _dbContext = dbContext;
+        _tenantContext = tenantContext;
+    }
+
+    /// <summary>Aggregated run-status summary for the current tenant workspace scope.</summary>
+    [HttpGet("summary")]
+    [ProducesResponseType(typeof(ReportSummaryDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ReportSummaryDto>> SummaryAsync(CancellationToken ct)
+    {
+        var query = from run in _dbContext.EnforcementRuns.AsNoTracking()
+                    join contract in _dbContext.Contracts.AsNoTracking() on run.ContractId equals contract.ContractId
+                    where _tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId
+                    select run;
+
+        var runs = await query.ToListAsync(ct).ConfigureAwait(false);
+        var latest = runs.OrderByDescending(run => run.TriggeredAt).FirstOrDefault();
+
+        return Ok(new ReportSummaryDto
+        {
+            TotalRuns = runs.Count,
+            PassedRuns = runs.Count(run => string.Equals(run.Status, "passed", StringComparison.OrdinalIgnoreCase)),
+            FailedRuns = runs.Count(run => string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase)),
+            WarnedRuns = runs.Count(run => string.Equals(run.Status, "warned", StringComparison.OrdinalIgnoreCase)),
+            ErrorRuns = runs.Count(run => string.Equals(run.Status, "error", StringComparison.OrdinalIgnoreCase)),
+            LastRunAt = latest is null ? null : ToIsoString(latest.TriggeredAt),
+        });
+    }
+
+    /// <summary>Recent run audit rows for the current tenant workspace scope.</summary>
     [HttpGet("audit")]
-    [ProducesResponseType(StatusCodes.Status501NotImplemented)]
-    public IActionResult AuditAsync() => Problem(
-        statusCode: StatusCodes.Status501NotImplemented,
-        title: "Not implemented.",
-        detail: "Audit reporting is scheduled for a later sprint.");
+    [ProducesResponseType(typeof(IReadOnlyList<AuditReportRowDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AuditReportRowDto>>> AuditAsync(CancellationToken ct)
+    {
+        var rows = await (
+            from run in _dbContext.EnforcementRuns.AsNoTracking()
+            join contract in _dbContext.Contracts.AsNoTracking() on run.ContractId equals contract.ContractId
+            where _tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId
+            orderby run.TriggeredAt descending
+            select new AuditReportRowDto
+            {
+                RunId = run.RunId,
+                ContractId = run.ContractId,
+                ContractName = contract.Name,
+                Status = run.Status,
+                TriggeredBy = run.TriggeredBy,
+                TriggeredAt = ToIsoString(run.TriggeredAt),
+                CompletedAt = run.CompletedAt == null ? null : ToIsoString(run.CompletedAt.Value),
+                DeltaTableVersion = run.DeltaTableVersion,
+                BreachScore = run.BreachScore,
+                CorrelationId = run.CorrelationId,
+            })
+            .Take(200)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return Ok(rows);
+    }
+
+    private static string ToIsoString(DateTimeOffset value) => value.UtcDateTime.ToString("O");
 }

@@ -50,6 +50,10 @@ builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(serviceProvider => serviceProvider.GetRequiredService<HttpTenantContext>());
 builder.Services.AddScoped<IContractStore, ContractStore>();
 builder.Services.AddScoped<IOneLakeTokenBroker, OneLakeTokenBroker>();
+builder.Services.AddHttpClient<IActivatorClient, ActivatorClient>();
+builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.IGenericWebhookSender, Orqentis.Api.Services.Webhooks.GenericWebhookSender>();
+builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.ISlackWebhookSender, Orqentis.Api.Services.Webhooks.SlackWebhookSender>();
+builder.Services.AddScoped<IBreachAlertDispatcher, BreachAlertDispatcher>();
 
 builder.Services.AddOrqentisData(builder.Configuration);
 builder.Services.AddOrqentisEngine();
@@ -119,7 +123,7 @@ builder.Services.AddApplicationInsightsTelemetry();
 var app = builder.Build();
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
-if (!string.IsNullOrWhiteSpace(postgresConnectionString) && app.Environment.IsDevelopment())
+if (!string.IsNullOrWhiteSpace(postgresConnectionString))
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     try
@@ -136,10 +140,7 @@ app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSwagger();
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwaggerUI();
-}
+app.UseSwaggerUI();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -152,6 +153,25 @@ app.UseAuthentication();
 app.UseMiddleware<TenantContextMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var checks = report.Entries.ToDictionary(
+            e => e.Key,
+            e => $"{e.Value.Status.ToString().ToLowerInvariant()}: {e.Value.Description ?? e.Value.Exception?.Message ?? "no detail"}");
+        var result = new
+        {
+            status = report.Status.ToString().ToLowerInvariant(),
+            checks,
+            timestamp = DateTimeOffset.UtcNow,
+        };
+        await context.Response.WriteAsJsonAsync(result);
+    },
+}).AllowAnonymous();
 
 app.Run();
 

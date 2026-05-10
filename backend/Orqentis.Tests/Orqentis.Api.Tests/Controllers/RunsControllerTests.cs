@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
+using Orqentis.Api.Services;
+using Orqentis.AI;
 using Orqentis.Data;
 using Orqentis.Engine;
 using Orqentis.Tests.Orqentis.Api.Tests.Infrastructure;
@@ -17,14 +19,23 @@ public sealed class RunsControllerTests
     {
         var tokenBroker = new CapturingTokenBroker();
         var orchestrator = new StubEnforcementOrchestrator();
+        var scorer = new StubBreachImpactScorer();
+        var advisor = new StubRemediationAdvisor();
+        var dispatcher = new StubBreachAlertDispatcher();
 
         using var factory = new ApiWebApplicationFactory(
             configureServices: services =>
             {
                 services.RemoveAll<IOneLakeTokenBroker>();
                 services.RemoveAll<IEnforcementOrchestrator>();
+                services.RemoveAll<IBreachImpactScorer>();
+                services.RemoveAll<IRemediationAdvisor>();
+                services.RemoveAll<IBreachAlertDispatcher>();
                 services.AddSingleton<IOneLakeTokenBroker>(tokenBroker);
                 services.AddSingleton<IEnforcementOrchestrator>(orchestrator);
+                services.AddSingleton<IBreachImpactScorer>(scorer);
+                services.AddSingleton<IRemediationAdvisor>(advisor);
+                services.AddSingleton<IBreachAlertDispatcher>(dispatcher);
             });
 
         using var client = factory.CreateAuthenticatedClient();
@@ -60,6 +71,8 @@ public sealed class RunsControllerTests
         var dbContext = scope.ServiceProvider.GetRequiredService<OrqentisDbContext>();
         dbContext.EnforcementRuns.Should().ContainSingle();
         dbContext.EnforcementRuns.Single().ResultJson.Should().Contain("\"overallStatus\":\"passed\"");
+        dbContext.EnforcementRuns.Single().BreachScore.Should().Be(67);
+        dbContext.EnforcementRuns.Single().ResultJson.Should().Contain("encounter_id");
 
         var listRuns = await client.GetFromJsonAsync<List<RunSummaryDto>>($"/v1/contracts/{created.Id}/runs");
         listRuns.Should().NotBeNull();

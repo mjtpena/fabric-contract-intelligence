@@ -47,13 +47,17 @@ public sealed record ContractSuggestion
 /// <summary>Sprint 8 deliverable. Computes 0-100 breach severity score for an enforcement run.</summary>
 public interface IBreachImpactScorer
 {
-    Task<BreachScore> ScoreAsync(
+    Task<BreachScore?> ScoreAsync(
         EnforcementResult result,
         ContractDefinition contract,
         CancellationToken ct = default);
 }
 
-public sealed record BreachScore(decimal Score, IReadOnlyList<string> Reasons, string ModelUsed);
+public sealed record BreachScore(
+    decimal Score,
+    IReadOnlyList<string> Reasons,
+    string ModelUsed,
+    IReadOnlyDictionary<string, decimal>? Breakdown = null);
 
 /// <summary>Sprint 8 deliverable. Plain-English remediation suggestions for failed rules.</summary>
 public interface IRemediationAdvisor
@@ -63,3 +67,32 @@ public interface IRemediationAdvisor
         ContractDefinition contract,
         CancellationToken ct = default);
 }
+
+/// <summary>Enterprise-only natural language search over the contract registry.</summary>
+public interface INaturalLanguageQueryHandler
+{
+    Task<NaturalLanguageQueryResponse> QueryAsync(
+        string query,
+        IReadOnlyList<NaturalLanguageContractDocument> contracts,
+        CancellationToken ct = default);
+}
+
+public sealed record NaturalLanguageContractDocument(
+    Guid ContractId,
+    string Name,
+    string? Description,
+    string OwnerEmail,
+    string OdcsYaml,
+    string Version);
+
+public sealed record NaturalLanguageQueryMatch(
+    Guid ContractId,
+    string Name,
+    string Version,
+    string Explanation,
+    double RelevanceScore);
+
+public sealed record NaturalLanguageQueryResponse(
+    string Explanation,
+    IReadOnlyList<NaturalLanguageQueryMatch> Matches,
+    string ModelUsed);

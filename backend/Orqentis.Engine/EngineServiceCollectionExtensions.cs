@@ -13,6 +13,7 @@ public static class EngineServiceCollectionExtensions
     {
         services.TryAddSingleton<ISchemaExtractor, SchemaExtractor>();
         services.AddHttpClient<IDeltaLogReader, DeltaLogReader>();
+        services.AddHttpClient<IFabricSqlClient, FabricSqlClient>();
         services.TryAddSingleton<OdcsContractSerializer>();
         services.TryAddSingleton<IOdcsContractParser, OdcsContractParser>();
         services.TryAddSingleton<IOdcsContractValidator, OdcsContractValidator>();

@@ -1,4 +1,6 @@
 using Orqentis.Api.Auth;
+using Orqentis.Api.Services;
+using Orqentis.AI;
 using Orqentis.Engine;
 using Orqentis.Engine.Models;
 using Orqentis.Engine.Odcs;
@@ -50,4 +52,28 @@ internal sealed class StubEnforcementOrchestrator : IEnforcementOrchestrator
         LastToken = oneLakeOboToken;
         return Task.FromResult(Result);
     }
+}
+
+internal sealed class StubBreachImpactScorer : IBreachImpactScorer
+{
+    public BreachScore? Result { get; set; } = new(67, ["Synthetic breach score for tests."], "test-model");
+
+    public Task<BreachScore?> ScoreAsync(EnforcementResult result, ContractDefinition contract, CancellationToken ct = default) =>
+        Task.FromResult(Result);
+}
+
+internal sealed class StubRemediationAdvisor : IRemediationAdvisor
+{
+    public IReadOnlyList<string> Suggestions { get; set; } = ["Fix upstream null handling for column 'encounter_id'."];
+
+    public Task<IReadOnlyList<string>> SuggestAsync(EnforcementResult result, ContractDefinition contract, CancellationToken ct = default) =>
+        Task.FromResult(Suggestions);
+}
+
+internal sealed class StubBreachAlertDispatcher : IBreachAlertDispatcher
+{
+    public AlertDispatchResult Result { get; set; } = new(false, "none");
+
+    public Task<AlertDispatchResult> DispatchAsync(AlertDispatchRequest request, CancellationToken ct = default) =>
+        Task.FromResult(Result);
 }

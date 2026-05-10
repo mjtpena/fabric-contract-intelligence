@@ -22,6 +22,7 @@ public sealed class OrqentisDbContext : DbContext
     public DbSet<ContractVersion> ContractVersions => Set<ContractVersion>();
     public DbSet<EnforcementRun> EnforcementRuns => Set<EnforcementRun>();
     public DbSet<ContractPolicy> ContractPolicies => Set<ContractPolicy>();
+    public DbSet<WorkspaceLink> WorkspaceLinks => Set<WorkspaceLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,12 +60,19 @@ public sealed class OrqentisDbContext : DbContext
             b.HasIndex(r => r.CorrelationId);
             b.Property(r => r.Status).HasMaxLength(32);
             b.Property(r => r.ResultJson).HasColumnType("jsonb");
+            b.Property(r => r.BreachScoreBreakdown).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<ContractPolicy>(b =>
         {
             b.HasKey(p => p.PolicyId);
             b.Property(p => p.ActionConfigJson).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<WorkspaceLink>(b =>
+        {
+            b.HasKey(link => link.LinkId);
+            b.HasIndex(link => new { link.TenantId, link.WorkspaceId, link.LinkedWorkspaceId }).IsUnique();
         });
     }
 }

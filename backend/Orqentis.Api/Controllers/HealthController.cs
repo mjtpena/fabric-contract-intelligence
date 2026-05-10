@@ -41,7 +41,14 @@ public sealed class HealthController : ControllerBase
             status = report.Status.ToString().ToLowerInvariant(),
             checks = report.Entries.ToDictionary(
                 entry => entry.Key,
-                entry => entry.Value.Status.ToString().ToLowerInvariant()),
+                entry =>
+                {
+                    var s = entry.Value.Status.ToString().ToLowerInvariant();
+                    var detail = entry.Value.Description
+                        ?? entry.Value.Exception?.ToString()
+                        ?? string.Empty;
+                    return string.IsNullOrEmpty(detail) ? s : $"{s}: {detail}";
+                }),
             timestamp = DateTimeOffset.UtcNow,
         };
 

@@ -139,6 +139,8 @@ export interface RunSummary {
   completedAt: string | null;
   /** Correlation id echoed by the backend. */
   correlationId: string;
+  /** True when an Activator rule was triggered for this run. */
+  activatorTriggered?: boolean;
 }
 
 /**
@@ -149,6 +151,8 @@ export interface RunDetail extends RunSummary {
   deltaTableVersion: number | null;
   /** API-level breach score copy for convenience. */
   breachScore: number | null;
+  /** Optional persisted breach score breakdown payload. */
+  breachScoreBreakdown?: unknown;
   /** Full persisted enforcement payload. */
   resultJson: EnforcementResult;
 }

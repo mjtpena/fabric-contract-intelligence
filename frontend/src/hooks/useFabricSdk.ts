@@ -24,6 +24,8 @@ const initializableWorkloadClient = workloadClient as (WorkloadClient & {
   init?: () => Promise<void>;
 }) | null;
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
+const ItemDefinitionPath = 'orqentis/item-definition.json';
+const InlineBase64PayloadType = 'InlineBase64';
 
 export function useFabricSdk() {
   const correlationId = useAppStore((state) => state.correlationId);
@@ -102,7 +104,20 @@ export function useFabricSdk() {
         openNotification(title, message, NotificationType.Info),
       notifySuccess: (title: string, message?: string) =>
         openNotification(title, message, NotificationType.Success),
-      saveItemDefinition: async (_definition: string) => undefined,
+      loadItemDefinition: async () => {
+        if (!state.isHosted || !state.itemId) {
+          return null;
+        }
+
+        return readItemDefinition(state.itemId);
+      },
+      saveItemDefinition: async (definition: string) => {
+        if (!state.isHosted || !state.itemId) {
+          return;
+        }
+
+        await persistItemDefinition(state.itemId, definition);
+      },
       themeMode: state.themeMode,
       workspaceId: workspaceIdInStore ?? state.workspaceId,
     }),
@@ -186,4 +201,116 @@ function getFallbackThemeMode(): ThemeMode {
   }
 
   return 'light';
+}
+
+type ItemDefinitionPart = {
+  path: string;
+  payload: string;
+  payloadType: string;
+};
+
+type ItemDefinition = {
+  format: string;
+  parts: ItemDefinitionPart[];
+};
+
+type ItemCrudClient = {
+  getItemDefinition: (params: { itemId: string }) => Promise<{ definition: ItemDefinition }>;
+  updateItemDefinition: (params: {
+    itemId: string;
+    payload: { definition: ItemDefinition };
+  }) => Promise<unknown>;
+};
+
+function getItemCrudClient(): ItemCrudClient | null {
+  const candidate = workloadClient as (WorkloadClient & { itemCrud?: ItemCrudClient }) | null;
+  if (!candidate?.itemCrud?.getItemDefinition || !candidate.itemCrud.updateItemDefinition) {
+    return null;
+  }
+
+  return candidate.itemCrud;
+}
+
+async function readItemDefinition(itemId: string): Promise<string | null> {
+  const itemCrud = getItemCrudClient();
+  if (!itemCrud) {
+    return null;
+  }
+
+  const result = await itemCrud.getItemDefinition({ itemId });
+  const parts = result.definition.parts ?? [];
+  if (parts.length === 0) {
+    return null;
+  }
+
+  const targetPart =
+    parts.find((part) => part.path === ItemDefinitionPath)
+    ?? parts.find((part) => !part.path.endsWith('.platform'))
+    ?? parts[0];
+
+  if (!targetPart?.payload) {
+    return null;
+  }
+
+  return decodeBase64Utf8(targetPart.payload);
+}
+
+async function persistItemDefinition(itemId: string, definitionText: string): Promise<void> {
+  const itemCrud = getItemCrudClient();
+  if (!itemCrud) {
+    return;
+  }
+
+  let existingDefinition: ItemDefinition | null = null;
+
+  try {
+    const result = await itemCrud.getItemDefinition({ itemId });
+    existingDefinition = result.definition;
+  } catch {
+    existingDefinition = null;
+  }
+
+  const payload = encodeBase64Utf8(definitionText);
+  const parts = existingDefinition?.parts ? [...existingDefinition.parts] : [];
+  const format = existingDefinition?.format ?? 'Default';
+
+  if (parts.length === 0) {
+    parts.push({
+      path: ItemDefinitionPath,
+      payload,
+      payloadType: InlineBase64PayloadType,
+    });
+  } else {
+    const partIndex =
+      parts.findIndex((part) => part.path === ItemDefinitionPath) >= 0
+        ? parts.findIndex((part) => part.path === ItemDefinitionPath)
+        : parts.findIndex((part) => !part.path.endsWith('.platform')) >= 0
+          ? parts.findIndex((part) => !part.path.endsWith('.platform'))
+          : 0;
+
+    const currentPart = parts[partIndex];
+    parts[partIndex] = {
+      path: currentPart.path || ItemDefinitionPath,
+      payload,
+      payloadType: InlineBase64PayloadType,
+    };
+  }
+
+  await itemCrud.updateItemDefinition({
+    itemId,
+    payload: {
+      definition: {
+        format,
+        parts,
+      },
+    },
+  });
+}
+
+function encodeBase64Utf8(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)));
+}
+
+function decodeBase64Utf8(value: string): string {
+  return decodeURIComponent(escape(atob(value)));
 }

@@ -1,6 +1,7 @@
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
+using Orqentis.AI;
 using Orqentis.Data;
 using Orqentis.Engine.Odcs;
 using Microsoft.AspNetCore.Mvc;
@@ -18,19 +19,22 @@ public sealed class ContractsController : ControllerBase
     private readonly IOdcsContractParser _parser;
     private readonly OdcsContractSerializer _serializer;
     private readonly ITenantContext _tenantContext;
+    private readonly IContractSuggestionAgent _contractSuggestionAgent;
 
     public ContractsController(
         IContractStore contractStore,
         IOdcsContractValidator validator,
         IOdcsContractParser parser,
         OdcsContractSerializer serializer,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IContractSuggestionAgent contractSuggestionAgent)
     {
         _contractStore = contractStore;
         _validator = validator;
         _parser = parser;
         _serializer = serializer;
         _tenantContext = tenantContext;
+        _contractSuggestionAgent = contractSuggestionAgent;
     }
 
     /// <summary>Lists contracts for the current tenant workspace.</summary>
@@ -48,7 +52,6 @@ public sealed class ContractsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status402PaymentRequired)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status501NotImplemented)]
     public async Task<ActionResult<ContractDto>> CreateAsync(
         [FromBody] CreateContractRequest request,
         CancellationToken ct)
@@ -62,14 +65,10 @@ public sealed class ContractsController : ControllerBase
                     title: "Enterprise tier required.",
                     detail: "AI-generated contracts are only available to enterprise tenants.");
             }
-
-            return Problem(
-                statusCode: StatusCodes.Status501NotImplemented,
-                title: "Not implemented.",
-                detail: "AI-generated contract creation is scheduled for a later sprint.");
         }
 
-        if (!string.Equals(request.Mode, "direct", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(request.Mode, "direct", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(request.Mode, "ai_generate", StringComparison.OrdinalIgnoreCase))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
@@ -77,12 +76,29 @@ public sealed class ContractsController : ControllerBase
                 detail: "Mode must be either 'direct' or 'ai_generate'.");
         }
 
+        var isAiGenerated = string.Equals(request.Mode, "ai_generate", StringComparison.OrdinalIgnoreCase);
+        var odcsYaml = request.OdcsYaml;
+
+        if (isAiGenerated)
+        {
+            var profile = new TableProfile
+            {
+                TableName = request.Name,
+                AbfssUri = request.TargetTablePath,
+                Columns = [],
+                SampleRows = [],
+            };
+
+            var suggestion = await _contractSuggestionAgent.SuggestAsync(profile, ct).ConfigureAwait(false);
+            odcsYaml = suggestion.OdcsYaml;
+        }
+
         if (!TryNormalizeContract(
                 request.Name,
                 request.Description,
                 request.OwnerEmail,
                 request.TargetTablePath,
-                request.OdcsYaml,
+                odcsYaml,
                 out var normalizedYaml,
                 out var contractDefinition,
                 out ActionResult<ContractDto>? validationProblem))
@@ -105,7 +121,7 @@ public sealed class ContractsController : ControllerBase
                     null),
                 ct).ConfigureAwait(false);
 
-            return Created($"/v1/contracts/{created.ContractId}", MapContract(created));
+            return Created($"/v1/contracts/{created.ContractId}", MapContract(created, isAiGenerated));
         }
         catch (ContractConflictException ex)
         {
@@ -287,7 +303,7 @@ public sealed class ContractsController : ControllerBase
         return true;
     }
 
-    private ContractDto MapContract(ContractRecord contract)
+    private ContractDto MapContract(ContractRecord contract, bool aiSuggested = false)
     {
         var yaml = contract.CurrentVersionRecord?.OdcsYaml ?? string.Empty;
         var parseResult = _parser.Parse(yaml);
@@ -304,7 +320,7 @@ public sealed class ContractsController : ControllerBase
             OwnerEmail = contract.OwnerEmail,
             TargetTablePath = parsed?.Servers.FirstOrDefault()?.Path ?? string.Empty,
             TargetLakehouseId = contract.FabricItemId,
-            AiSuggested = false,
+            AiSuggested = aiSuggested,
             CreatedBy = contract.CreatedBy,
             CreatedAt = ToIsoString(contract.CreatedAt),
             UpdatedAt = ToIsoString(contract.UpdatedAt),

@@ -34,6 +34,12 @@ public interface IContractStore
 
     /// <summary>Gets a single run detail record.</summary>
     Task<EnforcementRunRecord?> GetRunAsync(Guid runId, CancellationToken ct = default);
+
+    /// <summary>Updates AI enrichment and alert dispatch outcomes for an existing run.</summary>
+    Task<EnforcementRunRecord?> UpdateRunEnrichmentAsync(UpdateRunEnrichmentCommand command, CancellationToken ct = default);
+
+    /// <summary>Lists contracts across linked workspaces for enterprise federation.</summary>
+    Task<FederatedContractsPage> ListFederatedContractsAsync(int pageSize, string? cursor, CancellationToken ct = default);
 }
 
 /// <summary>Command used to create a contract.</summary>
@@ -68,9 +74,19 @@ public sealed record CreateRunCommand(
     string Status,
     long? DeltaTableVersion,
     decimal? BreachScore,
+    string? BreachScoreBreakdownJson,
+    bool ActivatorTriggered,
     string ResultJson,
     DateTimeOffset TriggeredAt,
     DateTimeOffset? CompletedAt);
+
+/// <summary>Command used to enrich an existing run after AI scoring and alert dispatch.</summary>
+public sealed record UpdateRunEnrichmentCommand(
+    Guid RunId,
+    decimal? BreachScore,
+    string? BreachScoreBreakdownJson,
+    bool ActivatorTriggered,
+    string ResultJson);
 
 /// <summary>Read model for contract list responses.</summary>
 public sealed record ContractSummaryRecord(
@@ -118,8 +134,15 @@ public sealed record EnforcementRunRecord(
     string Status,
     long? DeltaTableVersion,
     decimal? BreachScore,
+    string? BreachScoreBreakdownJson,
+    bool ActivatorTriggered,
     string ResultJson,
     string CorrelationId);
+
+/// <summary>Cursor-paged federated contract list.</summary>
+public sealed record FederatedContractsPage(
+    IReadOnlyList<ContractSummaryRecord> Contracts,
+    string? NextCursor);
 
 /// <summary>Raised when a create or update operation would violate a business uniqueness rule.</summary>
 public sealed class ContractConflictException : Exception

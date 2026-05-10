@@ -72,7 +72,9 @@ internal sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<OrqentisDbContext>>();
+            services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<OrqentisDbContext>>();
             services.RemoveAll<OrqentisDbContext>();
+            RemoveEntityFrameworkProviderServices(services, "Npgsql.EntityFrameworkCore.PostgreSQL");
             services.AddDbContext<OrqentisDbContext>(options => options.UseInMemoryDatabase(_databaseName));
 
             if (_useTestAuthentication)
@@ -95,6 +97,20 @@ internal sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
             dbContext.Database.EnsureCreated();
             SeedTenants(dbContext);
         });
+    }
+
+    private static void RemoveEntityFrameworkProviderServices(IServiceCollection services, string providerAssemblyName)
+    {
+        var descriptors = services
+            .Where(descriptor =>
+                descriptor.ServiceType.Assembly.GetName().Name?.Contains(providerAssemblyName, StringComparison.OrdinalIgnoreCase) == true
+                || descriptor.ImplementationType?.Assembly.GetName().Name?.Contains(providerAssemblyName, StringComparison.OrdinalIgnoreCase) == true)
+            .ToArray();
+
+        foreach (var descriptor in descriptors)
+        {
+            services.Remove(descriptor);
+        }
     }
 
     private static void SeedTenants(OrqentisDbContext dbContext)

@@ -2,8 +2,13 @@ using System.Text.Json;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
+using Orqentis.AI;
+using Orqentis.Data;
+using Orqentis.Data.Entities;
 using Orqentis.Engine;
+using Orqentis.Engine.Models;
 using Orqentis.Engine.Odcs;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Orqentis.Api.Controllers;
@@ -17,17 +22,29 @@ public sealed class RunsController : ControllerBase
     private readonly IOneLakeTokenBroker _tokenBroker;
     private readonly IEnforcementOrchestrator _orchestrator;
     private readonly IOdcsContractParser _parser;
+    private readonly OrqentisDbContext _dbContext;
+    private readonly IBreachImpactScorer _breachImpactScorer;
+    private readonly IRemediationAdvisor _remediationAdvisor;
+    private readonly IBreachAlertDispatcher _alertDispatcher;
 
     public RunsController(
         IContractStore contractStore,
         IOneLakeTokenBroker tokenBroker,
         IEnforcementOrchestrator orchestrator,
-        IOdcsContractParser parser)
+        OrqentisDbContext dbContext,
+        IOdcsContractParser parser,
+        IBreachImpactScorer breachImpactScorer,
+        IRemediationAdvisor remediationAdvisor,
+        IBreachAlertDispatcher alertDispatcher)
     {
         _contractStore = contractStore;
         _tokenBroker = tokenBroker;
         _orchestrator = orchestrator;
+        _dbContext = dbContext;
         _parser = parser;
+        _breachImpactScorer = breachImpactScorer;
+        _remediationAdvisor = remediationAdvisor;
+        _alertDispatcher = alertDispatcher;
     }
 
     /// <summary>Runs contract enforcement immediately and persists the resulting run record.</summary>
@@ -62,18 +79,52 @@ public sealed class RunsController : ControllerBase
 
         var oneLakeToken = await _tokenBroker.GetOneLakeTokenAsync(bearerToken, ct).ConfigureAwait(false);
         var result = await _orchestrator.RunAsync(parseResult.Value, oneLakeToken, ct).ConfigureAwait(false);
+        var breachScore = await _breachImpactScorer.ScoreAsync(result, parseResult.Value, ct).ConfigureAwait(false);
+        var remediationSuggestions = await _remediationAdvisor.SuggestAsync(result, parseResult.Value, ct).ConfigureAwait(false);
+        var breakdownJson = breachScore is null
+            ? null
+            : JsonSerializer.Serialize(new
+            {
+                model = breachScore.ModelUsed,
+                reasons = breachScore.Reasons,
+                factors = breachScore.Breakdown,
+            });
+
+        var persistedResult = result with
+        {
+            BreachScore = breachScore?.Score,
+            RemediationSuggestions = remediationSuggestions,
+        };
+
+        var shouldDispatchAlert = await ShouldDispatchAlertAsync(contract.ContractId, persistedResult, ct).ConfigureAwait(false);
+        var activatorTriggered = false;
+        if (shouldDispatchAlert.Policy is not null)
+        {
+            var fabricToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false);
+            var alertResult = await _alertDispatcher.DispatchAsync(
+                new AlertDispatchRequest(
+                    shouldDispatchAlert.WorkspaceId,
+                    shouldDispatchAlert.Policy,
+                    BuildTriggerContext(contract, parseResult.Value, persistedResult),
+                    fabricToken),
+                ct).ConfigureAwait(false);
+            activatorTriggered = alertResult.ActivatorTriggered;
+        }
+
         var persisted = await _contractStore.CreateRunAsync(
             new CreateRunCommand(
                 contract.ContractId,
                 contract.CurrentVersionRecord.VersionId,
                 "manual",
                 HttpContext.Items[Middleware.CorrelationIdMiddleware.HeaderName]?.ToString() ?? string.Empty,
-                result.OverallStatus.ToString().ToLowerInvariant(),
-                result.DeltaTableVersion,
-                result.BreachScore,
-                JsonSerializer.Serialize(result),
+                persistedResult.OverallStatus.ToString().ToLowerInvariant(),
+                persistedResult.DeltaTableVersion,
+                persistedResult.BreachScore,
+                breakdownJson,
+                activatorTriggered,
+                JsonSerializer.Serialize(persistedResult),
                 DateTimeOffset.UtcNow,
-                result.CompletedAt),
+                persistedResult.CompletedAt),
             ct).ConfigureAwait(false);
 
         if (persisted is null)
@@ -136,6 +187,7 @@ public sealed class RunsController : ControllerBase
             TriggeredAt = ToIsoString(run.TriggeredAt),
             CompletedAt = run.CompletedAt is null ? null : ToIsoString(run.CompletedAt.Value),
             CorrelationId = run.CorrelationId,
+            ActivatorTriggered = run.ActivatorTriggered,
         };
 
     private static RunDetailDto MapDetail(EnforcementRunRecord run) =>
@@ -150,9 +202,73 @@ public sealed class RunsController : ControllerBase
             CompletedAt = run.CompletedAt is null ? null : ToIsoString(run.CompletedAt.Value),
             DeltaTableVersion = run.DeltaTableVersion,
             BreachScore = run.BreachScore,
+            BreachScoreBreakdown = string.IsNullOrWhiteSpace(run.BreachScoreBreakdownJson)
+                ? null
+                : JsonDocument.Parse(run.BreachScoreBreakdownJson).RootElement.Clone(),
             CorrelationId = run.CorrelationId,
+            ActivatorTriggered = run.ActivatorTriggered,
             ResultJson = JsonDocument.Parse(run.ResultJson).RootElement.Clone(),
         };
+
+    private async Task<(ContractPolicy? Policy, Guid WorkspaceId)> ShouldDispatchAlertAsync(
+        Guid contractId,
+        EnforcementResult result,
+        CancellationToken ct)
+    {
+        var policyWithWorkspace = await (
+            from policy in _dbContext.ContractPolicies.AsNoTracking()
+            join contract in _dbContext.Contracts.AsNoTracking() on policy.ContractId equals contract.ContractId
+            where policy.ContractId == contractId && policy.Enabled
+            orderby policy.UpdatedAt descending
+            select new { policy, contract.WorkspaceId })
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        if (policyWithWorkspace is null)
+        {
+            return (null, Guid.Empty);
+        }
+
+        var status = result.OverallStatus;
+        var alertOnWarn = false;
+        if (!string.IsNullOrWhiteSpace(policyWithWorkspace.policy.ActionConfigJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(policyWithWorkspace.policy.ActionConfigJson);
+                alertOnWarn = doc.RootElement.TryGetProperty("alertOnWarn", out var node) && node.GetBoolean();
+            }
+            catch
+            {
+                alertOnWarn = false;
+            }
+        }
+
+        var policyAllows = status == EnforcementStatus.Failed
+            || (status == EnforcementStatus.Warned && alertOnWarn);
+        return policyAllows
+            ? (policyWithWorkspace.policy, policyWithWorkspace.WorkspaceId)
+            : (null, policyWithWorkspace.WorkspaceId);
+    }
+
+    private static ActivatorTriggerContext BuildTriggerContext(
+        ContractRecord contract,
+        ContractDefinition contractDefinition,
+        EnforcementResult result)
+    {
+        var violatedRules = result.SchemaRules.Count(rule => rule.Status is RuleStatus.Failed or RuleStatus.Warned)
+            + result.QualityRules.Count(rule => rule.Status is RuleStatus.Failed or RuleStatus.Warned)
+            + (result.FreshnessRule is not null && (result.FreshnessRule.Status is RuleStatus.Failed or RuleStatus.Warned) ? 1 : 0);
+        return new ActivatorTriggerContext(
+            contract.ContractId,
+            contract.Name,
+            contractDefinition.Servers.FirstOrDefault()?.Path ?? string.Empty,
+            result.RunId,
+            result.OverallStatus.ToString().ToLowerInvariant(),
+            result.BreachScore,
+            violatedRules,
+            $"https://app.fabric.microsoft.com/groups/{contract.WorkspaceId}/orqentis/runs/{result.RunId}");
+    }
 
     private static string ToIsoString(DateTimeOffset value) => value.UtcDateTime.ToString("O");
 }

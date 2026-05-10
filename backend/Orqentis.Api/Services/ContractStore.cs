@@ -261,6 +261,8 @@ public sealed class ContractStore : IContractStore
             Status = command.Status,
             DeltaTableVersion = command.DeltaTableVersion,
             BreachScore = command.BreachScore,
+            BreachScoreBreakdown = command.BreachScoreBreakdownJson,
+            ActivatorTriggered = command.ActivatorTriggered,
             ResultJson = command.ResultJson,
             CorrelationId = command.CorrelationId,
         };
@@ -298,6 +300,105 @@ public sealed class ContractStore : IContractStore
             select MapRun(run))
             .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<EnforcementRunRecord?> UpdateRunEnrichmentAsync(UpdateRunEnrichmentCommand command, CancellationToken ct = default)
+    {
+        var entity = await (
+            from run in _dbContext.EnforcementRuns
+            join contract in _dbContext.Contracts on run.ContractId equals contract.ContractId
+            where run.RunId == command.RunId &&
+                (_tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId)
+            select run)
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.BreachScore = command.BreachScore;
+        entity.BreachScoreBreakdown = command.BreachScoreBreakdownJson;
+        entity.ActivatorTriggered = command.ActivatorTriggered;
+        entity.ResultJson = command.ResultJson;
+        await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        return MapRun(entity);
+    }
+
+    /// <inheritdoc />
+    public async Task<FederatedContractsPage> ListFederatedContractsAsync(int pageSize, string? cursor, CancellationToken ct = default)
+    {
+        var effectivePageSize = Math.Clamp(pageSize, 1, 100);
+        DateTimeOffset? cursorUpdatedAt = null;
+        Guid? cursorContractId = null;
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+            var parts = decoded.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 &&
+                DateTimeOffset.TryParse(parts[0], out var parsedUpdatedAt) &&
+                Guid.TryParse(parts[1], out var parsedContractId))
+            {
+                cursorUpdatedAt = parsedUpdatedAt;
+                cursorContractId = parsedContractId;
+            }
+        }
+
+        var linkedWorkspaceIds = await _dbContext.WorkspaceLinks
+            .AsNoTracking()
+            .Where(link => link.TenantId == _tenantContext.TenantId && link.WorkspaceId == _tenantContext.WorkspaceId)
+            .Select(link => link.LinkedWorkspaceId)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var workspaceIds = linkedWorkspaceIds
+            .Append(_tenantContext.WorkspaceId)
+            .Distinct()
+            .ToArray();
+
+        var query = _dbContext.Contracts
+            .AsNoTracking()
+            .Where(contract => workspaceIds.Contains(contract.WorkspaceId))
+            .OrderByDescending(contract => contract.UpdatedAt)
+            .ThenByDescending(contract => contract.ContractId);
+
+        if (cursorUpdatedAt.HasValue && cursorContractId.HasValue)
+        {
+            query = query.Where(contract =>
+                contract.UpdatedAt < cursorUpdatedAt.Value ||
+                (contract.UpdatedAt == cursorUpdatedAt.Value && contract.ContractId.CompareTo(cursorContractId.Value) < 0))
+                .OrderByDescending(contract => contract.UpdatedAt)
+                .ThenByDescending(contract => contract.ContractId);
+        }
+
+        var contracts = await query
+            .Take(effectivePageSize + 1)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var hasMore = contracts.Count > effectivePageSize;
+        var pageItems = hasMore ? contracts.Take(effectivePageSize).ToArray() : contracts.ToArray();
+
+        var latestRuns = await LoadLatestRunsAsync(pageItems.Select(item => item.ContractId).ToArray(), ct).ConfigureAwait(false);
+        var summaries = pageItems
+            .Select(contract => new ContractSummaryRecord(
+                contract.ContractId,
+                contract.Name,
+                contract.Status,
+                contract.CurrentVersion,
+                latestRuns.TryGetValue(contract.ContractId, out var latestRun) ? latestRun : null))
+            .ToArray();
+
+        string? nextCursor = null;
+        if (hasMore)
+        {
+            var last = pageItems[^1];
+            nextCursor = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{last.UpdatedAt:O}|{last.ContractId}"));
+        }
+
+        return new FederatedContractsPage(summaries, nextCursor);
     }
 
     private async Task<bool> ContractExistsAsync(Guid contractId, CancellationToken ct)
@@ -406,6 +507,8 @@ public sealed class ContractStore : IContractStore
             run.Status,
             run.DeltaTableVersion,
             run.BreachScore,
+            run.BreachScoreBreakdown,
+            run.ActivatorTriggered,
             run.ResultJson,
             run.CorrelationId);
 

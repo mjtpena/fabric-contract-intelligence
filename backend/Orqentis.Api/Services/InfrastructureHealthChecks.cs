@@ -18,9 +18,17 @@ public sealed class OrqentisDatabaseHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false)
-            ? HealthCheckResult.Healthy("Database reachable.")
-            : HealthCheckResult.Unhealthy("Database unavailable.");
+        try
+        {
+            var canConnect = await _dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false);
+            return canConnect
+                ? HealthCheckResult.Healthy("Database reachable.")
+                : HealthCheckResult.Unhealthy("Database unavailable.");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy($"Database connection failed: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Body1,
   Button,
@@ -9,6 +9,9 @@ import {
   DataGridHeader,
   DataGridHeaderCell,
   DataGridRow,
+  Dropdown,
+  Field,
+  Option,
   Spinner,
   Subtitle1,
   Title2,
@@ -19,10 +22,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { AddRegular, ArrowClockwiseRegular, PlayRegular } from '@fluentui/react-icons';
 import { createContractClient } from '@/api/contractClient';
+import { createOpsClient } from '@/api/opsClient';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
+import type { WorkspaceSummary } from '@/models/ops';
 
 const useStyles = makeStyles({
   root: {
@@ -78,6 +83,44 @@ export function ContractListPage() {
   );
 
   const { contracts, error, loading, refresh, runNow } = useContracts(client);
+  const [workspaceScope, setWorkspaceScope] = useState<'current' | 'linked'>('current');
+  const [tier, setTier] = useState<string>('community');
+  const [federatedContracts, setFederatedContracts] = useState<ContractSummary[]>([]);
+  const [federatedLoading, setFederatedLoading] = useState(false);
+
+  const opsClient = useMemo(
+    () =>
+      createOpsClient({
+        baseUrl: sdk.apiBaseUrl,
+        correlationId: sdk.correlationId,
+        getAccessToken: sdk.getAccessToken,
+        workspaceId: sdk.workspaceId,
+      }),
+    [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
+  );
+
+  useEffect(() => {
+    void opsClient.listWorkspaces().then((workspaces: WorkspaceSummary[]) => {
+      setTier(workspaces[0]?.tier ?? 'community');
+    }).catch(() => setTier('community'));
+  }, [opsClient]);
+
+  useEffect(() => {
+    if (!(tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked')) {
+      return;
+    }
+
+    setFederatedLoading(true);
+    void opsClient
+      .listFederatedContracts()
+      .then((response) => setFederatedContracts(response.contracts))
+      .catch(() => setFederatedContracts([]))
+      .finally(() => setFederatedLoading(false));
+  }, [opsClient, tier, workspaceScope]);
+
+  const displayedContracts = tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked'
+    ? federatedContracts
+    : contracts;
 
   const columns = useMemo(
     () =>
@@ -131,7 +174,12 @@ export function ContractListPage() {
     try {
       const run = await runNow(contractId);
       await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
-      await refresh();
+      if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+        const response = await opsClient.listFederatedContracts();
+        setFederatedContracts(response.contracts);
+      } else {
+        await refresh();
+      }
       navigate(`/contracts/${contractId}/runs/${run.runId}`);
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
@@ -147,11 +195,27 @@ export function ContractListPage() {
           <Caption1>Manage contract definitions, statuses, versions and quick runs.</Caption1>
         </div>
         <div className={styles.actions}>
+          {tier.toLowerCase() === 'enterprise' ? (
+            <Field label="Workspace scope">
+              <Dropdown
+                selectedOptions={[workspaceScope]}
+                value={workspaceScope === 'linked' ? 'Current + linked workspaces' : 'Current workspace'}
+                onOptionSelect={(_, data) => setWorkspaceScope((data.optionValue as 'current' | 'linked') ?? 'current')}
+              >
+                <Option value="current">Current workspace</Option>
+                <Option value="linked">Current + linked workspaces</Option>
+              </Dropdown>
+            </Field>
+          ) : null}
           <Button
             appearance="secondary"
             icon={<ArrowClockwiseRegular />}
             onClick={() => {
-              void refresh();
+              if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+                void opsClient.listFederatedContracts().then((response) => setFederatedContracts(response.contracts));
+              } else {
+                void refresh();
+              }
             }}
           >
             Refresh
@@ -163,9 +227,9 @@ export function ContractListPage() {
       </div>
 
       <div className={styles.surface}>
-        {loading ? <Spinner label="Loading contracts…" /> : null}
+        {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
         {error ? <Body1>{error}</Body1> : null}
-        {!loading && contracts.length === 0 ? (
+        {!loading && !federatedLoading && displayedContracts.length === 0 ? (
           <div className={styles.emptyState}>
             <Subtitle1>No contracts yet — create one</Subtitle1>
             <Body1>Start with a draft contract and validate the YAML before saving.</Body1>
@@ -175,8 +239,8 @@ export function ContractListPage() {
           </div>
         ) : null}
 
-        {!loading && contracts.length > 0 ? (
-          <DataGrid items={contracts} columns={columns}>
+        {!loading && !federatedLoading && displayedContracts.length > 0 ? (
+          <DataGrid items={displayedContracts} columns={columns}>
             <DataGridHeader>
               <DataGridRow>
                 {({ renderHeaderCell }) => (

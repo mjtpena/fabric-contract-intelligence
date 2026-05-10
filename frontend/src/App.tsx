@@ -1,10 +1,15 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { Body1, Title1, makeStyles, tokens } from '@fluentui/react-components';
 import { ContractDetailPage } from './pages/ContractDetailPage';
 import { ContractEditorPage } from './pages/ContractEditorPage';
 import { ContractListPage } from './pages/ContractListPage';
 import { EnforcementRunPage } from './pages/EnforcementRunPage';
 import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
+import { LandingPage } from './pages/LandingPage';
+import { AISuggestPage } from './pages/AISuggestPage';
+import { NLQueryPage } from './pages/NLQueryPage';
+import { PolicyEditorPage } from './pages/PolicyEditorPage';
+import { AlertsDashboardPage } from './pages/AlertsDashboardPage';
 
 const useStyles = makeStyles({
   root: {
@@ -38,9 +43,9 @@ const useStyles = makeStyles({
   },
 });
 
-export default function App() {
+/** Fabric workload layout — wraps all item-level routes with the shared header/nav. */
+function WorkloadLayout() {
   const styles = useStyles();
-
   return (
     <main className={styles.root}>
       <header className={styles.header}>
@@ -50,23 +55,45 @@ export default function App() {
         </div>
         <nav className={styles.nav}>
           <Link to="/contracts">Contracts</Link>
+          <Link to="/contracts/ai-suggest">AI Suggest</Link>
+          <Link to="/contracts/ai-query">AI Query</Link>
+          <Link to="/contracts/policies">Policies</Link>
+          <Link to="/contracts/alerts">Alerts</Link>
           <Link to="/workspace/settings">Workspace settings</Link>
         </nav>
       </header>
       <div className={styles.content}>
         <Routes>
-          <Route path="/" element={<Navigate replace to="/contracts" />} />
-          <Route path="/contracts" element={<ContractListPage />} />
-          <Route path="/contracts/new" element={<ContractEditorPage />} />
-          <Route path="/contracts/editor" element={<ContractEditorPage />} />
-          <Route path="/contracts/runs" element={<EnforcementRunPage />} />
-          <Route path="/contracts/:id" element={<ContractDetailPage />} />
-          <Route path="/contracts/:id/edit" element={<ContractEditorPage />} />
-          <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
-          <Route path="/workspace/settings" element={<WorkspaceSettingsPage />} />
-          <Route path="*" element={<Navigate replace to="/contracts" />} />
+          <Route index element={<ContractListPage />} />
+          <Route path="ai-suggest" element={<AISuggestPage />} />
+          <Route path="ai-query" element={<NLQueryPage />} />
+          <Route path="policies" element={<PolicyEditorPage />} />
+          <Route path="alerts" element={<AlertsDashboardPage />} />
+          <Route path="new" element={<ContractEditorPage />} />
+          <Route path="editor" element={<ContractEditorPage />} />
+          <Route path="runs" element={<EnforcementRunPage />} />
+          <Route path=":id" element={<ContractDetailPage />} />
+          <Route path=":id/edit" element={<ContractEditorPage />} />
+          <Route path=":id/runs/:runId" element={<EnforcementRunPage />} />
         </Routes>
       </div>
     </main>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      {/* Public landing page at / */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Workload routes inside Fabric iframe */}
+      <Route path="/contracts/*" element={<WorkloadLayout />} />
+      <Route path="/workspace/settings" element={<WorkspaceSettingsPage />} />
+
+      {/* Legacy fallback: policy/report item routes Fabric may deep-link to */}
+      <Route path="/contracts/editor" element={<ContractEditorPage />} />
+      <Route path="/contracts/runs" element={<EnforcementRunPage />} />
+    </Routes>
   );
 }

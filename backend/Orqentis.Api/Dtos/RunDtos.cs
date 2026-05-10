@@ -20,6 +20,7 @@ public sealed record RunSummaryDto
     public required string TriggeredAt { get; init; }
     public string? CompletedAt { get; init; }
     public required string CorrelationId { get; init; }
+    public bool ActivatorTriggered { get; init; }
 }
 
 /// <summary>Run detail including the persisted result payload.</summary>
@@ -34,6 +35,8 @@ public sealed record RunDetailDto
     public string? CompletedAt { get; init; }
     public long? DeltaTableVersion { get; init; }
     public decimal? BreachScore { get; init; }
+    public JsonElement? BreachScoreBreakdown { get; init; }
     public required string CorrelationId { get; init; }
+    public bool ActivatorTriggered { get; init; }
     public required JsonElement ResultJson { get; init; }
 }
