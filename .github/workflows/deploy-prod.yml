@@ -112,13 +112,10 @@ jobs:
       - name: Resolve frontend URL for workload package
         shell: bash
         run: |
-          host=$(az staticwebapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].defaultHostname" -o tsv)
-          if [ -z "$host" ]; then
-            echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://fabric.orqentis.com" >> "$GITHUB_ENV"
-          else
-            echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://$host" >> "$GITHUB_ENV"
-          fi
+          # fabric.orqentis.com is the registered tenant domain pointing to the workload SWA.
+          # azurestaticapps.net URLs are rejected by Fabric manifest validation (not in tenant domain list).
           # AppId must be the Entra ID app registration client ID (a GUID), not the SWA resource ID.
+          echo "ORQENTIS_WORKLOAD_FRONTEND_URL=https://fabric.orqentis.com" >> "$GITHUB_ENV"
           echo "ORQENTIS_WORKLOAD_FRONTEND_APP_ID=7a234404-ea08-454c-b2b5-0acb523f0417" >> "$GITHUB_ENV"
 
       - name: Install mono runtime for NuGet packaging
