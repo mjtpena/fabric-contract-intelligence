@@ -187,6 +187,7 @@ try {
 
     $nugetExe = Get-NuGetExe
     $nuspecPath = Join-Path $buildRoot "ManifestPackage.nuspec"
+    $expectedPackagePath = Join-Path $resolvedOutputDirectory "$($manifest.workloadId).$($manifest.version).nupkg"
 
     if ($IsWindows) {
         & $nugetExe pack $nuspecPath -OutputDirectory $resolvedOutputDirectory -Verbosity quiet | Out-Null
@@ -197,6 +198,15 @@ try {
         }
 
         & mono $nugetExe pack $nuspecPath -OutputDirectory $resolvedOutputDirectory -Verbosity quiet | Out-Null
+    }
+
+    $nugetExitCode = $LASTEXITCODE
+    if ($nugetExitCode -ne 0 -and -not (Test-Path $expectedPackagePath)) {
+        throw "NuGet pack failed with exit code $nugetExitCode and no package was produced."
+    }
+
+    if ($nugetExitCode -ne 0 -and (Test-Path $expectedPackagePath)) {
+        Write-Warning "NuGet reported exit code $nugetExitCode but package output exists at '$expectedPackagePath'. Continuing."
     }
 }
 finally {
