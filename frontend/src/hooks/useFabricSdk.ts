@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   NotificationToastDuration,
   NotificationType,
-  WorkloadClient,
+  PayloadType,
+  createWorkloadClient,
 } from '@ms-fabric/workload-client';
+import type { ItemDefinition } from '@ms-fabric/workload-client';
 import { useAppStore } from '@/store/appStore';
 import { parseFabricPathContext } from '@/utils/fabricPathContext';
 
@@ -20,13 +22,9 @@ interface FabricSdkState extends FabricSdkRuntime {
   isReady: boolean;
 }
 
-const workloadClient = typeof window === 'undefined' ? null : new WorkloadClient();
-const initializableWorkloadClient = workloadClient as (WorkloadClient & {
-  init?: () => Promise<void>;
-}) | null;
+const workloadClient = typeof window === 'undefined' ? null : createWorkloadClient();
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
 const ItemDefinitionPath = 'orqentis/item-definition.json';
-const InlineBase64PayloadType = 'InlineBase64';
 
 export function useFabricSdk() {
   const correlationId = useAppStore((state) => state.correlationId);
@@ -91,7 +89,9 @@ export function useFabricSdk() {
         }
 
         try {
-          return (await workloadClient.auth.getAccessToken()).token;
+          // acquireFrontendAccessToken with empty scopes returns the default Power BI token.
+          const result = await workloadClient.auth.acquireFrontendAccessToken({ scopes: [] });
+          return result.token;
         } catch {
           return '';
         }
@@ -146,7 +146,6 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
     }
 
     try {
-      await initializableWorkloadClient?.init?.();
       const theme = await workloadClient.theme.get();
 
       return {
@@ -205,41 +204,12 @@ function getFallbackThemeMode(): ThemeMode {
   return 'light';
 }
 
-type ItemDefinitionPart = {
-  path: string;
-  payload: string;
-  payloadType: string;
-};
-
-type ItemDefinition = {
-  format: string;
-  parts: ItemDefinitionPart[];
-};
-
-type ItemCrudClient = {
-  getItemDefinition: (params: { itemId: string }) => Promise<{ definition: ItemDefinition }>;
-  updateItemDefinition: (params: {
-    itemId: string;
-    payload: { definition: ItemDefinition };
-  }) => Promise<unknown>;
-};
-
-function getItemCrudClient(): ItemCrudClient | null {
-  const candidate = workloadClient as (WorkloadClient & { itemCrud?: ItemCrudClient }) | null;
-  if (!candidate?.itemCrud?.getItemDefinition || !candidate.itemCrud.updateItemDefinition) {
-    return null;
-  }
-
-  return candidate.itemCrud;
-}
-
 async function readItemDefinition(itemId: string): Promise<string | null> {
-  const itemCrud = getItemCrudClient();
-  if (!itemCrud) {
+  if (!workloadClient) {
     return null;
   }
 
-  const result = await itemCrud.getItemDefinition({ itemId });
+  const result = await workloadClient.itemCrud.getItemDefinition({ itemId });
   const parts = result.definition.parts ?? [];
   if (parts.length === 0) {
     return null;
@@ -258,15 +228,14 @@ async function readItemDefinition(itemId: string): Promise<string | null> {
 }
 
 async function persistItemDefinition(itemId: string, definitionText: string): Promise<void> {
-  const itemCrud = getItemCrudClient();
-  if (!itemCrud) {
+  if (!workloadClient) {
     return;
   }
 
   let existingDefinition: ItemDefinition | null = null;
 
   try {
-    const result = await itemCrud.getItemDefinition({ itemId });
+    const result = await workloadClient.itemCrud.getItemDefinition({ itemId });
     existingDefinition = result.definition;
   } catch {
     existingDefinition = null;
@@ -280,7 +249,7 @@ async function persistItemDefinition(itemId: string, definitionText: string): Pr
     parts.push({
       path: ItemDefinitionPath,
       payload,
-      payloadType: InlineBase64PayloadType,
+      payloadType: PayloadType.InlineBase64,
     });
   } else {
     const partIndex =
@@ -292,13 +261,13 @@ async function persistItemDefinition(itemId: string, definitionText: string): Pr
 
     const currentPart = parts[partIndex];
     parts[partIndex] = {
-      path: currentPart.path || ItemDefinitionPath,
+      path: currentPart?.path || ItemDefinitionPath,
       payload,
-      payloadType: InlineBase64PayloadType,
+      payloadType: PayloadType.InlineBase64,
     };
   }
 
-  await itemCrud.updateItemDefinition({
+  await workloadClient.itemCrud.updateItemDefinition({
     itemId,
     payload: {
       definition: {

@@ -1,25 +1,24 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { FluentProvider, webDarkTheme, webLightTheme } from '@fluentui/react-components';
-import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import { useFabricSdk } from './hooks/useFabricSdk';
-import './index.css';
+import { bootstrap } from '@ms-fabric/workload-client';
 
-export function AppShell() {
-  const { themeMode } = useFabricSdk();
-
-  return (
-    <FluentProvider theme={themeMode === 'dark' ? webDarkTheme : webLightTheme}>
-      <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        <App />
-      </BrowserRouter>
-    </FluentProvider>
-  );
+// When the Fabric auth flow redirects back via a popup, close the popup window.
+const url = new URL(window.location.href);
+if (url.pathname?.startsWith('/close')) {
+  window.close();
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AppShell />
-  </React.StrictMode>,
-);
+/**
+ * Entry point for the Orqentis workload frontend.
+ *
+ * bootstrap() detects whether this iframe is loaded in:
+ *   - "worker" mode  → hidden background iframe, receives Fabric action callbacks
+ *   - "page"/"panel" → visible iframe, renders the React UI
+ *
+ * Without calling bootstrap(), Fabric never receives the initialization handshake
+ * and leaves the workload stuck in a permanent loading state.
+ */
+void bootstrap({
+  initializeWorker: (params) =>
+    import('./index.worker').then(({ initialize }) => initialize(params)),
+  initializeUI: (params) =>
+    import('./index.ui').then(({ initialize }) => initialize(params)),
+});
