@@ -355,6 +355,42 @@ const useStyles = makeStyles({
     fontSize: '13px',
     lineHeight: '1.5',
   },
+  screenshotGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '20px',
+  },
+  screenshotCard: {
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  screenshotImage: {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  screenshotBody: {
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  screenshotTitle: {
+    color: '#ffffff',
+    fontWeight: 600,
+    fontSize: '15px',
+  },
+  screenshotText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: '13px',
+    lineHeight: '1.5',
+  },
 
   /* ---- Footer ---- */
   footer: {
@@ -412,6 +448,26 @@ export function LandingPage() {
   const styles = useStyles();
   const navigate = useNavigate();
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
+  const productShots = [
+    {
+      src: '/images/screenshots/contract-library.png',
+      alt: 'Contract library page in Orqentis',
+      title: 'Contract library',
+      text: 'Browse contracts, enforce runs, and open contract details from the central workload surface.',
+    },
+    {
+      src: '/images/screenshots/ai-suggest-workflow.png',
+      alt: 'AI suggest page in Orqentis',
+      title: 'AI suggest workflow',
+      text: 'Generate ODCS-compliant drafts with AI assistance, then refine and save directly in the editor flow.',
+    },
+    {
+      src: '/images/screenshots/alerts-dashboard.png',
+      alt: 'Alerts dashboard page in Orqentis',
+      title: 'Alerts dashboard',
+      text: 'Review breach alerts and routing outcomes to triage contract issues and close remediation loops.',
+    },
+  ];
 
   return (
     <div className={styles.root}>
@@ -532,6 +588,29 @@ export function LandingPage() {
                 Trigger a run, inspect breach scoring, and review alerts to close the loop with producers.
               </div>
             </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Browser captures */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <section className={styles.section}>
+          <div className={styles.sectionLabel}>Live product capture</div>
+          <Title2 className={styles.sectionTitle}>Screenshots from a real browser session</Title2>
+          <div className={styles.sectionSub}>
+            Captured from an active Chrome run and updated with this release to reflect the current workload
+            experience.
+          </div>
+          <div className={styles.screenshotGrid}>
+            {productShots.map((shot) => (
+              <article className={styles.screenshotCard} key={shot.src}>
+                <img className={styles.screenshotImage} src={shot.src} alt={shot.alt} loading="lazy" />
+                <div className={styles.screenshotBody}>
+                  <div className={styles.screenshotTitle}>{shot.title}</div>
+                  <div className={styles.screenshotText}>{shot.text}</div>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       </div>
