@@ -113,6 +113,11 @@ jobs:
             echo "ORQENTIS_WORKLOAD_FRONTEND_APP_ID=$app_id" >> "$GITHUB_ENV"
           fi
 
+      - name: Install mono runtime for NuGet packaging
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-runtime
+
       - name: Package workload manifest
         shell: pwsh
         run: .\scripts\Publish-Workload.ps1 -SkipBuild
