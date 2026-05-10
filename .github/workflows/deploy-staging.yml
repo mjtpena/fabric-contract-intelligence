@@ -31,16 +31,25 @@ jobs:
           AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING }}
         run: |
           missing=()
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID KV_ADMIN_GROUP_OBJECT_ID PG_ADMIN_PASSWORD_STAGING AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING; do
+          optional=()
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID KV_ADMIN_GROUP_OBJECT_ID PG_ADMIN_PASSWORD_STAGING; do
             if [ -z "${!key}" ]; then
               missing+=("$key")
             fi
           done
+          
+          if [ -z "$AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING" ]; then
+            optional+=("AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING")
+          fi
 
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required staging secrets: ${missing[*]}"
             echo "::error::Set these in repository or environment secrets before re-running deploy-staging.yml."
             exit 1
+          fi
+          
+          if [ ${#optional[@]} -gt 0 ]; then
+            echo "::warning::Frontend (SWA) deployment will be skipped: ${optional[*]} not configured"
           fi
 
       - name: Azure login (OIDC)
@@ -154,3 +163,4 @@ jobs:
           name: staging-integration-test-results
           path: backend/Orqentis.Tests/Orqentis.Integration.Tests/TestResults/**/*.trx
           retention-days: 7
+
