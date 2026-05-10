@@ -86,16 +86,25 @@ function New-AssignmentBody {
     return $body | ConvertTo-Json
 }
 
-function Get-NuGetExe {
+function Get-NuGetCli {
     $toolRoot = Join-Path $repoRoot ".artifacts\tools\orqentis-nuget"
-    $nugetExe = Join-Path $toolRoot "nuget.exe"
+    New-Item -ItemType Directory -Force -Path $toolRoot | Out-Null
 
-    if (-not (Test-Path $nugetExe)) {
-        New-Item -ItemType Directory -Force -Path $toolRoot | Out-Null
-        Invoke-WebRequest -UseBasicParsing -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile $nugetExe
+    if ($IsWindows) {
+        $nugetExe = Join-Path $toolRoot "nuget.exe"
+        if (-not (Test-Path $nugetExe)) {
+            Invoke-WebRequest -UseBasicParsing -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile $nugetExe
+        }
+
+        return $nugetExe
     }
 
-    return $nugetExe
+    $nugetCli = Join-Path $toolRoot "nuget"
+    if (-not (Test-Path $nugetCli)) {
+        dotnet tool install NuGet.CommandLine --tool-path $toolRoot | Out-Null
+    }
+
+    return $nugetCli
 }
 
 function Invoke-PlaceholderReplacement {
@@ -186,10 +195,10 @@ try {
     Get-ChildItem -Path $buildRoot -Recurse -File -Include *.xml, *.json, *.nuspec |
         ForEach-Object { Invoke-PlaceholderReplacement -FilePath $_.FullName -Replacements $replacements }
 
-    $nugetExe = Get-NuGetExe
+    $nugetCli = Get-NuGetCli
     $nuspecPath = Join-Path $buildRoot "ManifestPackage.nuspec"
 
-    & $nugetExe pack $nuspecPath -OutputDirectory $resolvedOutputDirectory -Verbosity quiet | Out-Null
+    & $nugetCli pack $nuspecPath -OutputDirectory $resolvedOutputDirectory -Verbosity quiet | Out-Null
 }
 finally {
     if (Test-Path $buildRoot) {

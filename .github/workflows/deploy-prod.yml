@@ -125,7 +125,6 @@ jobs:
 
       - name: Package workload manifest
         shell: pwsh
-        continue-on-error: true
         run: .\scripts\Publish-Workload.ps1 -SkipBuild
 
       - name: Upload workload package
