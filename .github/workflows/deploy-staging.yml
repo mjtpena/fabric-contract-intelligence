@@ -17,6 +17,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: staging
+    env:
+      SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING }}
     steps:
       - uses: actions/checkout@v4
 
@@ -109,10 +111,10 @@ jobs:
           retention-days: 14
 
       - name: Deploy frontend (Static Web Apps)
-        if: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING != '' }}
+        if: ${{ env.SWA_TOKEN != '' }}
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING }}
+          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: frontend
@@ -120,6 +122,6 @@ jobs:
           skip_app_build: true
 
       - name: Skip frontend deployment (token missing)
-        if: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING == '' }}
+        if: ${{ env.SWA_TOKEN == '' }}
         run: echo "Skipping Static Web Apps deploy because AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING is not set."
 
