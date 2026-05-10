@@ -106,6 +106,8 @@ module api 'modules/app-service.bicep' = {
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     pgFqdn: postgres.outputs.fqdn
     pgDatabaseName: postgres.outputs.databaseName
+    pgAdminUsername: pgAdminUsername
+    pgAdminPassword: pgAdminPassword
     openAiEndpoint: openai.outputs.endpoint
     tags: tags
   }
