@@ -10,7 +10,7 @@ namespace Orqentis.AI;
 /// <summary>Generates ODCS suggestions with timeout/retry/fallback behavior.</summary>
 public sealed class ContractSuggestionAgent : IContractSuggestionAgent
 {
-    private const string PromptFile = "ContractSuggestion.txt";
+    private const string _promptFile = "ContractSuggestion.txt";
 
     private readonly AiOptions _options;
     private readonly ILlmRouter _llmRouter;
@@ -36,7 +36,7 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
     {
         ArgumentNullException.ThrowIfNull(profile);
         var started = DateTimeOffset.UtcNow;
-        var prompt = _promptLoader.Load(PromptFile);
+        var prompt = _promptLoader.Load(_promptFile);
         var userInput = BuildSuggestionInput(profile);
 
         _logger.LogDebug("AI-ContractSuggestion-Prompt Prompt={Prompt}", prompt);
@@ -175,7 +175,7 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
 /// <summary>Computes breach score with model fallback to null.</summary>
 public sealed class BreachImpactScorer : IBreachImpactScorer
 {
-    private const string PromptFile = "BreachImpactScoring.txt";
+    private const string _promptFile = "BreachImpactScoring.txt";
 
     private readonly ILlmRouter _llmRouter;
     private readonly IPromptLoader _promptLoader;
@@ -196,7 +196,7 @@ public sealed class BreachImpactScorer : IBreachImpactScorer
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(contract);
 
-        var prompt = _promptLoader.Load(PromptFile);
+        var prompt = _promptLoader.Load(_promptFile);
         var input = JsonSerializer.Serialize(new { contract, result });
         _logger.LogDebug("AI-BreachImpact-Prompt Prompt={Prompt}", prompt);
 
@@ -238,7 +238,7 @@ public sealed class BreachImpactScorer : IBreachImpactScorer
 /// <summary>Generates remediation suggestions with safe empty fallback.</summary>
 public sealed class RemediationAdvisor : IRemediationAdvisor
 {
-    private const string PromptFile = "RemediationAdvisor.txt";
+    private const string _promptFile = "RemediationAdvisor.txt";
 
     private readonly ILlmRouter _llmRouter;
     private readonly IPromptLoader _promptLoader;
@@ -259,7 +259,7 @@ public sealed class RemediationAdvisor : IRemediationAdvisor
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(contract);
 
-        var prompt = _promptLoader.Load(PromptFile);
+        var prompt = _promptLoader.Load(_promptFile);
         var failedColumns = result.SchemaRules
             .Concat(result.QualityRules)
             .Where(rule => rule.Status is RuleStatus.Failed or RuleStatus.Warned)

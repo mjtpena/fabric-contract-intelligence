@@ -7,7 +7,7 @@ namespace Orqentis.Engine.Evaluation;
 /// <summary>Evaluates ODCS quality rules using Fabric SQL scalar queries.</summary>
 public sealed class QualityRuleEvaluator : IQualityRuleEvaluator
 {
-    private static readonly string[] ForbiddenCustomSqlTokens = ["${", "#{", "{", "}"];
+    private static readonly string[] _forbiddenCustomSqlTokens = ["${", "#{", "{", "}"];
 
     private readonly IFabricSqlClient _fabricSqlClient;
     private readonly ILogger<QualityRuleEvaluator> _logger;
@@ -119,7 +119,7 @@ public sealed class QualityRuleEvaluator : IQualityRuleEvaluator
         }
 
         var sql = rule.Sql ?? string.Empty;
-        if (ForbiddenCustomSqlTokens.Any(sql.Contains))
+        if (_forbiddenCustomSqlTokens.Any(sql.Contains))
         {
             reason = "custom_sql contains unsupported template placeholders; use bound parameters only.";
             return true;

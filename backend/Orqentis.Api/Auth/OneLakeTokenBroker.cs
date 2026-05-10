@@ -8,8 +8,8 @@ namespace Orqentis.Api.Auth;
 /// <summary>Azure.Identity-backed OBO broker for OneLake and Fabric REST scopes.</summary>
 public sealed class OneLakeTokenBroker : IOneLakeTokenBroker
 {
-    private static readonly string[] OneLakeScopes = ["https://storage.azure.com/.default"];
-    private static readonly string[] FabricScopes = ["https://api.fabric.microsoft.com/.default"];
+    private static readonly string[] _oneLakeScopes = ["https://storage.azure.com/.default"];
+    private static readonly string[] _fabricScopes = ["https://api.fabric.microsoft.com/.default"];
 
     private readonly AzureAdOptions _options;
     private readonly ITenantContext _tenantContext;
@@ -27,11 +27,11 @@ public sealed class OneLakeTokenBroker : IOneLakeTokenBroker
 
     /// <inheritdoc />
     public Task<string> GetOneLakeTokenAsync(string userAssertion, CancellationToken ct = default) =>
-        GetTokenAsync(userAssertion, OneLakeScopes, "storage.azure.com", ct);
+        GetTokenAsync(userAssertion, _oneLakeScopes, "storage.azure.com", ct);
 
     /// <inheritdoc />
     public Task<string> GetFabricRestTokenAsync(string userAssertion, CancellationToken ct = default) =>
-        GetTokenAsync(userAssertion, FabricScopes, "api.fabric.microsoft.com", ct);
+        GetTokenAsync(userAssertion, _fabricScopes, "api.fabric.microsoft.com", ct);
 
     private async Task<string> GetTokenAsync(
         string userAssertion,

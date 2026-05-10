@@ -13,7 +13,7 @@ namespace Orqentis.Engine.Delta;
 /// </summary>
 internal sealed class DeltaLogReader : IDeltaLogReader
 {
-    private const string DeltaLogFolderName = "_delta_log";
+    private const string _deltaLogFolderName = "_delta_log";
 
     private readonly HttpClient _httpClient;
     private readonly ISchemaExtractor _schemaExtractor;
@@ -113,7 +113,7 @@ internal sealed class DeltaLogReader : IDeltaLogReader
         for (long version = 0; ; version++)
         {
             var fileName = $"{version:D20}.json";
-            var requestUri = new Uri(new Uri(baseUri), $"{DeltaLogFolderName}/{fileName}");
+            var requestUri = new Uri(new Uri(baseUri), $"{_deltaLogFolderName}/{fileName}");
 
             using var response = await _httpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -140,8 +140,8 @@ internal sealed class DeltaLogReader : IDeltaLogReader
         var serviceClient = new DataLakeServiceClient(new Uri($"https://{descriptor.Host}"), credential);
         var fileSystemClient = serviceClient.GetFileSystemClient(descriptor.FileSystem);
         var deltaLogPath = string.IsNullOrWhiteSpace(descriptor.TablePath)
-            ? DeltaLogFolderName
-            : $"{descriptor.TablePath.TrimEnd('/')}/{DeltaLogFolderName}";
+            ? _deltaLogFolderName
+            : $"{descriptor.TablePath.TrimEnd('/')}/{_deltaLogFolderName}";
 
         var files = new List<TransactionLogFile>();
 

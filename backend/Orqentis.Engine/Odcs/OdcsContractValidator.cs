@@ -8,9 +8,9 @@ namespace Orqentis.Engine.Odcs;
 /// <summary>JSON-Schema-backed ODCS validation via NJsonSchema.</summary>
 public sealed class OdcsContractValidator : IOdcsContractValidator
 {
-    private const string SchemaResourceName = "Orqentis.Engine.Odcs.Schema.odcs-v3.1.0.json";
+    private const string _schemaResourceName = "Orqentis.Engine.Odcs.Schema.odcs-v3.1.0.json";
 
-    private static readonly Regex MissingPropertyRegex = new("'(?<property>[^']+)'", RegexOptions.Compiled);
+    private static readonly Regex _missingPropertyRegex = new("'(?<property>[^']+)'", RegexOptions.Compiled);
 
     private readonly Lazy<JsonSchema> _schema;
     private readonly ILogger<OdcsContractValidator> _logger;
@@ -44,8 +44,8 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
 
     private static JsonSchema LoadSchema()
     {
-        using var stream = typeof(OdcsContractValidator).Assembly.GetManifestResourceStream(SchemaResourceName)
-            ?? throw new InvalidOperationException($"Embedded schema resource '{SchemaResourceName}' was not found.");
+        using var stream = typeof(OdcsContractValidator).Assembly.GetManifestResourceStream(_schemaResourceName)
+            ?? throw new InvalidOperationException($"Embedded schema resource '{_schemaResourceName}' was not found.");
         using var reader = new StreamReader(stream);
         var schemaJson = NormalizeSchemaForNJsonSchema(reader.ReadToEnd());
         return JsonSchema.FromJsonAsync(schemaJson).GetAwaiter().GetResult();
@@ -86,7 +86,7 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
             return "$." + error.Property;
         }
 
-        var match = MissingPropertyRegex.Match(error.ToString());
+        var match = _missingPropertyRegex.Match(error.ToString());
         return match.Success
             ? "$." + match.Groups["property"].Value
             : "$";

@@ -5,7 +5,7 @@ namespace Orqentis.AI;
 
 public sealed class NaturalLanguageQueryHandler : INaturalLanguageQueryHandler
 {
-    private const string PromptFile = "NaturalLanguageQuery.txt";
+    private const string _promptFile = "NaturalLanguageQuery.txt";
 
     private readonly ILlmRouter _llmRouter;
     private readonly IPromptLoader _promptLoader;
@@ -51,7 +51,7 @@ public sealed class NaturalLanguageQueryHandler : INaturalLanguageQueryHandler
                 "heuristic");
         }
 
-        var prompt = _promptLoader.Load(PromptFile);
+        var prompt = _promptLoader.Load(_promptFile);
         var promptInput = JsonSerializer.Serialize(new
         {
             query,

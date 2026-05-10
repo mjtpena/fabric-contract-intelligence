@@ -6,7 +6,7 @@ namespace Orqentis.Engine.Odcs;
 /// <summary>Serializes the internal contract model into ODCS-compatible YAML.</summary>
 public sealed class OdcsContractSerializer
 {
-    private static readonly ISerializer Serializer = new SerializerBuilder()
+    private static readonly ISerializer _serializer = new SerializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
         .Build();
@@ -21,6 +21,6 @@ public sealed class OdcsContractSerializer
         ArgumentNullException.ThrowIfNull(contract);
 
         var document = OdcsDocumentMapper.MapToDocument(contract);
-        return Serializer.Serialize(document);
+        return _serializer.Serialize(document);
     }
 }

@@ -25,9 +25,9 @@ info:
 
 servers:
   - server: fabric-production
-    type: onelake
-    host: onelake.dfs.fabric.microsoft.com
-    path: abfss://retail@onelake.dfs.fabric.microsoft.com/RetailLakehouse.Lakehouse/Tables/sales_transactions
+    type: azure
+    location: abfss://retail@onelake.dfs.fabric.microsoft.com/RetailLakehouse.Lakehouse/Tables/sales_transactions
+    format: delta
 
 schema:
   - name: transaction_id

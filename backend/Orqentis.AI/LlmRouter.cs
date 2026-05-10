@@ -166,7 +166,7 @@ internal sealed class AzureOpenAiLlmProvider : ILlmProvider
 
 internal sealed class AnthropicLlmProvider : ILlmProvider
 {
-    private const string AnthropicVersion = "2023-06-01";
+    private const string _anthropicVersion = "2023-06-01";
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AiOptions _options;
 
@@ -192,7 +192,7 @@ internal sealed class AnthropicLlmProvider : ILlmProvider
         var endpoint = _options.Anthropic.Endpoint.TrimEnd('/');
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}/v1/messages");
         request.Headers.Add("x-api-key", _options.Anthropic.ApiKey);
-        request.Headers.Add("anthropic-version", AnthropicVersion);
+        request.Headers.Add("anthropic-version", _anthropicVersion);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         var payload = new

@@ -7,7 +7,7 @@ namespace Orqentis.Integration.Tests;
 
 public sealed class RunEndpointsIntegrationTests
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
+    private static readonly JsonSerializerOptions _serializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
@@ -54,7 +54,7 @@ public sealed class RunEndpointsIntegrationTests
         using var response = await client.PostAsJsonAsync($"v1/contracts/{contractId}/runs", new { });
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        var payload = await response.Content.ReadFromJsonAsync<RunAcceptedResponse>(SerializerOptions);
+        var payload = await response.Content.ReadFromJsonAsync<RunAcceptedResponse>(_serializerOptions);
         payload.Should().NotBeNull();
 
         return payload!;
@@ -67,7 +67,7 @@ public sealed class RunEndpointsIntegrationTests
             using var response = await client.GetAsync($"v1/runs/{runId}");
             response.EnsureSuccessStatusCode();
 
-            var payload = await response.Content.ReadFromJsonAsync<RunDetailResponse>(SerializerOptions);
+            var payload = await response.Content.ReadFromJsonAsync<RunDetailResponse>(_serializerOptions);
             payload.Should().NotBeNull();
 
             if (!string.Equals(payload!.Status, "running", StringComparison.OrdinalIgnoreCase))
