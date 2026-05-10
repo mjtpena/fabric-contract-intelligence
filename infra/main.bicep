@@ -120,7 +120,6 @@ module swa 'modules/static-web-apps.bicep' = {
     environment: environment
     location: location
     suffix: resourceSuffix
-    apiBackendResourceId: api.outputs.appId
     tags: tags
   }
 }

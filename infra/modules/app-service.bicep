@@ -32,7 +32,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
       appSettings: [
         { name: 'ASPNETCORE_ENVIRONMENT', value: environment == 'production' ? 'Production' : 'Staging' }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
-        { name: 'KeyVault__Uri', value: keyVaultUri }
+        { name: 'KeyVault__VaultUri', value: keyVaultUri }
         { name: 'ConnectionStrings__Postgres', value: 'Host=${pgFqdn};Database=${pgDatabaseName};SslMode=Require;Username=${pgAdminUsername};Password=${pgAdminPassword}' }
         { name: 'AI__AzureOpenAI__Endpoint', value: openAiEndpoint }
       ]
