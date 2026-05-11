@@ -1,27 +1,32 @@
-import { createBrowserHistory } from '@remix-run/router';
-import { createWorkloadClient } from '@ms-fabric/workload-client';
+import type { WorkloadClientAPI } from '@ms-fabric/workload-client';
 
 /**
- * Singleton browser-history instance shared between the router (AppShell)
- * and the Fabric SDK navigation hook. Must be created before React mounts
- * so that onNavigate events received before the first render are not lost.
+ * The live Fabric workload client, set by initialize() in index.ui.tsx
+ * AFTER bootstrap() has established the communication channel with the host.
+ *
+ * Consumers must call getWorkloadClient() at use time (never cache the result
+ * at module-load time) because the client does not exist until after bootstrap.
  */
-export const fabricHistory = createBrowserHistory();
+let _workloadClient: WorkloadClientAPI | null = null;
+
+export function setWorkloadClient(client: WorkloadClientAPI): void {
+  _workloadClient = client;
+}
+
+export function getWorkloadClient(): WorkloadClientAPI | null {
+  return _workloadClient;
+}
 
 /**
- * Singleton workload client created once for the lifetime of the page iframe.
- * Shared between useFabricSdk and the navigation/action registrations in
- * index.ui.tsx so that all SDK interactions use the same channel.
+ * Navigate BrowserRouter to targetUrl using the standard popstate bridge.
+ *
+ * BrowserRouter (from react-router-dom) listens to the 'popstate' window event
+ * via its internal createBrowserHistory. Calling replaceState then dispatching
+ * a popstate event causes the router to re-render at the new path — no custom
+ * History object or unstable APIs required.
  */
-export const fabricWorkloadClient =
-  typeof window === 'undefined' ? null : createWorkloadClient();
-
-// Bridge: when Fabric's host sends an onNavigate event (e.g., user clicks a
-// Contract item in the workspace list) it provides targetUrl = the manifest
-// editor path + "/" + the Fabric objectId, e.g. "/contracts/editor/64aad0c5-...".
-// history.replace pushes that URL into React Router so the correct editor mounts.
-if (fabricWorkloadClient) {
-  fabricWorkloadClient.navigation.onNavigate((route) => {
-    fabricHistory.replace(route.targetUrl);
-  });
+export function navigateTo(targetUrl: string): void {
+  if (typeof window === 'undefined') return;
+  window.history.replaceState(null, '', targetUrl);
+  window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
 }

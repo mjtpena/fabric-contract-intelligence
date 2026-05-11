@@ -6,7 +6,7 @@ import {
 } from '@ms-fabric/workload-client';
 import type { ItemDefinition } from '@ms-fabric/workload-client';
 import { useAppStore } from '@/store/appStore';
-import { fabricWorkloadClient } from '@/lib/fabricRuntime';
+import { getWorkloadClient } from '@/lib/fabricRuntime';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -20,8 +20,9 @@ interface FabricSdkState extends FabricSdkRuntime {
   isReady: boolean;
 }
 
-const workloadClient = fabricWorkloadClient;
+/** Resolved once per page lifetime — reset is not needed because the client never changes. */
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
+
 const ItemDefinitionPath = 'orqentis/item-definition.json';
 
 export function useFabricSdk() {
@@ -81,12 +82,13 @@ export function useFabricSdk() {
       apiBaseUrl: import.meta.env.VITE_ORQENTIS_API_BASE_URL ?? '',
       correlationId: correlationId ?? '',
       getAccessToken: async () => {
-        if (!workloadClient || !state.isHosted) {
+        const client = getWorkloadClient();
+        if (!client || !state.isHosted) {
           return '';
         }
 
         try {
-          const result = await workloadClient.auth.acquireFrontendAccessToken({ scopes: [] });
+          const result = await client.auth.acquireFrontendAccessToken({ scopes: [] });
           return result.token;
         } catch {
           return '';
@@ -136,12 +138,13 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
       workspaceId: searchParams.get('workspaceId') ?? '',
     };
 
-    if (!workloadClient) {
+    const client = getWorkloadClient();
+    if (!client) {
       return fallbackRuntime;
     }
 
     try {
-      const theme = await workloadClient.theme.get();
+      const theme = await client.theme.get();
 
       return {
         isHosted: true,
@@ -161,12 +164,13 @@ async function openNotification(
   message: string | undefined,
   notificationType: NotificationType,
 ): Promise<void> {
-  if (!workloadClient) {
+  const client = getWorkloadClient();
+  if (!client) {
     return;
   }
 
   try {
-    await workloadClient.notification.open({
+    await client.notification.open({
       duration: NotificationToastDuration.Medium,
       message,
       notificationType,
@@ -199,11 +203,12 @@ function getFallbackThemeMode(): ThemeMode {
 }
 
 async function readItemDefinition(itemId: string): Promise<string | null> {
-  if (!workloadClient) {
+  const client = getWorkloadClient();
+  if (!client) {
     return null;
   }
 
-  const result = await workloadClient.itemCrud.getItemDefinition({ itemId });
+  const result = await client.itemCrud.getItemDefinition({ itemId });
   const parts = result.definition.parts ?? [];
   if (parts.length === 0) {
     return null;
@@ -222,14 +227,15 @@ async function readItemDefinition(itemId: string): Promise<string | null> {
 }
 
 async function persistItemDefinition(itemId: string, definitionText: string): Promise<void> {
-  if (!workloadClient) {
+  const client = getWorkloadClient();
+  if (!client) {
     return;
   }
 
   let existingDefinition: ItemDefinition | null = null;
 
   try {
-    const result = await workloadClient.itemCrud.getItemDefinition({ itemId });
+    const result = await client.itemCrud.getItemDefinition({ itemId });
     existingDefinition = result.definition;
   } catch {
     existingDefinition = null;
@@ -261,7 +267,7 @@ async function persistItemDefinition(itemId: string, definitionText: string): Pr
     };
   }
 
-  await workloadClient.itemCrud.updateItemDefinition({
+  await client.itemCrud.updateItemDefinition({
     itemId,
     payload: {
       definition: {
@@ -279,3 +285,4 @@ function encodeBase64Utf8(value: string): string {
 function decodeBase64Utf8(value: string): string {
   return decodeURIComponent(escape(atob(value)));
 }
+
