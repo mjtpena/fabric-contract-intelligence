@@ -51,6 +51,11 @@ builder.Services.AddScoped<ITenantContext>(serviceProvider => serviceProvider.Ge
 builder.Services.AddScoped<IContractStore, ContractStore>();
 builder.Services.AddScoped<IOneLakeTokenBroker, OneLakeTokenBroker>();
 builder.Services.AddHttpClient<IActivatorClient, ActivatorClient>();
+builder.Services.AddHttpClient("fabric-rest", client =>
+{
+    client.BaseAddress = new Uri("https://api.fabric.microsoft.com/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.IGenericWebhookSender, Orqentis.Api.Services.Webhooks.GenericWebhookSender>();
 builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.ISlackWebhookSender, Orqentis.Api.Services.Webhooks.SlackWebhookSender>();
 builder.Services.AddScoped<IBreachAlertDispatcher, BreachAlertDispatcher>();

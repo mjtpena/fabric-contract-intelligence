@@ -411,13 +411,15 @@ function EditorWorkspace({
               />
             </Field>
             <LakehousePicker
-              getToken={sdk.getFabricApiToken}
+              apiBaseUrl={sdk.apiBaseUrl}
+              getToken={sdk.getAccessToken}
               value={draft.targetLakehouseId}
               workspaceId={sdk.workspaceId}
               onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id })}
             />
             <TablePicker
-              getToken={sdk.getFabricApiToken}
+              apiBaseUrl={sdk.apiBaseUrl}
+              getToken={sdk.getAccessToken}
               lakehouseId={draft.targetLakehouseId}
               value={draft.targetTablePath}
               workspaceId={sdk.workspaceId}
@@ -572,14 +574,15 @@ function isPersistedDraft(value: unknown): value is ContractDraft {
 // ─── Lakehouse Picker ──────────────────────────────────────────────────────────
 
 interface LakehousePickerProps {
+  apiBaseUrl: string;
   getToken: () => Promise<string>;
   onChange: (lakehouseId: string) => void;
   value: string;
   workspaceId: string;
 }
 
-function LakehousePicker({ getToken, onChange, value, workspaceId }: LakehousePickerProps) {
-  const { isLoading, lakehouses } = useLakehouses({ getToken, workspaceId });
+function LakehousePicker({ apiBaseUrl, getToken, onChange, value, workspaceId }: LakehousePickerProps) {
+  const { isLoading, lakehouses } = useLakehouses({ baseUrl: apiBaseUrl, getToken, workspaceId });
 
   const selectedName =
     lakehouses.find((l) => l.id === value)?.displayName ?? (value || undefined);
@@ -616,6 +619,7 @@ function LakehousePicker({ getToken, onChange, value, workspaceId }: LakehousePi
 // ─── Table Picker ──────────────────────────────────────────────────────────────
 
 interface TablePickerProps {
+  apiBaseUrl: string;
   getToken: () => Promise<string>;
   lakehouseId: string;
   onChange: (tablePath: string) => void;
@@ -623,8 +627,8 @@ interface TablePickerProps {
   workspaceId: string;
 }
 
-function TablePicker({ getToken, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
-  const { isLoading, tables } = useLakehouseTables({ getToken, lakehouseId, workspaceId });
+function TablePicker({ apiBaseUrl, getToken, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
+  const { isLoading, tables } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, lakehouseId, workspaceId });
 
   const hasLakehouse = isGuid(lakehouseId);
   const placeholder = !hasLakehouse

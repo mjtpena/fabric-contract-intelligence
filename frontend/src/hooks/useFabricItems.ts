@@ -5,6 +5,7 @@ import type { FabricLakehouse, FabricLakehouseTable } from '@/api/fabricItemsCli
 export type { FabricLakehouse, FabricLakehouseTable };
 
 interface UseLakehousesParams {
+  baseUrl: string;
   getToken: () => Promise<string>;
   workspaceId: string;
 }
@@ -15,22 +16,22 @@ interface UseLakehousesResult {
 }
 
 /**
- * Fetches Lakehouse items for the given workspace.
- * Returns empty list if the workspace ID is absent or the token can't be obtained.
+ * Fetches Lakehouse items for the given workspace via the Orqentis backend proxy.
+ * Returns empty list if baseUrl/workspaceId are absent or the token can't be obtained.
  */
-export function useLakehouses({ getToken, workspaceId }: UseLakehousesParams): UseLakehousesResult {
+export function useLakehouses({ baseUrl, getToken, workspaceId }: UseLakehousesParams): UseLakehousesResult {
   const [lakehouses, setLakehouses] = useState<FabricLakehouse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!workspaceId) {
+    if (!baseUrl || !workspaceId) {
       return;
     }
 
     let cancelled = false;
     setIsLoading(true);
 
-    void listWorkspaceLakehouses(workspaceId, getToken)
+    void listWorkspaceLakehouses(baseUrl, workspaceId, getToken)
       .then((items) => {
         if (!cancelled) {
           setLakehouses(items);
@@ -47,12 +48,13 @@ export function useLakehouses({ getToken, workspaceId }: UseLakehousesParams): U
     };
   // getToken is a stable callback from useFabricSdk — intentionally excluded from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
+  }, [baseUrl, workspaceId]);
 
   return { isLoading, lakehouses };
 }
 
 interface UseLakehouseTablesParams {
+  baseUrl: string;
   getToken: () => Promise<string>;
   lakehouseId: string;
   workspaceId: string;
@@ -64,10 +66,11 @@ interface UseLakehouseTablesResult {
 }
 
 /**
- * Fetches Delta/Parquet tables for the given Lakehouse.
+ * Fetches Delta/Parquet tables for the given Lakehouse via the Orqentis backend proxy.
  * Clears the list and skips fetching if lakehouseId is not a valid GUID.
  */
 export function useLakehouseTables({
+  baseUrl,
   getToken,
   lakehouseId,
   workspaceId,
@@ -76,7 +79,7 @@ export function useLakehouseTables({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!workspaceId || !isGuid(lakehouseId)) {
+    if (!baseUrl || !workspaceId || !isGuid(lakehouseId)) {
       setTables([]);
       return;
     }
@@ -84,7 +87,7 @@ export function useLakehouseTables({
     let cancelled = false;
     setIsLoading(true);
 
-    void listLakehouseTables(workspaceId, lakehouseId, getToken)
+    void listLakehouseTables(baseUrl, workspaceId, lakehouseId, getToken)
       .then((items) => {
         if (!cancelled) {
           setTables(items);
@@ -101,7 +104,7 @@ export function useLakehouseTables({
     };
   // getToken is a stable callback from useFabricSdk — intentionally excluded from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, lakehouseId]);
+  }, [baseUrl, workspaceId, lakehouseId]);
 
   return { isLoading, tables };
 }

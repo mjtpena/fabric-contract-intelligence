@@ -1,9 +1,6 @@
-const FABRIC_API = 'https://api.fabric.microsoft.com/v1';
-
 export interface FabricLakehouse {
   id: string;
   displayName: string;
-  description?: string;
   workspaceId: string;
 }
 
@@ -15,13 +12,16 @@ export interface FabricLakehouseTable {
 
 /**
  * Lists all Lakehouse items in the given workspace.
+ * Calls the Orqentis backend proxy (which uses OBO to reach the Fabric REST API),
+ * because the frontend cannot call api.fabric.microsoft.com directly from the Fabric iframe.
  * Returns an empty array on auth failure or network error — callers should fall back gracefully.
  */
 export async function listWorkspaceLakehouses(
+  baseUrl: string,
   workspaceId: string,
   getToken: () => Promise<string>,
 ): Promise<FabricLakehouse[]> {
-  if (!workspaceId) {
+  if (!baseUrl || !workspaceId) {
     return [];
   }
 
@@ -31,7 +31,7 @@ export async function listWorkspaceLakehouses(
   }
 
   try {
-    const response = await fetch(`${FABRIC_API}/workspaces/${workspaceId}/lakehouses`, {
+    const response = await fetch(`${baseUrl}/v1/fabric/${workspaceId}/lakehouses`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -39,8 +39,7 @@ export async function listWorkspaceLakehouses(
       return [];
     }
 
-    const json = (await response.json()) as { value?: FabricLakehouse[] };
-    return json.value ?? [];
+    return (await response.json()) as FabricLakehouse[];
   } catch {
     return [];
   }
@@ -48,14 +47,16 @@ export async function listWorkspaceLakehouses(
 
 /**
  * Lists Delta/Parquet tables inside a specific Lakehouse.
+ * Calls the Orqentis backend proxy (OBO → Fabric REST API).
  * Returns an empty array on auth failure or network error.
  */
 export async function listLakehouseTables(
+  baseUrl: string,
   workspaceId: string,
   lakehouseId: string,
   getToken: () => Promise<string>,
 ): Promise<FabricLakehouseTable[]> {
-  if (!workspaceId || !lakehouseId) {
+  if (!baseUrl || !workspaceId || !lakehouseId) {
     return [];
   }
 
@@ -66,7 +67,7 @@ export async function listLakehouseTables(
 
   try {
     const response = await fetch(
-      `${FABRIC_API}/workspaces/${workspaceId}/lakehouses/${lakehouseId}/tables`,
+      `${baseUrl}/v1/fabric/${workspaceId}/lakehouses/${lakehouseId}/tables`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -76,8 +77,7 @@ export async function listLakehouseTables(
       return [];
     }
 
-    const json = (await response.json()) as { data?: FabricLakehouseTable[] };
-    return json.data ?? [];
+    return (await response.json()) as FabricLakehouseTable[];
   } catch {
     return [];
   }
