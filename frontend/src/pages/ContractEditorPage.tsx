@@ -411,6 +411,7 @@ function EditorWorkspace({
             <LakehousePicker
               apiBaseUrl={sdk.apiBaseUrl}
               getToken={sdk.getAccessToken}
+              isReady={sdk.isReady}
               value={draft.targetLakehouseId}
               workspaceId={sdk.workspaceId}
               onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id, targetTablePath: '' })}
@@ -418,6 +419,7 @@ function EditorWorkspace({
             <TablePicker
               apiBaseUrl={sdk.apiBaseUrl}
               getToken={sdk.getAccessToken}
+              isReady={sdk.isReady}
               lakehouseId={draft.targetLakehouseId}
               value={draft.targetTablePath}
               workspaceId={sdk.workspaceId}

@@ -6,19 +6,21 @@ import { useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 export interface LakehousePickerProps {
   apiBaseUrl: string;
   getToken: () => Promise<string>;
+  /** Pass sdk.isReady to prevent firing requests before the Fabric SDK token is available. */
+  isReady: boolean;
   onChange: (lakehouseId: string) => void;
   value: string;
   workspaceId: string;
 }
 
-export function LakehousePicker({ apiBaseUrl, getToken, onChange, value, workspaceId }: LakehousePickerProps) {
-  const { isLoading, lakehouses } = useLakehouses({ baseUrl: apiBaseUrl, getToken, workspaceId });
+export function LakehousePicker({ apiBaseUrl, getToken, isReady, onChange, value, workspaceId }: LakehousePickerProps) {
+  const { isLoading, lakehouses } = useLakehouses({ baseUrl: apiBaseUrl, getToken, isReady, workspaceId });
 
   const selectedName = lakehouses.find((l) => l.id === value)?.displayName ?? (value || undefined);
 
   return (
     <Field
-      hint={lakehouses.length === 0 && !isLoading ? 'Paste a lakehouse GUID if the list is unavailable.' : undefined}
+      hint={lakehouses.length === 0 && !isLoading && isReady ? 'Paste a lakehouse GUID if the list is unavailable.' : undefined}
       label="Target lakehouse"
     >
       <Combobox
@@ -49,14 +51,16 @@ export function LakehousePicker({ apiBaseUrl, getToken, onChange, value, workspa
 export interface TablePickerProps {
   apiBaseUrl: string;
   getToken: () => Promise<string>;
+  /** Pass sdk.isReady to prevent firing requests before the Fabric SDK token is available. */
+  isReady: boolean;
   lakehouseId: string;
   onChange: (tablePath: string) => void;
   value: string;
   workspaceId: string;
 }
 
-export function TablePicker({ apiBaseUrl, getToken, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
-  const { isLoading, tables } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, lakehouseId, workspaceId });
+export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
+  const { isLoading, tables } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, isReady, lakehouseId, workspaceId });
 
   const hasLakehouse = isGuid(lakehouseId);
   const placeholder = !hasLakehouse

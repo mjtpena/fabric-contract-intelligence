@@ -7,6 +7,8 @@ export type { FabricLakehouse, FabricLakehouseTable };
 interface UseLakehousesParams {
   baseUrl: string;
   getToken: () => Promise<string>;
+  /** Pass sdk.isReady so the effect re-fires once the Fabric SDK has initialised and the token is available. */
+  isReady: boolean;
   workspaceId: string;
 }
 
@@ -18,13 +20,15 @@ interface UseLakehousesResult {
 /**
  * Fetches Lakehouse items for the given workspace via the Orqentis backend proxy.
  * Returns empty list if baseUrl/workspaceId are absent or the token can't be obtained.
+ * isReady MUST be true before fetching — this prevents wasting a request with an
+ * empty token during the SDK initialisation window.
  */
-export function useLakehouses({ baseUrl, getToken, workspaceId }: UseLakehousesParams): UseLakehousesResult {
+export function useLakehouses({ baseUrl, getToken, isReady, workspaceId }: UseLakehousesParams): UseLakehousesResult {
   const [lakehouses, setLakehouses] = useState<FabricLakehouse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!baseUrl || !workspaceId) {
+    if (!baseUrl || !workspaceId || !isReady) {
       return;
     }
 
@@ -46,9 +50,10 @@ export function useLakehouses({ baseUrl, getToken, workspaceId }: UseLakehousesP
     return () => {
       cancelled = true;
     };
-  // getToken is a stable callback from useFabricSdk — intentionally excluded from deps
+  // getToken is a stable callback from useFabricSdk — intentionally excluded from deps.
+  // isReady is included so the effect re-fires after the SDK initialises.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, workspaceId]);
+  }, [baseUrl, isReady, workspaceId]);
 
   return { isLoading, lakehouses };
 }
@@ -56,6 +61,8 @@ export function useLakehouses({ baseUrl, getToken, workspaceId }: UseLakehousesP
 interface UseLakehouseTablesParams {
   baseUrl: string;
   getToken: () => Promise<string>;
+  /** Pass sdk.isReady so the effect re-fires once the Fabric SDK has initialised. */
+  isReady: boolean;
   lakehouseId: string;
   workspaceId: string;
 }
@@ -67,11 +74,12 @@ interface UseLakehouseTablesResult {
 
 /**
  * Fetches Delta/Parquet tables for the given Lakehouse via the Orqentis backend proxy.
- * Clears the list and skips fetching if lakehouseId is not a valid GUID.
+ * Clears the list and skips fetching if lakehouseId is not a valid GUID or isReady is false.
  */
 export function useLakehouseTables({
   baseUrl,
   getToken,
+  isReady,
   lakehouseId,
   workspaceId,
 }: UseLakehouseTablesParams): UseLakehouseTablesResult {
@@ -79,7 +87,7 @@ export function useLakehouseTables({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!baseUrl || !workspaceId || !isGuid(lakehouseId)) {
+    if (!baseUrl || !workspaceId || !isReady || !isGuid(lakehouseId)) {
       setTables([]);
       return;
     }
@@ -102,9 +110,9 @@ export function useLakehouseTables({
     return () => {
       cancelled = true;
     };
-  // getToken is a stable callback from useFabricSdk — intentionally excluded from deps
+  // getToken is stable — intentionally excluded. isReady triggers re-fetch on SDK init.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, workspaceId, lakehouseId]);
+  }, [baseUrl, isReady, lakehouseId, workspaceId]);
 
   return { isLoading, tables };
 }

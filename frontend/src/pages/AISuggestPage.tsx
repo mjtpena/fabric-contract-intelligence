@@ -152,6 +152,7 @@ export function AISuggestPage() {
         <LakehousePicker
           apiBaseUrl={sdk.apiBaseUrl}
           getToken={sdk.getAccessToken}
+          isReady={sdk.isReady}
           value={targetLakehouseId}
           workspaceId={sdk.workspaceId}
           onChange={(id) => {
@@ -162,6 +163,7 @@ export function AISuggestPage() {
         <TablePicker
           apiBaseUrl={sdk.apiBaseUrl}
           getToken={sdk.getAccessToken}
+          isReady={sdk.isReady}
           lakehouseId={targetLakehouseId}
           value={targetTablePath}
           workspaceId={sdk.workspaceId}

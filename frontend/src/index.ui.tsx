@@ -3,9 +3,21 @@ import ReactDOM from 'react-dom/client';
 import type { InitParams, ItemTabActionContext } from '@ms-fabric/workload-client';
 import { createWorkloadClient } from '@ms-fabric/workload-client';
 import { setWorkloadClient, getWorkloadClient, navigateTo } from './lib/fabricRuntime';
+import { useAppStore } from './store/appStore';
 import AppShell from './components/AppShell';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+
+/** Extract workspaceId from a URL string (checks both query params). */
+function extractWorkspaceId(url: string): string | null {
+  try {
+    const qIndex = url.indexOf('?');
+    if (qIndex === -1) return null;
+    return new URLSearchParams(url.slice(qIndex + 1)).get('workspaceId');
+  } catch {
+    return null;
+  }
+}
 
 /**
  * UI iframe initialization — called by bootstrap() when Fabric loads this app
@@ -23,6 +35,19 @@ export function initialize(params: InitParams): Promise<void> {
   }
   const client = getWorkloadClient()!;
 
+  // ── Extract workspaceId BEFORE React renders ──────────────────────────────
+  // Fabric passes workspaceId as a query param in bootstrapPath (and sometimes
+  // the current window URL). We prime the Zustand store here so the very first
+  // render sees the correct workspaceId — avoids the race where
+  // initializeFabricSdk reads it from window.location before replaceState runs.
+  const initialWorkspaceId =
+    extractWorkspaceId(params.bootstrapPath ?? '') ??
+    extractWorkspaceId(window.location.search);
+
+  if (initialWorkspaceId) {
+    useAppStore.getState().setWorkspaceId(initialWorkspaceId);
+  }
+
   // If Fabric hinted the initial path via bootstrapPath AND the browser URL is
   // still at '/', navigate to it now so BrowserRouter mounts at the right route.
   if (params.bootstrapPath && window.location.pathname === '/') {
@@ -30,7 +55,12 @@ export function initialize(params: InitParams): Promise<void> {
   }
 
   // Wire subsequent in-session navigations (e.g., user clicks another item tab).
+  // Also capture workspaceId updates from each navigation event.
   client.navigation.onNavigate((route) => {
+    const wsId = extractWorkspaceId(route.targetUrl);
+    if (wsId) {
+      useAppStore.getState().setWorkspaceId(wsId);
+    }
     navigateTo(route.targetUrl);
   });
 
