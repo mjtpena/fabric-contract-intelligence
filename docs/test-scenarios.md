@@ -1,0 +1,142 @@
+# Orqentis FCI Workload — Test Scenarios
+
+Manually validated against production:
+- SWA: `https://fabric.orqentis.com`
+- API: `https://orqentis-api.azurewebsites.net`
+- Workspace: `https://app.fabric.microsoft.com/groups/8e15a176-ac93-4ed2-9540-818214ab1199/list`
+
+---
+
+## 1. Bootstrap & Loading
+
+| # | Scenario | Expected |
+|---|---|---|
+| 1.1 | Click any `Orqentis Contract` item in the Fabric workspace list | Item opens; workload iframe renders (no blank page, no permanent spinner) |
+| 1.2 | Hard-refresh an already-open workload item URL | Reloads correctly without blank page |
+| 1.3 | Open the workload with browser DevTools → Console | No uncaught JS errors; no `Empty iframeId` in real Fabric context |
+| 1.4 | Introduce a deliberate render error (e.g., bad env var) | `ErrorBoundary` displays a red error panel instead of a blank page |
+| 1.5 | Open two different Contract items in separate Fabric tabs | Both iframes load independently without interfering |
+
+---
+
+## 2. Contract List Page (`/contracts`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 2.1 | Default route after item opens | `ContractListPage` renders the workspace's contracts |
+| 2.2 | Workspace has no contracts yet | Empty state UI shown (no crash, no spinner loop) |
+| 2.3 | Workspace has 10+ contracts | List paginates or scrolls correctly |
+| 2.4 | Click a contract row | Navigates to `ContractDetailPage` |
+| 2.5 | API is unreachable (kill backend) | Error message shown; no blank page |
+
+---
+
+## 3. Contract Editor (`/contracts/editor/:itemObjectId`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 3.1 | Fabric navigates to an editor URL with a valid item object ID | `ContractEditorPage` loads; Monaco YAML editor is visible |
+| 3.2 | Monaco editor renders ODCS YAML with syntax highlighting | YAML coloured correctly; no plain-text fallback |
+| 3.3 | Type invalid YAML in editor | `ValidationPanel` shows red error(s) in real time |
+| 3.4 | Type valid ODCS v3.1.0 YAML | `ValidationPanel` shows green / no errors |
+| 3.5 | Click **Save** ribbon action | Persists via `persistItemDefinition` → Fabric item definition updated; success toast |
+| 3.6 | Click **Activate** ribbon action | Contract status transitions to `active`; badge updates |
+| 3.7 | Click **Run Now** ribbon action | Enforcement run triggered; navigates to `EnforcementRunPage` |
+| 3.8 | Click **AI Suggest** button | `AISuggestPage` opened; YAML suggestion returned within 15 s |
+| 3.9 | Open an item with an existing definition | Monaco pre-populated with saved YAML |
+| 3.10 | Refresh editor mid-edit | Draft persisted (or warning shown); no data loss |
+
+---
+
+## 4. Policy Editor (`/contracts/policies/:itemObjectId`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 4.1 | Fabric navigates to a policy item | `PolicyEditorPage` renders |
+| 4.2 | Edit and save a policy | Persisted and success toast shown |
+
+---
+
+## 5. Enforcement Run Page (`/contracts/runs/:itemObjectId`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 5.1 | Fabric navigates to a run item | `EnforcementRunPage` renders with run status |
+| 5.2 | Run is in-progress | Spinner / progress indicator shown |
+| 5.3 | Run completes with violations | Violations list rendered with column/rule details |
+| 5.4 | Run completes with no violations | "No violations" message shown |
+
+---
+
+## 6. AI Features
+
+| # | Scenario | Expected |
+|---|---|---|
+| 6.1 | AI Suggest (`/contracts/ai-suggest`) — submit a description | Returns ODCS YAML draft within 15 s |
+| 6.2 | AI Suggest — primary model (GPT-4o) times out | Fallback to Claude 3.7 Sonnet; result still returned |
+| 6.3 | NL Query (`/contracts/ai-query`) — ask "which contracts cover PII data?" | Natural-language answer with contract references |
+| 6.4 | Both AI models unavailable | Empty template returned; no crash; error toast shown |
+
+---
+
+## 7. Alerts Dashboard (`/contracts/alerts`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 7.1 | Navigate to `/contracts/alerts` | `AlertsDashboardPage` renders |
+| 7.2 | Alerts exist | List of alerts with severity, contract name, timestamp |
+| 7.3 | No alerts | Empty state shown |
+
+---
+
+## 8. Workspace Settings (`/workspace/settings`)
+
+| # | Scenario | Expected |
+|---|---|---|
+| 8.1 | Navigate to settings | `WorkspaceSettingsPage` renders |
+| 8.2 | Save OneLake connection settings | API call succeeds; success toast |
+
+---
+
+## 9. Authentication & Security
+
+| # | Scenario | Expected |
+|---|---|---|
+| 9.1 | Open workload as a workspace Member (not Admin) | Workload loads; write actions may be restricted per RBAC |
+| 9.2 | Token expiry mid-session | Silent re-auth via `acquireFrontendAccessToken`; no forced logout |
+| 9.3 | Open workload in a workspace the user does not have access to | Fabric shows access error (not a blank page from our workload) |
+| 9.4 | Check API request headers | `X-Correlation-Id` header present on every call |
+| 9.5 | Verify no secrets in JS bundle | `dist/assets/index.ui-*.js` — no connection strings, no API keys |
+
+---
+
+## 10. Navigation & Routing
+
+| # | Scenario | Expected |
+|---|---|---|
+| 10.1 | Open Item A then Item B in same Fabric tab | `onNavigate` fires; router switches to Item B's route; no full reload |
+| 10.2 | Navigate to an unknown path | Redirects to `/contracts` (default route) |
+| 10.3 | Browser back button inside workload | Not applicable (Fabric controls top-level nav); no crash |
+
+---
+
+## 11. Theme
+
+| # | Scenario | Expected |
+|---|---|---|
+| 11.1 | Fabric portal set to Dark mode | Workload renders using `webDarkTheme`; no hardcoded white backgrounds |
+| 11.2 | Fabric portal set to Light mode | Workload renders using `webLightTheme` |
+
+---
+
+## 12. Performance & Stability
+
+| # | Scenario | Expected |
+|---|---|---|
+| 12.1 | Time from item click to interactive | < 3 s on a standard connection |
+| 12.2 | 300 KB+ YAML in Monaco editor | Editor remains responsive; no freeze |
+| 12.3 | Leave workload open for 30 min | No memory leak; no spontaneous blank page |
+
+---
+
+*Generated: 2026-05-11*
