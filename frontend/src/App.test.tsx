@@ -76,7 +76,7 @@ vi.mock('./pages/WorkspaceSettingsPage', () => ({
 }));
 
 describe('App', () => {
-  it('renders the contracts workspace shell', () => {
+  it('renders the contract list at /contracts', () => {
     render(
       <FluentProvider theme={webLightTheme}>
         <MemoryRouter
@@ -88,26 +88,24 @@ describe('App', () => {
       </FluentProvider>,
     );
 
-    expect(screen.getByText('Orqentis')).toBeInTheDocument();
+    // Fabric provides its own chrome; the workload renders only the item content area.
+    // ContractListPage is the default view at /contracts.
     expect(screen.getByText('Contract library')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Contracts' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Workspace settings' })).toBeInTheDocument();
   });
 
-  it('resolves Fabric workspace deep links to the contract editor', () => {
+  it('renders the contract editor when navigating to a Fabric item editor URL', () => {
     render(
       <FluentProvider theme={webLightTheme}>
         <MemoryRouter
           future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
-          initialEntries={[
-            '/groups/8e15a176-ac93-4ed2-9540-818214ab1199/Org.Orqentis.Contract/64aad0c5-cb6e-443b-b20c-995b95d6f1e3?experience=fabric-developer',
-          ]}
+          initialEntries={['/contracts/editor/64aad0c5-cb6e-443b-b20c-995b95d6f1e3']}
         >
           <App />
         </MemoryRouter>
       </FluentProvider>,
     );
 
+    // ContractEditorPage empty state is shown when no contract is loaded yet.
     expect(screen.getByText('Start drafting')).toBeInTheDocument();
   });
 });

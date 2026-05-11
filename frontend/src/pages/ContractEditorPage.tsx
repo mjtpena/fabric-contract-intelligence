@@ -77,12 +77,13 @@ const useStyles = makeStyles({
 
 export function ContractEditorPage() {
   const styles = useStyles();
-  const { id: routeId } = useParams();
+  const { id: routeId, itemObjectId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const sdk = useFabricSdk();
   const [persistedEditorState, setPersistedEditorState] = useState<PersistedEditorState | null>(null);
   const [itemDefinitionLoaded, setItemDefinitionLoaded] = useState(false);
+  // contractId is the backend Orqentis UUID; itemObjectId is the Fabric item UUID
   const contractId = routeId ?? searchParams.get('id') ?? persistedEditorState?.contractId ?? null;
 
   const client = useMemo(
@@ -104,7 +105,12 @@ export function ContractEditorPage() {
   useEffect(() => {
     let cancelled = false;
 
-    void sdk.loadItemDefinition()
+    if (!itemObjectId) {
+      setItemDefinitionLoaded(true);
+      return;
+    }
+
+    void sdk.loadItemDefinition(itemObjectId)
       .then((persisted) => {
         if (cancelled || !persisted) {
           setItemDefinitionLoaded(true);
@@ -125,7 +131,7 @@ export function ContractEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [sdk]);
+  }, [sdk, itemObjectId]);
 
   useEffect(() => {
     if (!contract) {
@@ -152,6 +158,7 @@ export function ContractEditorPage() {
         contractId={contractId}
         draft={draft}
         error={error}
+        fabricItemId={itemObjectId ?? null}
         loading={loading}
         navigateToContracts={() => navigate('/contracts')}
         navigateToDetail={(selectedContractId) => navigate(`/contracts/${selectedContractId}`)}
@@ -162,7 +169,6 @@ export function ContractEditorPage() {
         onCreateDraft={() =>
           setDraft(
             createNewDraft({
-              itemId: sdk.itemId,
               targetLakehouseId: searchParams.get('lakehouseId') ?? '',
               targetTablePath: searchParams.get('targetTablePath') ?? '',
             }),
@@ -183,6 +189,7 @@ interface EditorWorkspaceProps {
   contractId: string | null | undefined;
   draft: ContractDraft | null;
   error: string | null;
+  fabricItemId: string | null;
   loading: boolean;
   navigateToContracts: () => void;
   navigateToDetail: (contractId: string) => void;
@@ -201,6 +208,7 @@ function EditorWorkspace({
   contractId,
   draft,
   error,
+  fabricItemId,
   loading,
   navigateToContracts,
   navigateToDetail,
@@ -270,7 +278,9 @@ function EditorWorkspace({
       };
 
       try {
-        await sdk.saveItemDefinition(JSON.stringify(persistedState));
+        if (fabricItemId) {
+          await sdk.saveItemDefinition(fabricItemId, JSON.stringify(persistedState));
+        }
       } catch {
         await sdk.notifyInfo(
           'Item state not synced',
@@ -461,7 +471,6 @@ function getInitialView(contract: ContractDetail | null) {
 }
 
 function createNewDraft(seed: {
-  itemId: string | null;
   targetLakehouseId: string;
   targetTablePath: string;
 }): ContractDraft {
@@ -470,7 +479,6 @@ function createNewDraft(seed: {
   return {
     commitMessage: '',
     description: '',
-    id: seed.itemId ?? undefined,
     name: 'New Contract',
     odcsYaml: synchronizeDraftYaml(yaml, {
       name: 'New Contract',

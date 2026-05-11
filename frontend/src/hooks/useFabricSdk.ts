@@ -3,17 +3,15 @@ import {
   NotificationToastDuration,
   NotificationType,
   PayloadType,
-  createWorkloadClient,
 } from '@ms-fabric/workload-client';
 import type { ItemDefinition } from '@ms-fabric/workload-client';
 import { useAppStore } from '@/store/appStore';
-import { parseFabricPathContext } from '@/utils/fabricPathContext';
+import { fabricWorkloadClient } from '@/lib/fabricRuntime';
 
 type ThemeMode = 'dark' | 'light';
 
 interface FabricSdkRuntime {
   isHosted: boolean;
-  itemId: string | null;
   themeMode: ThemeMode;
   workspaceId: string;
 }
@@ -22,7 +20,7 @@ interface FabricSdkState extends FabricSdkRuntime {
   isReady: boolean;
 }
 
-const workloadClient = typeof window === 'undefined' ? null : createWorkloadClient();
+const workloadClient = fabricWorkloadClient;
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
 const ItemDefinitionPath = 'orqentis/item-definition.json';
 
@@ -34,7 +32,6 @@ export function useFabricSdk() {
   const [state, setState] = useState<FabricSdkState>(() => ({
     isHosted: false,
     isReady: false,
-    itemId: null,
     themeMode: getFallbackThemeMode(),
     workspaceId: workspaceIdInStore ?? '',
   }));
@@ -54,14 +51,14 @@ export function useFabricSdk() {
           return;
         }
 
-        if (runtime.workspaceId) {
-          setWorkspaceId(runtime.workspaceId);
-        }
-
         setState({
           ...runtime,
           isReady: true,
         });
+
+        if (runtime.workspaceId) {
+          setWorkspaceId(runtime.workspaceId);
+        }
       })
       .catch(() => {
         if (!isMounted) {
@@ -89,7 +86,6 @@ export function useFabricSdk() {
         }
 
         try {
-          // acquireFrontendAccessToken with empty scopes returns the default Power BI token.
           const result = await workloadClient.auth.acquireFrontendAccessToken({ scopes: [] });
           return result.token;
         } catch {
@@ -98,31 +94,32 @@ export function useFabricSdk() {
       },
       isHosted: state.isHosted,
       isReady: state.isReady,
-      itemId: state.itemId,
       notifyError: (title: string, message?: string) =>
         openNotification(title, message, NotificationType.Error),
       notifyInfo: (title: string, message?: string) =>
         openNotification(title, message, NotificationType.Info),
       notifySuccess: (title: string, message?: string) =>
         openNotification(title, message, NotificationType.Success),
-      loadItemDefinition: async () => {
-        if (!state.isHosted || !state.itemId) {
+      /** Load item definition using the Fabric objectId from the route param. */
+      loadItemDefinition: async (fabricItemId: string) => {
+        if (!state.isHosted || !fabricItemId) {
           return null;
         }
 
-        return readItemDefinition(state.itemId);
+        return readItemDefinition(fabricItemId);
       },
-      saveItemDefinition: async (definition: string) => {
-        if (!state.isHosted || !state.itemId) {
+      /** Persist item definition using the Fabric objectId from the route param. */
+      saveItemDefinition: async (fabricItemId: string, definition: string) => {
+        if (!state.isHosted || !fabricItemId) {
           return;
         }
 
-        await persistItemDefinition(state.itemId, definition);
+        await persistItemDefinition(fabricItemId, definition);
       },
       themeMode: state.themeMode,
       workspaceId: workspaceIdInStore ?? state.workspaceId,
     }),
-    [correlationId, state.isHosted, state.isReady, state.itemId, state.themeMode, state.workspaceId, workspaceIdInStore],
+    [correlationId, state.isHosted, state.isReady, state.themeMode, state.workspaceId, workspaceIdInStore],
   );
 }
 
@@ -133,12 +130,10 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
 
   initializationPromise = (async () => {
     const searchParams = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
-    const pathContext = typeof window === 'undefined' ? null : parseFabricPathContext(window.location.pathname);
     const fallbackRuntime: FabricSdkRuntime = {
       isHosted: false,
-      itemId: searchParams.get('itemId') ?? pathContext?.itemId ?? null,
       themeMode: getFallbackThemeMode(),
-      workspaceId: searchParams.get('workspaceId') ?? pathContext?.workspaceId ?? '',
+      workspaceId: searchParams.get('workspaceId') ?? '',
     };
 
     if (!workloadClient) {
@@ -150,9 +145,8 @@ async function initializeFabricSdk(): Promise<FabricSdkRuntime> {
 
       return {
         isHosted: true,
-        itemId: searchParams.get('itemId') ?? pathContext?.itemId ?? null,
         themeMode: getThemeMode(theme.colorScheme, theme.name),
-        workspaceId: searchParams.get('workspaceId') ?? pathContext?.workspaceId ?? '',
+        workspaceId: searchParams.get('workspaceId') ?? '',
       };
     } catch {
       return fallbackRuntime;
