@@ -6,14 +6,32 @@ import YamlWorker from './yaml.worker?worker';
 
 let isConfigured = false;
 
+// Set up Monaco Environment with graceful worker fallback for Fabric iframe context.
+// Fabric iframes may block blob: workers (CSP or sandbox restrictions); Monaco
+// handles this gracefully by falling back to main-thread mode.
 if (typeof window !== 'undefined' && !window.MonacoEnvironment) {
   window.MonacoEnvironment = {
     getWorker(_moduleId, label) {
-      if (label === 'yaml') {
-        return new YamlWorker();
+      try {
+        if (label === 'yaml') {
+          return new YamlWorker();
+        }
+        return new EditorWorker();
+      } catch {
+        // Worker creation blocked by iframe security context — Monaco falls back
+        // to main-thread mode automatically. Return a minimal stub to prevent
+        // uncaught exceptions propagating to the host page.
+        return {
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          postMessage: () => {},
+          terminate: () => {},
+          dispatchEvent: () => false,
+          onmessage: null,
+          onmessageerror: null,
+          onerror: null,
+        } as unknown as Worker;
       }
-
-      return new EditorWorker();
     },
   };
 }
