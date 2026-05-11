@@ -14,7 +14,7 @@ namespace Orqentis.Api.Controllers;
 [Route("v1/fabric")]
 public sealed class FabricProxyController : ControllerBase
 {
-    private const string FabricApiBase = "https://api.fabric.microsoft.com/v1";
+    private const string _fabricApiBase = "https://api.fabric.microsoft.com/v1";
 
     private readonly IOneLakeTokenBroker _tokenBroker;
     private readonly HttpClient _httpClient;
@@ -61,7 +61,7 @@ public sealed class FabricProxyController : ControllerBase
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"{FabricApiBase}/workspaces/{workspaceId}/lakehouses");
+            $"{_fabricApiBase}/workspaces/{workspaceId}/lakehouses");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", fabricToken);
 
         HttpResponseMessage response;
@@ -126,7 +126,7 @@ public sealed class FabricProxyController : ControllerBase
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"{FabricApiBase}/workspaces/{workspaceId}/lakehouses/{lakehouseId}/tables");
+            $"{_fabricApiBase}/workspaces/{workspaceId}/lakehouses/{lakehouseId}/tables");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", fabricToken);
 
         HttpResponseMessage response;
