@@ -44,6 +44,7 @@ export default function App() {
       <Route path="/contracts/alerts" element={<AlertsDashboardPage />} />
       <Route path="/contracts/:id" element={<ContractDetailPage />} />
       <Route path="/contracts/:id/edit" element={<ContractEditorPage />} />
+      <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
       <Route path="/workspace/settings" element={<WorkspaceSettingsPage />} />
 
       {/* Default: redirect to contract list */}

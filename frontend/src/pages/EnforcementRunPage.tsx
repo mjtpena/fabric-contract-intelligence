@@ -24,6 +24,7 @@ import {
 import { ArrowClockwiseRegular, ArrowLeftRegular } from '@fluentui/react-icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
+import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { BreachScoreGauge } from '@/components/RunResult/BreachScoreGauge';
 import { RuleResultsTable } from '@/components/RunResult/RuleResultsTable';
@@ -33,8 +34,14 @@ import { useContract } from '@/hooks/useContract';
 import { useEnforcementRun } from '@/hooks/useEnforcementRun';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { RunSummary, SchemaDiff } from '@/models/enforcement';
+import type { ReportAuditRow } from '@/models/ops';
 
 type RunTab = 'schema-rules' | 'quality-rules' | 'freshness' | 'schema-diff' | 'remediation';
+
+interface PersistedReportState {
+  contractId: string | null;
+  runId: string | null;
+}
 
 const useStyles = makeStyles({
   root: {
@@ -113,15 +120,20 @@ const useStyles = makeStyles({
 export function EnforcementRunPage() {
   const styles = useStyles();
   const navigate = useNavigate();
-  const { id: routeContractId, runId: routeRunId } = useParams();
+  const { id: routeContractId, itemObjectId, runId: routeRunId } = useParams();
   const [searchParams] = useSearchParams();
   const sdk = useFabricSdk();
   const [selectedTab, setSelectedTab] = useState<RunTab>('schema-rules');
   const [leftVersionId, setLeftVersionId] = useState<string>('');
   const [rightVersionId, setRightVersionId] = useState<string>('');
+  const [persistedReportState, setPersistedReportState] = useState<PersistedReportState | null>(null);
+  const [itemDefinitionLoaded, setItemDefinitionLoaded] = useState(false);
+  const [auditRows, setAuditRows] = useState<ReportAuditRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
-  const requestedContractId = routeContractId ?? searchParams.get('contractId');
-  const requestedRunId = routeRunId ?? searchParams.get('runId');
+  const requestedContractId = routeContractId ?? searchParams.get('contractId') ?? persistedReportState?.contractId ?? null;
+  const requestedRunId = routeRunId ?? searchParams.get('runId') ?? persistedReportState?.runId ?? null;
 
   const contractClient = useMemo(
     () =>
@@ -137,6 +149,17 @@ export function EnforcementRunPage() {
   const runClient = useMemo(
     () =>
       createRunClient({
+        baseUrl: sdk.apiBaseUrl,
+        correlationId: sdk.correlationId,
+        getAccessToken: sdk.getAccessToken,
+        workspaceId: sdk.workspaceId,
+      }),
+    [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
+  );
+
+  const opsClient = useMemo(
+    () =>
+      createOpsClient({
         baseUrl: sdk.apiBaseUrl,
         correlationId: sdk.correlationId,
         getAccessToken: sdk.getAccessToken,
@@ -193,6 +216,87 @@ export function EnforcementRunPage() {
     [versions],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!itemObjectId) {
+      setItemDefinitionLoaded(true);
+      return;
+    }
+
+    setItemDefinitionLoaded(false);
+    void sdk.loadItemDefinition(itemObjectId)
+      .then((persisted) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPersistedReportState(persisted ? parsePersistedReportState(persisted) : null);
+        setItemDefinitionLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setPersistedReportState(null);
+        setItemDefinitionLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [itemObjectId, sdk]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (requestedRunId || !itemDefinitionLoaded) {
+      return;
+    }
+
+    setAuditLoading(true);
+    setAuditError(null);
+    void opsClient.listAuditRows()
+      .then((rows) => {
+        if (!cancelled) {
+          setAuditRows(rows);
+        }
+      })
+      .catch((auditListError) => {
+        if (!cancelled) {
+          setAuditRows([]);
+          setAuditError(auditListError instanceof Error ? auditListError.message : 'Unable to load report audit rows.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuditLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [itemDefinitionLoaded, opsClient, requestedRunId]);
+
+  const openAuditRow = async (row: ReportAuditRow) => {
+    if (itemObjectId) {
+      const persistedState: PersistedReportState = {
+        contractId: row.contractId,
+        runId: row.runId,
+      };
+
+      try {
+        await sdk.saveItemDefinition(itemObjectId, JSON.stringify(persistedState));
+      } catch {
+        await sdk.notifyInfo('Report item not synced', 'The run can be opened, but Fabric item metadata could not be updated.');
+      }
+    }
+
+    navigate(buildRunLink(row.contractId, row.runId));
+  };
+
   const historyColumns = useMemo(
     () => [
       createTableColumn<RunSummary>({
@@ -228,7 +332,7 @@ export function EnforcementRunPage() {
     [navigate, styles.historyActions, versionLookup],
   );
 
-  if (loading && !run) {
+  if ((itemObjectId && !itemDefinitionLoaded) || (loading && !run)) {
     return (
       <section className={styles.root}>
         <Spinner label="Loading enforcement run…" />
@@ -239,14 +343,15 @@ export function EnforcementRunPage() {
   if (!run) {
     return (
       <section className={styles.root}>
-        <div className={styles.emptyState}>
-          <Title2>Enforcement run</Title2>
-          <Body1>
-            Select a contract run from the contract list or provide `contractId` and `runId` in
-            the route to inspect the persisted result JSON.
-          </Body1>
-          {error ? <Body1>{error}</Body1> : null}
-        </div>
+        <ReportItemDashboard
+          auditError={auditError ?? error}
+          auditLoading={auditLoading}
+          rows={auditRows}
+          styles={styles}
+          onOpenRun={(row) => {
+            void openAuditRow(row);
+          }}
+        />
       </section>
     );
   }
@@ -447,6 +552,93 @@ export function EnforcementRunPage() {
   );
 }
 
+interface ReportItemDashboardProps {
+  auditError: string | null;
+  auditLoading: boolean;
+  rows: ReportAuditRow[];
+  styles: ReturnType<typeof useStyles>;
+  onOpenRun: (row: ReportAuditRow) => void;
+}
+
+function ReportItemDashboard({
+  auditError,
+  auditLoading,
+  rows,
+  styles,
+  onOpenRun,
+}: ReportItemDashboardProps) {
+  const columns = useMemo(
+    () => [
+      createTableColumn<ReportAuditRow>({
+        columnId: 'contract',
+        renderCell: (row) => row.contractName,
+        renderHeaderCell: () => 'Contract',
+      }),
+      createTableColumn<ReportAuditRow>({
+        columnId: 'status',
+        renderCell: (row) => <StatusBadge status={row.status} />,
+        renderHeaderCell: () => 'Status',
+      }),
+      createTableColumn<ReportAuditRow>({
+        columnId: 'score',
+        renderCell: (row) => (row.breachScore != null ? row.breachScore.toFixed(2) : 'n/a'),
+        renderHeaderCell: () => 'Breach score',
+      }),
+      createTableColumn<ReportAuditRow>({
+        columnId: 'triggeredAt',
+        renderCell: (row) => formatDate(row.triggeredAt),
+        renderHeaderCell: () => 'Triggered',
+      }),
+      createTableColumn<ReportAuditRow>({
+        columnId: 'actions',
+        renderCell: (row) => (
+          <Button appearance="subtle" onClick={() => onOpenRun(row)}>
+            Open
+          </Button>
+        ),
+        renderHeaderCell: () => 'Actions',
+      }),
+    ],
+    [onOpenRun],
+  );
+
+  return (
+    <>
+      <div className={styles.header}>
+        <div>
+          <Title2>Contract reports</Title2>
+          <Caption1>Open persisted enforcement runs and breach reports for this workspace.</Caption1>
+        </div>
+      </div>
+
+      {auditError ? <Body1>{auditError}</Body1> : null}
+
+      {auditLoading ? (
+        <Spinner label="Loading contract reports…" />
+      ) : rows.length === 0 ? (
+        <div className={styles.emptyState}>
+          <Body1>No enforcement reports have been recorded for this workspace yet.</Body1>
+        </div>
+      ) : (
+        <DataGrid items={rows} columns={columns}>
+          <DataGridHeader>
+            <DataGridRow>
+              {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
+            </DataGridRow>
+          </DataGridHeader>
+          <DataGridBody<ReportAuditRow>>
+            {({ item, rowId }) => (
+              <DataGridRow<ReportAuditRow> key={rowId}>
+                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+              </DataGridRow>
+            )}
+          </DataGridBody>
+        </DataGrid>
+      )}
+    </>
+  );
+}
+
 interface SchemaDiffSummaryProps {
   schemaDiff: SchemaDiff | undefined;
 }
@@ -515,6 +707,25 @@ function buildRunLink(contractId: string | null | undefined, runId: string) {
   return contractId
     ? `/contracts/${contractId}/runs/${runId}`
     : `/contracts/runs?runId=${encodeURIComponent(runId)}`;
+}
+
+function parsePersistedReportState(raw: string): PersistedReportState | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<PersistedReportState>;
+    const contractId = typeof parsed.contractId === 'string' ? parsed.contractId : null;
+    const runId = typeof parsed.runId === 'string' ? parsed.runId : null;
+
+    if (!contractId && !runId) {
+      return null;
+    }
+
+    return {
+      contractId,
+      runId,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function formatDate(value: string) {
