@@ -293,7 +293,7 @@ function EditorWorkspace({
       const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
       await sdk.notifyError('Save failed', message);
     }
-  }, [actions, client, draft, navigateToDetail, onValidationChange, sdk, validationResult]);
+  }, [actions, client, draft, fabricItemId, navigateToDetail, onValidationChange, sdk, validationResult]);
 
   const handleRunNow = useCallback(async () => {
     if (!draft?.id) {
