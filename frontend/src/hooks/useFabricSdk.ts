@@ -94,6 +94,22 @@ export function useFabricSdk() {
           return '';
         }
       },
+      /** Token scoped to api.fabric.microsoft.com — use for Fabric REST API calls (list lakehouses, tables, etc.). */
+      getFabricApiToken: async () => {
+        const client = getWorkloadClient();
+        if (!client || !state.isHosted) {
+          return '';
+        }
+
+        try {
+          const result = await client.auth.acquireFrontendAccessToken({
+            scopes: ['https://api.fabric.microsoft.com/.default'],
+          });
+          return result.token;
+        } catch {
+          return '';
+        }
+      },
       isHosted: state.isHosted,
       isReady: state.isReady,
       notifyError: (title: string, message?: string) =>

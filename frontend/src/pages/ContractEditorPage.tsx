@@ -3,8 +3,10 @@ import {
   Body1,
   Button,
   Caption1,
+  Combobox,
   Field,
   Input,
+  Option,
   Spinner,
   Textarea,
   makeStyles,
@@ -31,6 +33,7 @@ import { createVersionHistoryAction } from '@/components/ItemEditor/actions/crea
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 import type { ContractDetail, ContractDraft, ContractValidationResult } from '@/models/Contract';
 
 interface PersistedEditorState {
@@ -407,18 +410,19 @@ function EditorWorkspace({
                 onChange={(_, data) => onChangeDraft({ ...draft, ownerEmail: data.value })}
               />
             </Field>
-            <Field label="Target lakehouse ID">
-              <Input
-                value={draft.targetLakehouseId}
-                onChange={(_, data) => onChangeDraft({ ...draft, targetLakehouseId: data.value })}
-              />
-            </Field>
-            <Field label="Target table path">
-              <Input
-                value={draft.targetTablePath}
-                onChange={(_, data) => onChangeDraft({ ...draft, targetTablePath: data.value })}
-              />
-            </Field>
+            <LakehousePicker
+              getToken={sdk.getFabricApiToken}
+              value={draft.targetLakehouseId}
+              workspaceId={sdk.workspaceId}
+              onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id })}
+            />
+            <TablePicker
+              getToken={sdk.getFabricApiToken}
+              lakehouseId={draft.targetLakehouseId}
+              value={draft.targetTablePath}
+              workspaceId={sdk.workspaceId}
+              onChange={(path) => onChangeDraft({ ...draft, targetTablePath: path })}
+            />
             <Field label="Version">
               <Input
                 value={draft.version}
@@ -563,4 +567,102 @@ function isPersistedDraft(value: unknown): value is ContractDraft {
     && typeof draft.targetTablePath === 'string'
     && typeof draft.targetLakehouseId === 'string'
     && typeof draft.commitMessage === 'string';
+}
+
+// ─── Lakehouse Picker ──────────────────────────────────────────────────────────
+
+interface LakehousePickerProps {
+  getToken: () => Promise<string>;
+  onChange: (lakehouseId: string) => void;
+  value: string;
+  workspaceId: string;
+}
+
+function LakehousePicker({ getToken, onChange, value, workspaceId }: LakehousePickerProps) {
+  const { isLoading, lakehouses } = useLakehouses({ getToken, workspaceId });
+
+  const selectedName =
+    lakehouses.find((l) => l.id === value)?.displayName ?? (value || undefined);
+
+  return (
+    <Field
+      hint={lakehouses.length === 0 && !isLoading ? 'Paste a lakehouse GUID if the list is unavailable.' : undefined}
+      label="Target lakehouse"
+    >
+      <Combobox
+        freeform
+        placeholder={isLoading ? 'Loading lakehouses…' : 'Select or paste lakehouse ID'}
+        value={selectedName ?? ''}
+        onOptionSelect={(_, data) => {
+          if (data.optionValue) {
+            onChange(data.optionValue);
+          }
+        }}
+        onChange={(e) => {
+          // Allow pasting a raw GUID when no options are loaded
+          onChange(e.currentTarget.value);
+        }}
+      >
+        {lakehouses.map((lakehouse) => (
+          <Option key={lakehouse.id} text={lakehouse.displayName} value={lakehouse.id}>
+            {lakehouse.displayName}
+          </Option>
+        ))}
+      </Combobox>
+    </Field>
+  );
+}
+
+// ─── Table Picker ──────────────────────────────────────────────────────────────
+
+interface TablePickerProps {
+  getToken: () => Promise<string>;
+  lakehouseId: string;
+  onChange: (tablePath: string) => void;
+  value: string;
+  workspaceId: string;
+}
+
+function TablePicker({ getToken, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
+  const { isLoading, tables } = useLakehouseTables({ getToken, lakehouseId, workspaceId });
+
+  const hasLakehouse = isGuid(lakehouseId);
+  const placeholder = !hasLakehouse
+    ? 'Select a lakehouse first'
+    : isLoading
+      ? 'Loading tables…'
+      : tables.length > 0
+        ? 'Select a table'
+        : 'No tables found — enter path manually';
+
+  return (
+    <Field
+      hint={!hasLakehouse ? undefined : 'The ABFSS path is auto-filled when you pick a table.'}
+      label="Target table"
+    >
+      <Combobox
+        disabled={!hasLakehouse}
+        freeform
+        placeholder={placeholder}
+        value={value}
+        onOptionSelect={(_, data) => {
+          if (data.optionValue) {
+            onChange(data.optionValue);
+          }
+        }}
+        onChange={(e) => {
+          onChange(e.currentTarget.value);
+        }}
+      >
+        {tables.map((table) => (
+          <Option key={table.name} text={table.location || table.name} value={table.location || table.name}>
+            <span style={{ fontWeight: 600 }}>{table.name}</span>
+            {table.type ? (
+              <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.6 }}>{table.type}</span>
+            ) : null}
+          </Option>
+        ))}
+      </Combobox>
+    </Field>
+  );
 }
