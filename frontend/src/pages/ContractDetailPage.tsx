@@ -18,6 +18,7 @@ import {
 } from '@fluentui/react-components';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EditRegular } from '@fluentui/react-icons';
+import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { createContractClient } from '@/api/contractClient';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract } from '@/hooks/useContract';
@@ -50,9 +51,8 @@ const useStyles = makeStyles({
     padding: tokens.spacingHorizontalL,
   },
   yaml: {
-    whiteSpace: 'pre-wrap',
-    fontFamily: tokens.fontFamilyMonospace,
-    margin: 0,
+    height: '32rem',
+    minHeight: '20rem',
   },
 });
 
@@ -162,7 +162,14 @@ export function ContractDetailPage() {
 
           <div className={styles.card}>
             <Subtitle1>Current YAML</Subtitle1>
-            <pre className={styles.yaml}>{contract.odcsYaml}</pre>
+            <div className={styles.yaml}>
+              <MonacoYamlEditor
+                readOnly
+                themeMode={sdk.themeMode}
+                value={contract.odcsYaml}
+                onChange={() => undefined}
+              />
+            </div>
           </div>
         </>
       ) : null}

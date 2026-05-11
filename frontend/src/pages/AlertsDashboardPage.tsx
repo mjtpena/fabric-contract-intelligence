@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Body1,
+  Caption1,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -10,12 +11,14 @@ import {
   Dropdown,
   Field,
   Option,
+  Spinner,
   Title2,
   createTableColumn,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
 import { createOpsClient } from '@/api/opsClient';
+import { StatusBadge } from '@/components/StatusBadge';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ReportAuditRow } from '@/models/ops';
 
@@ -26,10 +29,21 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalL,
     padding: tokens.spacingHorizontalXXL,
   },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
   filters: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
     gap: tokens.spacingHorizontalL,
+  },
+  emptyState: {
+    border: `1px dashed ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    padding: tokens.spacingHorizontalXXL,
+    backgroundColor: tokens.colorNeutralBackground2,
   },
 });
 
@@ -37,6 +51,7 @@ export function AlertsDashboardPage() {
   const styles = useStyles();
   const sdk = useFabricSdk();
   const [rows, setRows] = useState<ReportAuditRow[]>([]);
+  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>('all');
 
   const opsClient = useMemo(
@@ -51,10 +66,15 @@ export function AlertsDashboardPage() {
   );
 
   useEffect(() => {
-    void opsClient.listAuditRows().then(setRows).catch(() => setRows([]));
+    setLoading(true);
+    void opsClient.listAuditRows()
+      .then(setRows)
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
   }, [opsClient]);
 
   const filtered = rows.filter((row) => status === 'all' || row.status === status);
+
   const columns = useMemo(
     () => [
       createTableColumn<ReportAuditRow>({
@@ -65,17 +85,17 @@ export function AlertsDashboardPage() {
       createTableColumn<ReportAuditRow>({
         columnId: 'status',
         renderHeaderCell: () => 'Status',
-        renderCell: (row) => row.status,
+        renderCell: (row) => <StatusBadge status={row.status} />,
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'score',
         renderHeaderCell: () => 'Breach score',
-        renderCell: (row) => row.breachScore?.toFixed(2) ?? 'n/a',
+        renderCell: (row) => row.breachScore != null ? row.breachScore.toFixed(2) : 'n/a',
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'triggeredAt',
         renderHeaderCell: () => 'Triggered',
-        renderCell: (row) => new Date(row.triggeredAt).toLocaleString(),
+        renderCell: (row) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(row.triggeredAt)),
       }),
     ],
     [],
@@ -83,20 +103,33 @@ export function AlertsDashboardPage() {
 
   return (
     <section className={styles.root}>
-      <Title2>Alerts dashboard</Title2>
+      <div className={styles.header}>
+        <Title2>Alerts dashboard</Title2>
+        <Caption1>Audit log of all enforcement runs and their breach scores.</Caption1>
+      </div>
+
       <div className={styles.filters}>
         <Field label="Status">
-          <Dropdown selectedOptions={[status]} value={status} onOptionSelect={(_, data) => setStatus(data.optionValue ?? 'all')}>
-            <Option value="all">all</Option>
-            <Option value="failed">failed</Option>
-            <Option value="warned">warned</Option>
-            <Option value="passed">passed</Option>
-            <Option value="error">error</Option>
+          <Dropdown
+            selectedOptions={[status]}
+            value={status === 'all' ? 'All statuses' : status}
+            onOptionSelect={(_, data) => setStatus(data.optionValue ?? 'all')}
+          >
+            <Option value="all">All statuses</Option>
+            <Option value="passed">Passed</Option>
+            <Option value="warned">Warned</Option>
+            <Option value="failed">Failed</Option>
+            <Option value="error">Error</Option>
           </Dropdown>
         </Field>
       </div>
-      {filtered.length === 0 ? (
-        <Body1>No alerts matched the selected filters.</Body1>
+
+      {loading ? (
+        <Spinner label="Loading alerts…" />
+      ) : filtered.length === 0 ? (
+        <div className={styles.emptyState}>
+          <Body1>No alerts matched the selected filters.</Body1>
+        </div>
       ) : (
         <DataGrid items={filtered} columns={columns}>
           <DataGridHeader>

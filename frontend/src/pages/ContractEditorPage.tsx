@@ -3,10 +3,8 @@ import {
   Body1,
   Button,
   Caption1,
-  Combobox,
   Field,
   Input,
-  Option,
   Spinner,
   Textarea,
   makeStyles,
@@ -30,10 +28,10 @@ import { createActivateAction } from '@/components/ItemEditor/actions/createActi
 import { createRunNowAction } from '@/components/ItemEditor/actions/createRunNowAction';
 import { createSaveAction } from '@/components/ItemEditor/actions/createSaveAction';
 import { createVersionHistoryAction } from '@/components/ItemEditor/actions/createVersionHistoryAction';
+import { LakehousePicker, TablePicker } from '@/components/FabricPickers';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
-import { useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 import type { ContractDetail, ContractDraft, ContractValidationResult } from '@/models/Contract';
 
 interface PersistedEditorState {
@@ -415,7 +413,7 @@ function EditorWorkspace({
               getToken={sdk.getAccessToken}
               value={draft.targetLakehouseId}
               workspaceId={sdk.workspaceId}
-              onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id })}
+              onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id, targetTablePath: '' })}
             />
             <TablePicker
               apiBaseUrl={sdk.apiBaseUrl}
@@ -573,100 +571,4 @@ function isPersistedDraft(value: unknown): value is ContractDraft {
 
 // ─── Lakehouse Picker ──────────────────────────────────────────────────────────
 
-interface LakehousePickerProps {
-  apiBaseUrl: string;
-  getToken: () => Promise<string>;
-  onChange: (lakehouseId: string) => void;
-  value: string;
-  workspaceId: string;
-}
-
-function LakehousePicker({ apiBaseUrl, getToken, onChange, value, workspaceId }: LakehousePickerProps) {
-  const { isLoading, lakehouses } = useLakehouses({ baseUrl: apiBaseUrl, getToken, workspaceId });
-
-  const selectedName =
-    lakehouses.find((l) => l.id === value)?.displayName ?? (value || undefined);
-
-  return (
-    <Field
-      hint={lakehouses.length === 0 && !isLoading ? 'Paste a lakehouse GUID if the list is unavailable.' : undefined}
-      label="Target lakehouse"
-    >
-      <Combobox
-        freeform
-        placeholder={isLoading ? 'Loading lakehouses…' : 'Select or paste lakehouse ID'}
-        value={selectedName ?? ''}
-        onOptionSelect={(_, data) => {
-          if (data.optionValue) {
-            onChange(data.optionValue);
-          }
-        }}
-        onChange={(e) => {
-          // Allow pasting a raw GUID when no options are loaded
-          onChange(e.currentTarget.value);
-        }}
-      >
-        {lakehouses.map((lakehouse) => (
-          <Option key={lakehouse.id} text={lakehouse.displayName} value={lakehouse.id}>
-            {lakehouse.displayName}
-          </Option>
-        ))}
-      </Combobox>
-    </Field>
-  );
-}
-
-// ─── Table Picker ──────────────────────────────────────────────────────────────
-
-interface TablePickerProps {
-  apiBaseUrl: string;
-  getToken: () => Promise<string>;
-  lakehouseId: string;
-  onChange: (tablePath: string) => void;
-  value: string;
-  workspaceId: string;
-}
-
-function TablePicker({ apiBaseUrl, getToken, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
-  const { isLoading, tables } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, lakehouseId, workspaceId });
-
-  const hasLakehouse = isGuid(lakehouseId);
-  const placeholder = !hasLakehouse
-    ? 'Select a lakehouse first'
-    : isLoading
-      ? 'Loading tables…'
-      : tables.length > 0
-        ? 'Select a table'
-        : 'No tables found — enter path manually';
-
-  return (
-    <Field
-      hint={!hasLakehouse ? undefined : 'The ABFSS path is auto-filled when you pick a table.'}
-      label="Target table"
-    >
-      <Combobox
-        disabled={!hasLakehouse}
-        freeform
-        placeholder={placeholder}
-        value={value}
-        onOptionSelect={(_, data) => {
-          if (data.optionValue) {
-            onChange(data.optionValue);
-          }
-        }}
-        onChange={(e) => {
-          onChange(e.currentTarget.value);
-        }}
-      >
-        {tables.map((table) => (
-          <Option key={table.name} text={table.location || table.name} value={table.location || table.name}>
-            <span style={{ fontWeight: 600 }}>{table.name}</span>
-            {table.type ? (
-              <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.6 }}>{table.type}</span>
-            ) : null}
-          </Option>
-        ))}
-      </Combobox>
-    </Field>
-  );
-}
+// Pickers are shared components defined in @/components/FabricPickers

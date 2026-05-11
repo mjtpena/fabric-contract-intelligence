@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Badge,
   Body1,
   Button,
   Caption1,
@@ -7,10 +8,12 @@ import {
   Input,
   Spinner,
   Subtitle2,
+  Title2,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
 import { Link } from 'react-router-dom';
+import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { NaturalLanguageQueryResponse } from '@/models/Ai';
@@ -22,6 +25,19 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalL,
     padding: tokens.spacingHorizontalXXL,
   },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  searchRow: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'flex-end',
+  },
+  inputWrapper: {
+    flex: 1,
+  },
   resultCard: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
@@ -31,12 +47,26 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
   },
+  matchCard: {
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusSmall,
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: tokens.colorNeutralBackground2,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  matchHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
 });
 
 export function NLQueryPage() {
   const styles = useStyles();
   const sdk = useFabricSdk();
-  const [query, setQuery] = useState('Find contracts for CO2 emissions by country');
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<NaturalLanguageQueryResponse | null>(null);
 
@@ -52,6 +82,10 @@ export function NLQueryPage() {
   );
 
   const runQuery = async () => {
+    if (!query.trim()) {
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await aiClient.queryContracts({ query });
@@ -66,27 +100,62 @@ export function NLQueryPage() {
 
   return (
     <section className={styles.root}>
-      <Caption1>Enterprise AI Query</Caption1>
-      <Body1>Ask questions in plain English to locate relevant contracts and explanations.</Body1>
-      <Field label="Natural-language query">
-        <Input value={query} onChange={(_, data) => setQuery(data.value)} />
-      </Field>
-      <Button appearance="primary" onClick={() => { void runQuery(); }} disabled={loading}>
-        Search contracts
-      </Button>
+      <div className={styles.header}>
+        <Title2>AI Contract Query</Title2>
+        <Body1>Ask questions in plain English to locate relevant contracts and explanations.</Body1>
+      </div>
 
-      {loading ? <Spinner label="Running AI query…" /> : null}
+      <div className={styles.searchRow}>
+        <Field className={styles.inputWrapper} label="Natural-language query">
+          <Input
+            placeholder="e.g. Find contracts for CO2 emissions by country"
+            value={query}
+            onChange={(_, data) => setQuery(data.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !loading) {
+                void runQuery();
+              }
+            }}
+          />
+        </Field>
+        <Button
+          appearance="primary"
+          disabled={loading || !query.trim()}
+          icon={loading ? <Spinner size="tiny" /> : <SearchRegular />}
+          onClick={() => { void runQuery(); }}
+        >
+          {loading ? 'Searching…' : 'Search'}
+        </Button>
+      </div>
+
       {result ? (
         <div className={styles.resultCard}>
-          <Subtitle2>{result.explanation}</Subtitle2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+            <SparkleRegular />
+            <Subtitle2>{result.explanation}</Subtitle2>
+          </div>
           <Caption1>Model: {result.modelUsed}</Caption1>
-          {result.matches.map((match) => (
-            <div key={match.contractId}>
-              <Link to={`/contracts/${match.contractId}`}>{match.name}</Link>
-              <Body1>{match.explanation}</Body1>
-              <Caption1>Version {match.version} • Score {match.relevanceScore.toFixed(2)}</Caption1>
-            </div>
-          ))}
+
+          {result.matches.length === 0 ? (
+            <Body1>No matching contracts found.</Body1>
+          ) : (
+            result.matches.map((match) => (
+              <div key={match.contractId} className={styles.matchCard}>
+                <div className={styles.matchHeader}>
+                  <Link to={`/contracts/${match.contractId}`}>
+                    <strong>{match.name}</strong>
+                  </Link>
+                  <Badge appearance="outline" size="small">
+                    v{match.version}
+                  </Badge>
+                  <Caption1 style={{ marginLeft: 'auto', opacity: 0.7 }}>
+                    relevance {(match.relevanceScore * 100).toFixed(0)}%
+                  </Caption1>
+                </div>
+                <Body1>{match.explanation}</Body1>
+              </div>
+            ))
+          )}
         </div>
       ) : null}
     </section>

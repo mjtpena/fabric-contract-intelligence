@@ -7,11 +7,14 @@ import {
   Input,
   Spinner,
   Textarea,
+  Title2,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { SparkleRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
+import { LakehousePicker, TablePicker } from '@/components/FabricPickers';
 import { createAiClient } from '@/api/aiClient';
 import { createContractClient } from '@/api/contractClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -23,10 +26,24 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalL,
     padding: tokens.spacingHorizontalXXL,
   },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  grid: {
+    display: 'grid',
+    gap: tokens.spacingHorizontalL,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(16rem, 1fr))',
+  },
+  fullWidth: {
+    gridColumn: '1 / -1',
+  },
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
     flexWrap: 'wrap',
+    alignItems: 'center',
   },
   editor: {
     height: '28rem',
@@ -43,12 +60,13 @@ export function AISuggestPage() {
   const sdk = useFabricSdk();
   const [loading, setLoading] = useState(false);
   const [yaml, setYaml] = useState('');
-  const [tableName, setTableName] = useState('owid_co2_demo');
-  const [tablePath, setTablePath] = useState('abfss://showcase@onelake.dfs.fabric.microsoft.com/ShowcaseLakehouse.Lakehouse/Tables/owid_co2_demo');
-  const [name, setName] = useState('OWID CO2 Contract');
+  const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [targetLakehouseId, setTargetLakehouseId] = useState('');
-  const [description, setDescription] = useState('AI-generated contract from table profile');
+  const [targetTablePath, setTargetTablePath] = useState('');
+  const [description, setDescription] = useState('');
+
+  const tableName = targetTablePath.split('/').at(-1) ?? '';
 
   const aiClient = useMemo(
     () =>
@@ -73,15 +91,23 @@ export function AISuggestPage() {
   );
 
   const generate = async () => {
+    if (!targetTablePath) {
+      await sdk.notifyInfo('No table selected', 'Select a lakehouse and table before generating.');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await aiClient.suggestContract({
-        tableName,
-        abfssUri: tablePath,
+        tableName: tableName || 'table',
+        abfssUri: targetTablePath,
         columns: [],
         sampleRows: [],
       });
       setYaml(response.odcsYaml);
+      if (!name) {
+        setName(tableName || 'Generated Contract');
+      }
       await sdk.notifySuccess('AI suggestion ready', `${response.modelUsed} returned a draft in ${response.latencyMs} ms.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate contract draft.';
@@ -100,10 +126,10 @@ export function AISuggestPage() {
     try {
       const created = await contractClient.createContract({
         mode: 'direct',
-        name,
+        name: name || tableName || 'AI Generated Contract',
         description,
         ownerEmail,
-        targetTablePath: tablePath,
+        targetTablePath,
         targetLakehouseId,
         odcsYaml: yaml,
       });
@@ -117,44 +143,80 @@ export function AISuggestPage() {
 
   return (
     <section className={styles.root}>
-      <Caption1>Enterprise AI Suggest</Caption1>
-      <Body1>Generate an ODCS contract from a Delta table path, refine it in Monaco, then save.</Body1>
+      <div className={styles.header}>
+        <Title2>AI Contract Suggest</Title2>
+        <Body1>Generate an ODCS contract from a Delta table, refine in Monaco, then save.</Body1>
+      </div>
 
-      <Field label="Contract name">
-        <Input value={name} onChange={(_, data) => setName(data.value)} />
-      </Field>
-      <Field label="Owner email">
-        <Input type="email" value={ownerEmail} onChange={(_, data) => setOwnerEmail(data.value)} />
-      </Field>
-      <Field label="Target lakehouse ID">
-        <Input value={targetLakehouseId} onChange={(_, data) => setTargetLakehouseId(data.value)} />
-      </Field>
-      <Field label="Table name">
-        <Input value={tableName} onChange={(_, data) => setTableName(data.value)} />
-      </Field>
-      <Field label="OneLake table path">
-        <Input value={tablePath} onChange={(_, data) => setTablePath(data.value)} />
-      </Field>
-      <Field label="Description">
-        <Textarea value={description} onChange={(_, data) => setDescription(data.value)} />
-      </Field>
+      <div className={styles.grid}>
+        <LakehousePicker
+          apiBaseUrl={sdk.apiBaseUrl}
+          getToken={sdk.getAccessToken}
+          value={targetLakehouseId}
+          workspaceId={sdk.workspaceId}
+          onChange={(id) => {
+            setTargetLakehouseId(id);
+            setTargetTablePath('');
+          }}
+        />
+        <TablePicker
+          apiBaseUrl={sdk.apiBaseUrl}
+          getToken={sdk.getAccessToken}
+          lakehouseId={targetLakehouseId}
+          value={targetTablePath}
+          workspaceId={sdk.workspaceId}
+          onChange={setTargetTablePath}
+        />
+        <Field label="Contract name">
+          <Input
+            placeholder={tableName ? `e.g. ${tableName} Contract` : 'Auto-filled after generate'}
+            value={name}
+            onChange={(_, data) => setName(data.value)}
+          />
+        </Field>
+        <Field label="Owner email">
+          <Input type="email" value={ownerEmail} onChange={(_, data) => setOwnerEmail(data.value)} />
+        </Field>
+        <Field className={styles.fullWidth} label="Description">
+          <Textarea value={description} onChange={(_, data) => setDescription(data.value)} />
+        </Field>
+      </div>
 
       <div className={styles.actions}>
-        <Button appearance="primary" onClick={() => { void generate(); }} disabled={loading}>
-          Generate draft
+        <Button
+          appearance="primary"
+          disabled={loading || !targetTablePath}
+          icon={<SparkleRegular />}
+          onClick={() => { void generate(); }}
+        >
+          {loading ? 'Generating…' : 'Generate draft'}
         </Button>
-        <Button appearance="secondary" onClick={() => { void saveDraft(); }} disabled={loading}>
+        <Button
+          appearance="secondary"
+          disabled={loading || !yaml.trim()}
+          onClick={() => { void saveDraft(); }}
+        >
           Save draft
         </Button>
         <Button appearance="subtle" onClick={() => navigate('/contracts')}>
           Back to contracts
         </Button>
+        {loading ? <Spinner size="tiny" /> : null}
       </div>
 
-      {loading ? <Spinner label="Generating AI draft…" /> : null}
-      <div className={styles.editor}>
-        <MonacoYamlEditor value={yaml} onChange={setYaml} themeMode={sdk.themeMode} />
-      </div>
+      {yaml || !targetTablePath ? (
+        <div className={styles.editor}>
+          <MonacoYamlEditor
+            value={yaml || (targetTablePath ? '' : '# Select a lakehouse and table above, then click Generate draft')}
+            onChange={setYaml}
+            themeMode={sdk.themeMode}
+          />
+        </div>
+      ) : null}
+
+      {!targetTablePath ? (
+        <Caption1>Select a lakehouse and table above to enable AI contract generation.</Caption1>
+      ) : null}
     </section>
   );
 }
