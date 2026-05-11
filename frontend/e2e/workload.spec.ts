@@ -20,11 +20,14 @@ import * as path from 'node:path';
 const STANDALONE = '?__standalone=1';
 const API_BASE = 'https://orqentis-api.azurewebsites.net';
 const MOCK_ITEM_ID = 'aaaabbbb-cccc-dddd-eeee-000000000001';
+const TEST_WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
+const TEST_LAKEHOUSE_ID = '11111111-1111-4111-8111-111111111111';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function gotoStandalone(page: Page, route = '') {
-  await page.goto(`/${route}${STANDALONE}`);
+  const separator = route.includes('?') ? '&' : '?';
+  await page.goto(`/${route}${route ? separator : STANDALONE}${route ? '__standalone=1' : ''}`);
 }
 
 /** Intercept all API calls and return the given fixture. */
@@ -41,6 +44,37 @@ async function mockApi(
 async function mockApiError(page: Page) {
   await page.route(`${API_BASE}/**`, (route) =>
     route.fulfill({ status: 503, body: 'Service Unavailable' }),
+  );
+}
+
+/** Intercept the Fabric proxy calls used by LakehousePicker and TablePicker. */
+async function mockFabricPickerApi(page: Page) {
+  await page.route(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: TEST_LAKEHOUSE_ID,
+          displayName: 'OrqentisShowcaseLakehouse',
+          workspaceId: TEST_WORKSPACE_ID,
+        },
+      ]),
+    }),
+  );
+
+  await page.route(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses/${TEST_LAKEHOUSE_ID}/tables`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          name: 'owid_co2_demo',
+          type: 'Managed',
+          location: 'abfss://workspace@onelake.dfs.fabric.microsoft.com/OrqentisShowcaseLakehouse.Lakehouse/Tables/owid_co2_demo',
+        },
+      ]),
+    }),
   );
 }
 
@@ -139,6 +173,36 @@ test.describe('3. Contract Editor', () => {
     // Monaco renders inside a .monaco-editor div
     // Give it up to 15s since Monaco loads workers asynchronously
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('3.3 — lakehouse and table dropdowns populate from Fabric proxy responses', async ({ page }) => {
+    const requestedFabricProxyUrls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().startsWith(`${API_BASE}/v1/fabric/`)) {
+        requestedFabricProxyUrls.push(request.url());
+        expect(request.headers().authorization).toBe('Bearer mock-access-token');
+      }
+    });
+
+    await mockFabricPickerApi(page);
+    await gotoStandalone(page, `contracts/new?workspaceId=${TEST_WORKSPACE_ID}`);
+
+    await page.getByRole('button', { name: /start drafting/i }).click();
+
+    const lakehouseCombobox = page.getByRole('combobox', { name: /target lakehouse/i });
+    await expect(lakehouseCombobox).toBeVisible({ timeout: 10_000 });
+    await lakehouseCombobox.click();
+    await page.getByRole('option', { name: 'OrqentisShowcaseLakehouse' }).click();
+
+    const tableCombobox = page.getByRole('combobox', { name: /target table/i });
+    await expect(tableCombobox).toBeEnabled({ timeout: 10_000 });
+    await tableCombobox.click();
+    await page.getByRole('option', { name: /owid_co2_demo/i }).click();
+
+    await expect(tableCombobox).toHaveValue('owid_co2_demo');
+    expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses`);
+    expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses/${TEST_LAKEHOUSE_ID}/tables`);
   });
 });
 

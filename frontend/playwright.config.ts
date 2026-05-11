@@ -33,6 +33,10 @@ export default defineConfig({
   /* Start the Vite dev server before running tests */
   webServer: {
     command: 'npm run dev',
+    env: {
+      ...process.env,
+      VITE_ORQENTIS_API_BASE_URL: 'https://orqentis-api.azurewebsites.net',
+    },
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

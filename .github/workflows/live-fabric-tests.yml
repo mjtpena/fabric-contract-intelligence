@@ -1,0 +1,80 @@
+name: Live Fabric regression
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  live-fabric:
+    name: Live Fabric/OneLake integration
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Validate live test secrets
+        shell: bash
+        env:
+          FABRIC_TEST_TENANT_ID: ${{ secrets.FABRIC_TEST_TENANT_ID }}
+          FABRIC_TEST_WORKSPACE_ID: ${{ secrets.FABRIC_TEST_WORKSPACE_ID }}
+          FABRIC_TEST_CAPACITY_ID: ${{ secrets.FABRIC_TEST_CAPACITY_ID }}
+          FABRIC_TEST_API_BASE_URL: ${{ secrets.FABRIC_TEST_API_BASE_URL }}
+          FABRIC_TEST_BEARER_TOKEN: ${{ secrets.FABRIC_TEST_BEARER_TOKEN }}
+          FABRIC_TEST_PASSED_CONTRACT_ID: ${{ secrets.FABRIC_TEST_PASSED_CONTRACT_ID }}
+          FABRIC_TEST_DRIFTED_CONTRACT_ID: ${{ secrets.FABRIC_TEST_DRIFTED_CONTRACT_ID }}
+        run: |
+          missing=()
+          for key in \
+            FABRIC_TEST_TENANT_ID \
+            FABRIC_TEST_WORKSPACE_ID \
+            FABRIC_TEST_CAPACITY_ID \
+            FABRIC_TEST_API_BASE_URL \
+            FABRIC_TEST_BEARER_TOKEN \
+            FABRIC_TEST_PASSED_CONTRACT_ID \
+            FABRIC_TEST_DRIFTED_CONTRACT_ID; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required live Fabric regression secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore Orqentis.sln
+
+      - name: Build integration tests
+        working-directory: backend
+        run: dotnet build Orqentis.Tests/Orqentis.Integration.Tests/Orqentis.Integration.Tests.csproj --configuration Release --no-restore
+
+      - name: Run live Fabric/OneLake tests
+        working-directory: backend
+        env:
+          FABRIC_TEST_TENANT_ID: ${{ secrets.FABRIC_TEST_TENANT_ID }}
+          FABRIC_TEST_WORKSPACE_ID: ${{ secrets.FABRIC_TEST_WORKSPACE_ID }}
+          FABRIC_TEST_CAPACITY_ID: ${{ secrets.FABRIC_TEST_CAPACITY_ID }}
+          FABRIC_TEST_API_BASE_URL: ${{ secrets.FABRIC_TEST_API_BASE_URL }}
+          FABRIC_TEST_BEARER_TOKEN: ${{ secrets.FABRIC_TEST_BEARER_TOKEN }}
+          FABRIC_TEST_PASSED_CONTRACT_ID: ${{ secrets.FABRIC_TEST_PASSED_CONTRACT_ID }}
+          FABRIC_TEST_DRIFTED_CONTRACT_ID: ${{ secrets.FABRIC_TEST_DRIFTED_CONTRACT_ID }}
+        run: dotnet test Orqentis.Tests/Orqentis.Integration.Tests/Orqentis.Integration.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=live-fabric-results.trx"
+
+      - name: Upload live test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-fabric-test-results
+          path: backend/**/live-fabric-results.trx
+          retention-days: 14
