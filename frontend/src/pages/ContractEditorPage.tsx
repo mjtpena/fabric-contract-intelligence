@@ -183,8 +183,7 @@ export function ContractEditorPage() {
           return;
         }
 
-        const itemName = normalizeName(itemMetadata.displayName);
-        const matchedContract = contracts.find((candidate) => normalizeName(candidate.name) === itemName);
+        const matchedContract = findContractForFabricItem(itemMetadata.displayName, contracts);
         if (matchedContract) {
           setResolvedItemContractId(matchedContract.id);
           return;
@@ -608,6 +607,31 @@ function isGuid(value: string) {
 
 function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function findContractForFabricItem(
+  itemDisplayName: string,
+  contracts: Array<{ id: string; name: string }>,
+) {
+  const itemName = normalizeName(itemDisplayName);
+  if (!itemName) {
+    return contracts.length === 1 ? contracts[0] : null;
+  }
+
+  const exactMatch = contracts.find((candidate) => normalizeName(candidate.name) === itemName);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const fuzzyMatch = contracts.find((candidate) => {
+    const candidateName = normalizeName(candidate.name);
+    return candidateName.includes(itemName) || itemName.includes(candidateName);
+  });
+  if (fuzzyMatch) {
+    return fuzzyMatch;
+  }
+
+  return contracts.length === 1 ? contracts[0] : null;
 }
 
 function parsePersistedEditorState(raw: string): PersistedEditorState | null {
