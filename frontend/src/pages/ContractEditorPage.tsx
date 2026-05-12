@@ -122,8 +122,13 @@ export function ContractEditorPage() {
       return;
     }
 
+    if (!sdk.isReady) {
+      return;
+    }
+
     setItemDefinitionLoaded(false);
     setItemContractLookupDone(false);
+    setResolvedItemContractId(null);
     void Promise.allSettled([
       sdk.loadItemDefinition(itemObjectId),
       sdk.loadItemMetadata(itemObjectId),
@@ -157,11 +162,9 @@ export function ContractEditorPage() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!itemObjectId || !itemDefinitionLoaded || contractId || itemContractLookupDone) {
+    if (!itemObjectId || !sdk.isReady || !itemDefinitionLoaded || contractId || itemContractLookupDone) {
       return;
     }
-
-    setItemContractLookupDone(true);
 
     const createItemNamedDraft = () => {
       setDraft((currentDraft) =>
@@ -171,6 +174,7 @@ export function ContractEditorPage() {
           targetTablePath: searchParams.get('targetTablePath') ?? '',
         }),
       );
+      setItemContractLookupDone(true);
     };
 
     void client.listContracts()
@@ -182,6 +186,7 @@ export function ContractEditorPage() {
         const matchedContract = findContractForFabricItem(itemMetadata?.displayName ?? '', contracts);
         if (matchedContract) {
           setResolvedItemContractId(matchedContract.id);
+          setItemContractLookupDone(true);
           return;
         }
 
@@ -196,7 +201,7 @@ export function ContractEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [client, contractId, itemContractLookupDone, itemDefinitionLoaded, itemMetadata, itemObjectId, searchParams]);
+  }, [client, contractId, itemContractLookupDone, itemDefinitionLoaded, itemMetadata, itemObjectId, sdk.isReady, searchParams]);
 
   useEffect(() => {
     if (!contract) {

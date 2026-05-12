@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 export type ItemEditorView = 'editor' | 'empty';
 
@@ -19,6 +19,12 @@ export function ItemEditorDefaultView({
   initialView,
 }: ItemEditorDefaultViewProps) {
   const [view, setView] = useState<ItemEditorView>(initialView);
+
+  useEffect(() => {
+    if (initialView === 'editor') {
+      setView('editor');
+    }
+  }, [initialView]);
 
   const value = useMemo<ViewNavigationContextValue>(
     () => ({
