@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -214,7 +213,7 @@ static void ConfigureJwtBearer(
         NameClaimType = "preferred_username",
         RoleClaimType = "roles",
         ValidAudiences = BuildValidAudiences(azureAdOptions).ToArray(),
-        IssuerValidator = (issuer, token, _) => ValidateIssuer(issuer, token, authorityBase, azureAdOptions.ValidIssuer),
+        IssuerValidator = (issuer, _, _) => ValidateIssuer(issuer, authorityBase, azureAdOptions.ValidIssuer, azureAdOptions.TenantId),
     };
 
     options.Events = new JwtBearerEvents
@@ -258,9 +257,9 @@ static IEnumerable<string> BuildValidAudiences(AzureAdOptions options)
 
 static string ValidateIssuer(
     string issuer,
-    SecurityToken securityToken,
     string authorityBase,
-    string? configuredIssuer)
+    string? configuredIssuer,
+    string? configuredTenantId)
 {
     if (!string.IsNullOrWhiteSpace(configuredIssuer))
     {
@@ -272,15 +271,18 @@ static string ValidateIssuer(
         throw new SecurityTokenInvalidIssuerException($"Unexpected issuer '{issuer}'.");
     }
 
-    if (securityToken is not JwtSecurityToken jwtToken)
-    {
-        throw new SecurityTokenInvalidIssuerException("Unsupported token type.");
-    }
-
-    var tenantId = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "tid")?.Value;
+    var tenantId = TryGetTenantIdFromIssuer(issuer);
     if (string.IsNullOrWhiteSpace(tenantId))
     {
-        throw new SecurityTokenInvalidIssuerException("Token tenant claim is missing.");
+        throw new SecurityTokenInvalidIssuerException($"Unable to determine tenant from issuer '{issuer}'.");
+    }
+
+    if (!string.IsNullOrWhiteSpace(configuredTenantId) &&
+        !string.Equals(configuredTenantId, "TBD", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(configuredTenantId, "common", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(configuredTenantId, tenantId, StringComparison.OrdinalIgnoreCase))
+    {
+        throw new SecurityTokenInvalidIssuerException($"Unexpected tenant '{tenantId}'.");
     }
 
     var validIssuers = new[]
@@ -296,6 +298,25 @@ static string ValidateIssuer(
     }
 
     throw new SecurityTokenInvalidIssuerException($"Unexpected issuer '{issuer}'.");
+}
+
+static string? TryGetTenantIdFromIssuer(string issuer)
+{
+    if (!Uri.TryCreate(issuer, UriKind.Absolute, out var uri))
+    {
+        return null;
+    }
+
+    var segments = uri.AbsolutePath
+        .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    return segments.Length switch
+    {
+        >= 2 when string.Equals(segments[0], "tenant", StringComparison.OrdinalIgnoreCase) => segments[1],
+        >= 2 when Guid.TryParse(segments[0], out _) => segments[0],
+        >= 1 when Guid.TryParse(segments[0], out _) => segments[0],
+        _ => null,
+    };
 }
 
 static async Task WriteProblemAsync(
