@@ -11,6 +11,13 @@ param pgAdminUsername string
 @secure()
 param pgAdminPassword string
 
+param azureAdTenantId string
+param azureAdClientId string
+param azureAdAudience string
+
+@secure()
+param azureAdClientSecret string
+
 param openAiEndpoint string
 param tags object
 
@@ -34,6 +41,11 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
         { name: 'KeyVault__VaultUri', value: keyVaultUri }
         { name: 'ConnectionStrings__Postgres', value: 'Host=${pgFqdn};Database=${pgDatabaseName};SslMode=Require;Username=${pgAdminUsername};Password=${pgAdminPassword}' }
+        { name: 'AzureAd__Instance', value: az.environment().authentication.loginEndpoint }
+        { name: 'AzureAd__TenantId', value: azureAdTenantId }
+        { name: 'AzureAd__ClientId', value: azureAdClientId }
+        { name: 'AzureAd__Audience', value: azureAdAudience }
+        { name: 'AzureAd__ClientSecret', value: azureAdClientSecret }
         { name: 'AI__AzureOpenAI__Endpoint', value: openAiEndpoint }
       ]
     }

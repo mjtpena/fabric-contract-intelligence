@@ -199,7 +199,10 @@ static void ConfigureJwtBearer(
 
     if (string.IsNullOrWhiteSpace(azureAdOptions.MetadataAddress))
     {
-        options.Authority = $"{authorityBase}/common/v2.0";
+        var tenantSegment = string.IsNullOrWhiteSpace(azureAdOptions.TenantId)
+            ? "common"
+            : azureAdOptions.TenantId;
+        options.Authority = $"{authorityBase}/{tenantSegment}/v2.0";
     }
 
     options.TokenValidationParameters = new TokenValidationParameters
@@ -216,6 +219,12 @@ static void ConfigureJwtBearer(
 
     options.Events = new JwtBearerEvents
     {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(context.Exception, "JwtAuth-Failed");
+            return Task.CompletedTask;
+        },
         OnChallenge = async context =>
         {
             context.HandleResponse();

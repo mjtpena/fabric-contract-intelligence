@@ -47,6 +47,17 @@ export function createMockWorkloadClient(): WorkloadClientAPI {
       execute: asyncNoop,
     },
     itemCrud: {
+      getItem: async ({ itemId }: { itemId: string }) => ({
+        item: {
+          description: 'Standalone test item',
+          displayName: 'Standalone Test Contract',
+          folderId: 'standalone-folder',
+          id: itemId,
+          tags: [],
+          type: 'Org.Orqentis.Contract',
+          workspaceId: 'standalone-workspace',
+        },
+      }),
       getItemDefinition: async ({ itemId }: { itemId: string }) => {
         const persistedState = JSON.stringify({
           contractId: null,

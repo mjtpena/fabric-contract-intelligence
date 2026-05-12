@@ -26,6 +26,19 @@ param pgAdminUsername string = 'orqentisadmin'
 @description('PostgreSQL admin password. Pass via parameter file referencing Key Vault.')
 param pgAdminPassword string
 
+@description('Microsoft Entra tenant id used to validate API bearer tokens.')
+param azureAdTenantId string = tenant().tenantId
+
+@description('Microsoft Entra application client id used by the Fabric workload and API.')
+param azureAdClientId string
+
+@description('Expected API audience. Defaults to api://{azureAdClientId}.')
+param azureAdAudience string = ''
+
+@secure()
+@description('Microsoft Entra application client secret used for OBO token exchange.')
+param azureAdClientSecret string
+
 @description('Tag set applied to every resource.')
 param tags object = {
   application: 'fabric-contract-intelligence'
@@ -108,6 +121,10 @@ module api 'modules/app-service.bicep' = {
     pgDatabaseName: postgres.outputs.databaseName
     pgAdminUsername: pgAdminUsername
     pgAdminPassword: pgAdminPassword
+    azureAdTenantId: azureAdTenantId
+    azureAdClientId: azureAdClientId
+    azureAdAudience: empty(azureAdAudience) ? 'api://${azureAdClientId}' : azureAdAudience
+    azureAdClientSecret: azureAdClientSecret
     openAiEndpoint: openai.outputs.endpoint
     tags: tags
   }

@@ -30,11 +30,12 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           KV_ADMIN_GROUP_OBJECT_ID: ${{ secrets.KV_ADMIN_GROUP_OBJECT_ID }}
           PG_ADMIN_PASSWORD_PROD: ${{ secrets.PG_ADMIN_PASSWORD_PROD }}
+          ORQENTIS_APP_CLIENT_SECRET: ${{ secrets.ORQENTIS_APP_CLIENT_SECRET }}
           AZURE_STATIC_WEB_APPS_API_TOKEN_PROD: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
         run: |
           missing=()
           optional=()
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID KV_ADMIN_GROUP_OBJECT_ID PG_ADMIN_PASSWORD_PROD; do
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID KV_ADMIN_GROUP_OBJECT_ID PG_ADMIN_PASSWORD_PROD ORQENTIS_APP_CLIENT_SECRET; do
             if [ -z "${!key}" ]; then
               missing+=("$key")
             fi
@@ -69,6 +70,9 @@ jobs:
 
       - name: What-if (production)
         env:
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ORQENTIS_APP_CLIENT_ID: 7a234404-ea08-454c-b2b5-0acb523f0417
+          ORQENTIS_APP_CLIENT_SECRET: ${{ secrets.ORQENTIS_APP_CLIENT_SECRET }}
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD_PROD }}
         run: |
           az deployment group what-if \
@@ -80,6 +84,9 @@ jobs:
 
       - name: Deploy infrastructure
         env:
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ORQENTIS_APP_CLIENT_ID: 7a234404-ea08-454c-b2b5-0acb523f0417
+          ORQENTIS_APP_CLIENT_SECRET: ${{ secrets.ORQENTIS_APP_CLIENT_SECRET }}
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD_PROD }}
         run: |
           az deployment group create \

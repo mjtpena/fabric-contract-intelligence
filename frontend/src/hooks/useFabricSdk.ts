@@ -20,6 +20,13 @@ interface FabricSdkState extends FabricSdkRuntime {
   isReady: boolean;
 }
 
+interface FabricItemMetadata {
+  displayName: string;
+  id: string;
+  type: string;
+  workspaceId: string;
+}
+
 /** Resolved once per page lifetime — reset is not needed because the client never changes. */
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
 
@@ -88,7 +95,9 @@ export function useFabricSdk() {
         }
 
         try {
-          const result = await client.auth.acquireFrontendAccessToken({ scopes: [] });
+          const result = await client.auth.acquireFrontendAccessToken({
+            scopes: getBackendApiScopes(),
+          });
           return result.token;
         } catch {
           return '';
@@ -125,6 +134,14 @@ export function useFabricSdk() {
         }
 
         return readItemDefinition(fabricItemId);
+      },
+      /** Load Fabric item metadata such as display name for item-context restoration. */
+      loadItemMetadata: async (fabricItemId: string) => {
+        if (!state.isHosted || !fabricItemId) {
+          return null;
+        }
+
+        return readItemMetadata(fabricItemId);
       },
       /** Persist item definition using the Fabric objectId from the route param. */
       saveItemDefinition: async (fabricItemId: string, definition: string) => {
@@ -242,6 +259,25 @@ async function readItemDefinition(itemId: string): Promise<string | null> {
   return decodeBase64Utf8(targetPart.payload);
 }
 
+async function readItemMetadata(itemId: string): Promise<FabricItemMetadata | null> {
+  const client = getWorkloadClient();
+  if (!client) {
+    return null;
+  }
+
+  const result = await client.itemCrud.getItem({ itemId });
+  if (!result.item) {
+    return null;
+  }
+
+  return {
+    displayName: result.item.displayName,
+    id: result.item.id,
+    type: result.item.type,
+    workspaceId: result.item.workspaceId,
+  };
+}
+
 async function persistItemDefinition(itemId: string, definitionText: string): Promise<void> {
   const client = getWorkloadClient();
   if (!client) {
@@ -302,3 +338,12 @@ function decodeBase64Utf8(value: string): string {
   return decodeURIComponent(escape(atob(value)));
 }
 
+function getBackendApiScopes(): string[] {
+  const configuredScope = import.meta.env.VITE_ORQENTIS_API_SCOPE;
+  if (configuredScope) {
+    return [configuredScope];
+  }
+
+  const clientId = import.meta.env.VITE_FABRIC_CLIENT_ID;
+  return clientId ? [`api://${clientId}/user_impersonation`] : [];
+}

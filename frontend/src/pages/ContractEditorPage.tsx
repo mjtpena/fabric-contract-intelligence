@@ -39,6 +39,13 @@ interface PersistedEditorState {
   draft: ContractDraft | null;
 }
 
+interface FabricItemMetadata {
+  displayName: string;
+  id: string;
+  type: string;
+  workspaceId: string;
+}
+
 const useStyles = makeStyles({
   layout: {
     display: 'flex',
@@ -84,8 +91,11 @@ export function ContractEditorPage() {
   const sdk = useFabricSdk();
   const [persistedEditorState, setPersistedEditorState] = useState<PersistedEditorState | null>(null);
   const [itemDefinitionLoaded, setItemDefinitionLoaded] = useState(false);
+  const [itemMetadata, setItemMetadata] = useState<FabricItemMetadata | null>(null);
+  const [itemContractLookupDone, setItemContractLookupDone] = useState(false);
+  const [resolvedItemContractId, setResolvedItemContractId] = useState<string | null>(null);
   // contractId is the backend Orqentis UUID; itemObjectId is the Fabric item UUID
-  const contractId = routeId ?? searchParams.get('id') ?? persistedEditorState?.contractId ?? null;
+  const contractId = routeId ?? searchParams.get('id') ?? persistedEditorState?.contractId ?? resolvedItemContractId ?? null;
 
   const client = useMemo(
     () =>
@@ -108,17 +118,25 @@ export function ContractEditorPage() {
 
     if (!itemObjectId) {
       setItemDefinitionLoaded(true);
+      setItemMetadata(null);
       return;
     }
 
-    void sdk.loadItemDefinition(itemObjectId)
-      .then((persisted) => {
-        if (cancelled || !persisted) {
-          setItemDefinitionLoaded(true);
+    setItemDefinitionLoaded(false);
+    setItemContractLookupDone(false);
+    void Promise.allSettled([
+      sdk.loadItemDefinition(itemObjectId),
+      sdk.loadItemMetadata(itemObjectId),
+    ])
+      .then(([definitionResult, metadataResult]) => {
+        if (cancelled) {
           return;
         }
 
-        setPersistedEditorState(parsePersistedEditorState(persisted));
+        const persisted = definitionResult.status === 'fulfilled' ? definitionResult.value : null;
+        const metadata = metadataResult.status === 'fulfilled' ? metadataResult.value : null;
+        setPersistedEditorState(persisted ? parsePersistedEditorState(persisted) : null);
+        setItemMetadata(metadata);
         setItemDefinitionLoaded(true);
       })
       .catch(() => {
@@ -126,6 +144,8 @@ export function ContractEditorPage() {
           return;
         }
 
+        setPersistedEditorState(null);
+        setItemMetadata(null);
         setItemDefinitionLoaded(true);
       });
 
@@ -133,6 +153,55 @@ export function ContractEditorPage() {
       cancelled = true;
     };
   }, [sdk, itemObjectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!itemObjectId || !itemDefinitionLoaded || contractId || itemContractLookupDone) {
+      return;
+    }
+
+    setItemContractLookupDone(true);
+
+    if (!itemMetadata?.displayName) {
+      return;
+    }
+
+    const createItemNamedDraft = () => {
+      setDraft((currentDraft) =>
+        currentDraft ?? createNewDraft({
+          name: itemMetadata.displayName,
+          targetLakehouseId: searchParams.get('lakehouseId') ?? '',
+          targetTablePath: searchParams.get('targetTablePath') ?? '',
+        }),
+      );
+    };
+
+    void client.listContracts()
+      .then((contracts) => {
+        if (cancelled) {
+          return;
+        }
+
+        const itemName = normalizeName(itemMetadata.displayName);
+        const matchedContract = contracts.find((candidate) => normalizeName(candidate.name) === itemName);
+        if (matchedContract) {
+          setResolvedItemContractId(matchedContract.id);
+          return;
+        }
+
+        createItemNamedDraft();
+      })
+      .catch(() => {
+        if (!cancelled) {
+          createItemNamedDraft();
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, contractId, itemContractLookupDone, itemDefinitionLoaded, itemMetadata, itemObjectId, searchParams]);
 
   useEffect(() => {
     if (!contract) {
@@ -477,17 +546,19 @@ function getInitialView(contract: ContractDetail | null) {
 }
 
 function createNewDraft(seed: {
+  name?: string;
   targetLakehouseId: string;
   targetTablePath: string;
 }): ContractDraft {
-  const yaml = createDefaultContractYaml('New Contract');
+  const name = seed.name?.trim() || 'New Contract';
+  const yaml = createDefaultContractYaml(name);
 
   return {
     commitMessage: '',
     description: '',
-    name: 'New Contract',
+    name,
     odcsYaml: synchronizeDraftYaml(yaml, {
-      name: 'New Contract',
+      name,
       status: 'draft',
       targetTablePath:
         seed.targetTablePath ||
@@ -533,6 +604,10 @@ function toDraft(contract: ContractDetail): ContractDraft {
 
 function isGuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function normalizeName(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 function parsePersistedEditorState(raw: string): PersistedEditorState | null {

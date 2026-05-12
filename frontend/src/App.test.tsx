@@ -8,6 +8,7 @@ import App from './App';
 const {
   getAccessTokenMock,
   loadItemDefinitionMock,
+  loadItemMetadataMock,
   notifyErrorMock,
   notifyInfoMock,
   notifySuccessMock,
@@ -17,6 +18,7 @@ const {
 } = vi.hoisted(() => ({
   getAccessTokenMock: vi.fn().mockResolvedValue(''),
   loadItemDefinitionMock: vi.fn().mockResolvedValue(null),
+  loadItemMetadataMock: vi.fn().mockResolvedValue(null),
   notifyErrorMock: vi.fn().mockResolvedValue(undefined),
   notifyInfoMock: vi.fn().mockResolvedValue(undefined),
   notifySuccessMock: vi.fn().mockResolvedValue(undefined),
@@ -34,6 +36,7 @@ vi.mock('./hooks/useFabricSdk', () => ({
     isReady: true,
     itemId: null,
     loadItemDefinition: loadItemDefinitionMock,
+    loadItemMetadata: loadItemMetadataMock,
     notifyError: notifyErrorMock,
     notifyInfo: notifyInfoMock,
     notifySuccess: notifySuccessMock,
