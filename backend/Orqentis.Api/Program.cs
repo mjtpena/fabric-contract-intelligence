@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Orqentis.AI;
@@ -9,6 +10,7 @@ using Orqentis.Api.Auth;
 using Orqentis.Api.Middleware;
 using Orqentis.Api.Services;
 using Orqentis.Data;
+using Orqentis.Data.Entities;
 using Orqentis.Engine;
 using Serilog;
 
@@ -133,6 +135,7 @@ if (!string.IsNullOrWhiteSpace(postgresConnectionString))
     try
     {
         DatabaseMigrator.Migrate(postgresConnectionString, logger);
+        await EnsureConfiguredTenantAsync(app.Services, builder.Configuration, logger).ConfigureAwait(false);
     }
     catch (Exception ex)
     {
@@ -317,6 +320,42 @@ static string? TryGetTenantIdFromIssuer(string issuer)
         >= 1 when Guid.TryParse(segments[0], out _) => segments[0],
         _ => null,
     };
+}
+
+static async Task EnsureConfiguredTenantAsync(
+    IServiceProvider services,
+    IConfiguration configuration,
+    Microsoft.Extensions.Logging.ILogger logger)
+{
+    var options = configuration.GetSection("AzureAd").Get<AzureAdOptions>() ?? new AzureAdOptions();
+    if (!Guid.TryParse(options.TenantId, out var entraTenantId))
+    {
+        logger.LogWarning("Tenant-ProvisionSkipped Reason={Reason}", "AzureAd tenant id is not configured.");
+        return;
+    }
+
+    using var scope = services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<OrqentisDbContext>();
+    if (await dbContext.Tenants.AnyAsync(tenant => tenant.EntraTenantId == entraTenantId).ConfigureAwait(false))
+    {
+        return;
+    }
+
+    var now = DateTimeOffset.UtcNow;
+    dbContext.Tenants.Add(new Tenant
+    {
+        TenantId = Guid.NewGuid(),
+        EntraTenantId = entraTenantId,
+        DisplayName = "Orqentis",
+        Tier = "community",
+        Region = "australiaeast",
+        Status = "active",
+        CreatedAt = now,
+        UpdatedAt = now,
+    });
+
+    await dbContext.SaveChangesAsync().ConfigureAwait(false);
+    logger.LogInformation("Tenant-Provisioned EntraTenantId={EntraTenantId}", entraTenantId);
 }
 
 static async Task WriteProblemAsync(

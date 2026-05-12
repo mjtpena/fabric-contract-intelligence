@@ -4,8 +4,6 @@
 -- Conventions: snake_case, UUID PKs (gen_random_uuid()), TIMESTAMPTZ, soft-delete.
 -- =====================================================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- ───── tenants ────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tenants (
     tenant_id        UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
