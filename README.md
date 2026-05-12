@@ -111,5 +111,8 @@ MIT — see [`LICENSE`](LICENSE). Bundled OSS dependencies retain their original
 
 ## Status
 
-🚧 **Initial scaffold** — Sprint 1 deliverable. Subsequent sprints are tracked in
-[`docs/agent-guide.md`](docs/agent-guide.md) §16.2 and `.ai/commands/sprint-*.md`.
+**Production pilot ready.** Core workload features are implemented, CI/CD is green,
+Engine/AI coverage gates are enforced, and live Fabric evidence is tracked in
+[`docs/test-scenarios.md`](docs/test-scenarios.md). Public ISV launch readiness is
+tracked by [`docs/isv-publish-checklist.md`](docs/isv-publish-checklist.md) and enforced by
+`scripts/Test-PublicReadiness.ps1`.

@@ -85,3 +85,12 @@ jobs:
         run: az bicep install
       - name: Lint main.bicep
         run: az bicep build --file infra/main.bicep --stdout > /dev/null
+
+  public-readiness:
+    name: Public ISV readiness artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate public readiness package
+        shell: pwsh
+        run: ./scripts/Test-PublicReadiness.ps1

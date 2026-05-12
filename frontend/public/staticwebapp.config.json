@@ -5,6 +5,10 @@
       "/assets/*",
       "/icons/*",
       "/images/*",
+      "/docs/*",
+      "/legal/*",
+      "/.well-known/*",
+      "/support.html",
       "/schemas/*",
       "/favicon.ico"
     ]

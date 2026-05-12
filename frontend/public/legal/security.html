@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orqentis Security</title>
+  <style>body{font-family:Segoe UI,Arial,sans-serif;line-height:1.5;margin:2rem;max-width:900px}code{background:#f3f2f1;padding:.1rem .25rem}</style>
+</head>
+<body>
+  <h1>Orqentis Security</h1>
+  <p>Orqentis is designed for Microsoft Fabric tenant isolation, delegated OneLake access, and auditable enforcement runs.</p>
+  <h2>Security model</h2>
+  <ul>
+    <li>Microsoft Entra ID protects API access.</li>
+    <li>OneLake reads use the signed-in user's On-Behalf-Of token.</li>
+    <li>All API calls propagate <code>X-Correlation-Id</code>.</li>
+    <li>Secrets are stored in Azure Key Vault or GitHub/Azure deployment secrets, not source code.</li>
+  </ul>
+  <h2>Report a security issue</h2>
+  <p>Report suspected vulnerabilities through the configured customer security contact. Do not include secrets, bearer tokens, or customer table data in public issue trackers.</p>
+</body>
+</html>

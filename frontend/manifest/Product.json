@@ -103,12 +103,12 @@
       }
     ],
     "supportLink": {
-      "documentation": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
-      "certification": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
-      "help": { "url": "https://github.com/mjtpena/fabric-contract-intelligence/issues" },
-      "privacy": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
-      "terms": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" },
-      "license": { "url": "https://github.com/mjtpena/fabric-contract-intelligence" }
+      "documentation": { "url": "https://fabric.orqentis.com/docs/getting-started.html" },
+      "certification": { "url": "https://fabric.orqentis.com/legal/security.html" },
+      "help": { "url": "https://fabric.orqentis.com/support.html" },
+      "privacy": { "url": "https://fabric.orqentis.com/legal/privacy.html" },
+      "terms": { "url": "https://fabric.orqentis.com/legal/terms.html" },
+      "license": { "url": "https://fabric.orqentis.com/legal/license.html" }
     }
   },
   "itemJobTypes": ["storeData"],

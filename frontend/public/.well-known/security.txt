@@ -1,0 +1,3 @@
+Contact: https://fabric.orqentis.com/legal/security.html
+Policy: https://fabric.orqentis.com/legal/security.html
+Preferred-Languages: en

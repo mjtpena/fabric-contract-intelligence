@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orqentis Privacy Notice</title>
+  <style>body{font-family:Segoe UI,Arial,sans-serif;line-height:1.5;margin:2rem;max-width:900px}</style>
+</head>
+<body>
+  <h1>Orqentis Privacy Notice</h1>
+  <p>Orqentis processes data needed to operate a Microsoft Fabric data contract workload.</p>
+  <h2>Data processed</h2>
+  <ul>
+    <li>Contract metadata, ODCS YAML versions, policy settings, run status, and audit metadata.</li>
+    <li>Fabric workspace and item identifiers required to scope customer records.</li>
+    <li>Operational telemetry such as correlation IDs, health events, and failure diagnostics.</li>
+  </ul>
+  <h2>OneLake access</h2>
+  <p>OneLake and Fabric REST access uses the signed-in user's delegated token through On-Behalf-Of flow. Orqentis does not use an application credential for customer data plane reads.</p>
+  <h2>AI features</h2>
+  <p>AI features send only the minimum prompt context required for contract suggestion, breach scoring, remediation, or natural-language query.</p>
+  <h2>Retention and deletion</h2>
+  <p>Business records use soft delete. Customer export and offboarding steps are documented in the customer onboarding guide.</p>
+</body>
+</html>
