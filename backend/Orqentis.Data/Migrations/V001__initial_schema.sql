@@ -1,12 +1,12 @@
 -- =====================================================================================
 -- Orqentis — Initial Schema (V001)
 -- Spec §5.1. Postgres 16+. Idempotent. Run by DbUp from Orqentis.Api at startup.
--- Conventions: snake_case, UUID PKs (gen_random_uuid()), TIMESTAMPTZ, soft-delete.
+-- Conventions: snake_case, UUID PKs supplied by the application, TIMESTAMPTZ, soft-delete.
 -- =====================================================================================
 
 -- ───── tenants ────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tenants (
-    tenant_id        UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id        UUID         PRIMARY KEY,
     entra_tenant_id  UUID         NOT NULL UNIQUE,
     display_name     TEXT         NOT NULL,
     tier             TEXT         NOT NULL CHECK (tier IN ('community','enterprise')),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 -- ───── contracts ──────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contracts (
-    contract_id      UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    contract_id      UUID         PRIMARY KEY,
     tenant_id        UUID         NOT NULL REFERENCES tenants(tenant_id) ON DELETE RESTRICT,
     workspace_id     UUID         NOT NULL,
     fabric_item_id   UUID         NULL,
@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS ix_contracts_status
 
 -- ───── contract_versions ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contract_versions (
-    version_id       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    version_id       UUID         PRIMARY KEY,
     contract_id      UUID         NOT NULL REFERENCES contracts(contract_id) ON DELETE CASCADE,
     version          TEXT         NOT NULL,
     odcs_yaml        TEXT         NOT NULL,
@@ -58,7 +58,7 @@ CREATE INDEX IF NOT EXISTS ix_contract_versions_contract
 
 -- ───── enforcement_runs ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS enforcement_runs (
-    run_id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id              UUID         PRIMARY KEY,
     contract_id         UUID         NOT NULL REFERENCES contracts(contract_id) ON DELETE CASCADE,
     version_id          UUID         NOT NULL REFERENCES contract_versions(version_id) ON DELETE RESTRICT,
     triggered_by        TEXT         NOT NULL CHECK (triggered_by IN ('manual','schedule','webhook','api')),
@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS ix_enforcement_runs_status
 
 -- ───── contract_policies ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contract_policies (
-    policy_id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    policy_id          UUID         PRIMARY KEY,
     contract_id        UUID         NOT NULL REFERENCES contracts(contract_id) ON DELETE CASCADE,
     activator_rule_id  UUID         NULL,
     trigger_event      TEXT         NOT NULL CHECK (trigger_event IN

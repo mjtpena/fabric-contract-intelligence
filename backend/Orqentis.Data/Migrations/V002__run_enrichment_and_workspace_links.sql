@@ -10,7 +10,7 @@ ALTER TABLE enforcement_runs
     ADD COLUMN IF NOT EXISTS activator_triggered BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS workspace_links (
-    link_id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    link_id              UUID         PRIMARY KEY,
     tenant_id            UUID         NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
     workspace_id         UUID         NOT NULL,
     linked_workspace_id  UUID         NOT NULL,

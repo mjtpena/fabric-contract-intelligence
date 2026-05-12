@@ -334,10 +334,29 @@ static async Task EnsureConfiguredTenantAsync(
         return;
     }
 
+    var requestedTier = configuration["Tenant:Tier"];
+    var provisionedTier = string.Equals(requestedTier, "community", StringComparison.OrdinalIgnoreCase)
+        ? "community"
+        : "enterprise";
     using var scope = services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<OrqentisDbContext>();
-    if (await dbContext.Tenants.AnyAsync(tenant => tenant.EntraTenantId == entraTenantId).ConfigureAwait(false))
+    var existingTenant = await dbContext.Tenants
+        .SingleOrDefaultAsync(tenant => tenant.EntraTenantId == entraTenantId)
+        .ConfigureAwait(false);
+
+    if (existingTenant is not null)
     {
+        if (!string.Equals(existingTenant.Tier, provisionedTier, StringComparison.OrdinalIgnoreCase))
+        {
+            existingTenant.Tier = provisionedTier;
+            existingTenant.UpdatedAt = DateTimeOffset.UtcNow;
+            await dbContext.SaveChangesAsync().ConfigureAwait(false);
+            logger.LogInformation(
+                "Tenant-ProvisionUpdated EntraTenantId={EntraTenantId} Tier={Tier}",
+                entraTenantId,
+                provisionedTier);
+        }
+
         return;
     }
 
@@ -347,7 +366,7 @@ static async Task EnsureConfiguredTenantAsync(
         TenantId = Guid.NewGuid(),
         EntraTenantId = entraTenantId,
         DisplayName = "Orqentis",
-        Tier = "community",
+        Tier = provisionedTier,
         Region = "australiaeast",
         Status = "active",
         CreatedAt = now,
@@ -355,7 +374,10 @@ static async Task EnsureConfiguredTenantAsync(
     });
 
     await dbContext.SaveChangesAsync().ConfigureAwait(false);
-    logger.LogInformation("Tenant-Provisioned EntraTenantId={EntraTenantId}", entraTenantId);
+    logger.LogInformation(
+        "Tenant-Provisioned EntraTenantId={EntraTenantId} Tier={Tier}",
+        entraTenantId,
+        provisionedTier);
 }
 
 static async Task WriteProblemAsync(
