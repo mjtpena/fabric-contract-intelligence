@@ -163,14 +163,10 @@ export function ContractEditorPage() {
 
     setItemContractLookupDone(true);
 
-    if (!itemMetadata?.displayName) {
-      return;
-    }
-
     const createItemNamedDraft = () => {
       setDraft((currentDraft) =>
         currentDraft ?? createNewDraft({
-          name: itemMetadata.displayName,
+          name: itemMetadata?.displayName,
           targetLakehouseId: searchParams.get('lakehouseId') ?? '',
           targetTablePath: searchParams.get('targetTablePath') ?? '',
         }),
@@ -183,7 +179,7 @@ export function ContractEditorPage() {
           return;
         }
 
-        const matchedContract = findContractForFabricItem(itemMetadata.displayName, contracts);
+        const matchedContract = findContractForFabricItem(itemMetadata?.displayName ?? '', contracts);
         if (matchedContract) {
           setResolvedItemContractId(matchedContract.id);
           return;
