@@ -10,6 +10,22 @@ platform. Contracts can bind to Lakehouses, Warehouses, Eventhouse/KQL databases
 Models, and Fabric SQL databases. Lakehouse/Delta enforcement is the first fully executable
 target; the shared target model keeps the contract workflow Fabric-wide.
 
+## AI value proposition
+
+Orqentis uses AI to make Fabric governance operational, not just conversational. The angle for
+customers and investors is a governed feedback loop:
+
+| AI capability | Customer outcome |
+|---|---|
+| Contract co-author | Data teams start from generated ODCS drafts instead of blank YAML, reducing time-to-first-contract. |
+| Breach impact scorer | Failures become explainable risk signals ranked by downstream business impact. |
+| Remediation advisor | Producers receive concrete next actions for schema, freshness, and quality breaches. |
+| Natural-language governance | Platform owners can ask who owns a data product, what changed, and which contracts are failing without reading YAML or logs. |
+
+This positions Orqentis as the **AI control plane for trusted Fabric data products**: contract
+authoring, enforcement evidence, risk explanation, and remediation workflow in one native Fabric
+experience.
+
 ## Tiers
 
 | | **Community** (free) | **Enterprise** (AUD $299/workspace/mo) |

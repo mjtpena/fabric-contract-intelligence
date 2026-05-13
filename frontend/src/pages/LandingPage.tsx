@@ -18,6 +18,7 @@ import {
   TableLightningRegular,
   DatabaseLinkRegular,
   ClipboardTaskRegular,
+  SparkleRegular,
 } from '@fluentui/react-icons';
 
 const FABRIC_URL = 'https://app.fabric.microsoft.com/workloadhub/Org.Orqentis';
@@ -498,15 +499,16 @@ export function LandingPage() {
         <div className={styles.heroGlow} />
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
-            <CheckmarkCircleRegular style={{ fontSize: 14 }} />
-            Production-verified Microsoft Fabric workload
+            <SparkleRegular style={{ fontSize: 14 }} />
+            AI-native contract intelligence for Microsoft Fabric
           </div>
           <Display className={styles.heroTitle}>
-            Data contracts running inside Fabric
+            The AI control plane for trusted Fabric data products
           </Display>
           <div className={styles.heroSub}>
-            Orqentis is live against a real Fabric showcase workspace: an active ODCS contract,
-            a persisted enforcement report, and a Lakehouse Delta table are all verified in production.
+            Orqentis turns Lakehouses, Warehouses, Eventhouse/KQL databases, Semantic Models,
+            and Fabric SQL into governed data products: AI drafts the contract, enforcement proves
+            it, impact scoring explains risk, and remediation guidance turns breaches into action.
           </div>
           <div className={styles.heroActions}>
             <Button
@@ -541,21 +543,59 @@ export function LandingPage() {
       {/* Stats */}
       <div className={styles.statsBar}>
         <div className={styles.stat}>
-          <span className={styles.statValue}>3</span>
-          <span className={styles.statLabel}>Fabric item types verified</span>
+          <span className={styles.statValue}>5</span>
+          <span className={styles.statLabel}>Fabric target types</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>25</span>
           <span className={styles.statLabel}>OWID Delta rows</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statValue}>0.05</span>
-          <span className={styles.statLabel}>Showcase breach score</span>
+          <span className={styles.statValue}>AI</span>
+            <span className={styles.statLabel}>Author / score / remediate</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>ODCS v3.1.0</span>
           <span className={styles.statLabel}>Schema standard</span>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <section className={styles.section}>
+          <div className={styles.sectionLabel}>AI value proposition</div>
+          <Title2 className={styles.sectionTitle}>From static contracts to autonomous governance</Title2>
+          <div className={styles.sectionSub}>
+            The investable wedge is not "AI writes YAML". It is a governed feedback loop that helps
+            Fabric teams create contracts faster, understand blast radius, and move from breach
+            detection to recommended action.
+          </div>
+          <div className={styles.cards}>
+            <ItemCard
+              badge="Author"
+              icon={<SparkleRegular />}
+              title="Contract co-author"
+              description="Generate ODCS drafts from Fabric target metadata and let teams refine the contract instead of starting from a blank YAML file."
+            />
+            <ItemCard
+              badge="Prioritize"
+              icon={<ChartMultipleRegular />}
+              title="Breach impact scoring"
+              description="Convert validation failures into explainable risk scores so data teams know which issues threaten downstream analytics, SLAs, and executive reports first."
+            />
+            <ItemCard
+              badge="Resolve"
+              icon={<ClipboardTaskRegular />}
+              title="Remediation advisor"
+              description="Translate schema, freshness, and quality failures into concrete producer actions, reducing mean time to restore trusted data products."
+            />
+            <ItemCard
+              badge="Ask"
+              icon={<DatabaseLinkRegular />}
+              title="Natural-language governance"
+              description="Let platform owners query contracts, owners, runs, and policies in plain English across Fabric workspaces instead of spelunking YAML and logs."
+            />
+          </div>
+        </section>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -661,8 +701,8 @@ export function LandingPage() {
               />
               <Feature
                 icon={<TableLightningRegular style={{ fontSize: 28 }} />}
-                title="AI-assisted authoring"
-                description="AI flows are implemented with timeout, retry, and fallback behavior for contract suggestion, scoring, remediation, and natural-language query."
+                title="AI governance loop"
+                description="AI-assisted authoring, breach scoring, remediation, and natural-language query are implemented with timeout, retry, and fallback behavior."
               />
               <Feature
                 icon={<DatabaseLinkRegular style={{ fontSize: 28 }} />}
@@ -674,11 +714,11 @@ export function LandingPage() {
                 title="ODCS v3.1.0 standard"
                 description="Contracts are validated against the Open Data Contract Standard v3.1.0 JSON Schema. Non-conformant YAML is never persisted as active."
               />
-            <Feature
-              icon={<ArrowRightRegular style={{ fontSize: 28 }} />}
-              title="Activator integration"
-              description="Policy-based breach dispatch supports Activator/webhook-style routing with correlation-aware logging."
-            />
+              <Feature
+                icon={<ArrowRightRegular style={{ fontSize: 28 }} />}
+                title="Activator integration"
+                description="Policy-based breach dispatch supports Activator/webhook-style routing with correlation-aware logging."
+              />
               <Feature
                 icon={<ChartMultipleRegular style={{ fontSize: 28 }} />}
                 title="Correlation tracing"

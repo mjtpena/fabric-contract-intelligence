@@ -13,6 +13,7 @@ Public publish is allowed only when every required gate below is complete and th
 | Gate | Required evidence |
 |---|---|
 | Partner Center offer metadata | Product name, short summary, long description, categories, keywords, pricing tier, support URL, privacy URL, terms URL |
+| AI value proposition | Listing copy explains contract co-authoring, breach impact scoring, remediation guidance, and natural-language governance without claiming autonomous data modification |
 | Fabric workload package | Latest `production-workload-package` artifact from `.github/workflows/deploy-prod.yml` |
 | Screenshots | Contract editor, contract report, Lakehouse/table evidence captured under `prod-verification` session artifacts |
 | Demo script | Customer walkthrough in `docs/customer-onboarding.md` |
@@ -42,6 +43,7 @@ Public publish is allowed only when every required gate below is complete and th
 | Rollback path | Previous production workflow artifact or git tag can be redeployed |
 | Backup and restore | PostgreSQL backup retention and restore procedure documented in `docs/operations-runbook.md` |
 | Observability | Correlation IDs, App Service logs, DB health, AI fallback, and alert delivery are monitored |
+| AI reliability | LLM timeout, retry, fallback, and no-throw behavior verified for suggestion, scoring, remediation, and natural-language query |
 
 ## Customer and commercial readiness
 
@@ -52,6 +54,7 @@ Public publish is allowed only when every required gate below is complete and th
 | Tier enforcement | Community/Enterprise limits configured and tested |
 | Entitlement process | Manual entitlement process documented until marketplace billing integration is live |
 | Support SLA | Public support page states channels, severities, and response targets |
+| Buyer narrative | Sales/demo script positions Orqentis as the AI control plane for trusted Fabric data products, not only a Lakehouse validator |
 
 ## Release sign-off record
 

@@ -51,7 +51,8 @@ Automated coverage:
 | 3.8 | Click **AI Suggest** button | `AISuggestPage` opened; YAML suggestion returned within 15 s |
 | 3.9 | Open an item with an existing definition | Monaco pre-populated with saved YAML |
 | 3.10 | Refresh editor mid-edit | Draft persisted (or warning shown); no data loss |
-| 3.11 | Select a Lakehouse and table from dropdowns | Lakehouse list is loaded through `/v1/fabric/{workspaceId}/lakehouses`; table list is loaded through `/v1/fabric/{workspaceId}/lakehouses/{lakehouseId}/tables`; the table control displays the table name, not the ABFSS path |
+| 3.11 | Select a Lakehouse and table from dropdowns | Lakehouse item list is loaded through `/v1/fabric/{workspaceId}/items?targetType=lakehouse`; table list is loaded through `/v1/fabric/{workspaceId}/lakehouses/{lakehouseId}/tables`; the table control displays the table name, not the ABFSS path |
+| 3.12 | Select Warehouse, Eventhouse/KQL, Semantic Model, or Fabric SQL target | Generic Fabric target picker loads eligible items through `/v1/fabric/{workspaceId}/items?targetType=...`; non-Lakehouse targets accept a governed object path/name |
 
 ---
 
