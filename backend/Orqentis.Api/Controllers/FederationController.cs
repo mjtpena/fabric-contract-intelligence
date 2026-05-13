@@ -39,10 +39,10 @@ public sealed class FederationController : ControllerBase
             Contracts = page.Contracts
                 .Select(contract => new ContractSummaryDto
                 {
-                     Id = contract.ContractId,
-                     Name = contract.Name,
-                     TargetType = contract.TargetType,
-                     Status = contract.Status,
+                    Id = contract.ContractId,
+                    Name = contract.Name,
+                    TargetType = contract.TargetType,
+                    Status = contract.Status,
                     Version = contract.CurrentVersion,
                     LastRunStatus = contract.LatestRun?.Status,
                     LastRunAt = contract.LatestRun?.TriggeredAt.UtcDateTime.ToString("O"),
