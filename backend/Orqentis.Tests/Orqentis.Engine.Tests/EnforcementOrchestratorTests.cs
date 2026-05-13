@@ -303,6 +303,90 @@ public sealed class EnforcementOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_SqlTargetWithQuality_ResolvesConnectionAndEvaluatesSqlQuality()
+    {
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 0,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero),
+        };
+        var sqlReader = new Mock<IFabricSqlSchemaReader>();
+        sqlReader
+            .Setup(reader => reader.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        sqlReader
+            .Setup(reader => reader.ResolveConnectionStringAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string>.Success("Server=sales.datawarehouse.fabric.microsoft.com;Initial Catalog=Sales;"));
+
+        var qualityEvaluator = new Mock<IQualityRuleEvaluator>();
+        qualityEvaluator
+            .Setup(evaluator => evaluator.EvaluateAsync(
+                It.IsAny<IReadOnlyList<QualityRule>>(),
+                It.Is<ContractServer>(server => server.Host!.Contains("Sales", StringComparison.Ordinal)),
+                "sql-token",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new RuleResult
+                {
+                    RuleId = "quality.null_rate",
+                    Status = RuleStatus.Passed,
+                    Message = "ok",
+                },
+            ]);
+        var orchestrator = CreateOrchestrator(sqlReader: sqlReader.Object, qualityEvaluator: qualityEvaluator.Object);
+
+        var result = await orchestrator.RunAsync(
+            CreateSqlContractWithQuality(),
+            new EnforcementCredentials { FabricRestToken = "fabric-token", FabricSqlToken = "sql-token" },
+            CreateTarget());
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Passed);
+        result.QualityRules.Should().ContainSingle(rule => rule.RuleId == "quality.null_rate");
+        sqlReader.Verify(reader => reader.ResolveConnectionStringAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_KqlTargetWithQuality_SkipsQualityUntilKqlQueryAdapterExists()
+    {
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 0,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero),
+        };
+        var kqlReader = new Mock<IFabricKqlSchemaReader>();
+        kqlReader
+            .Setup(reader => reader.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        var orchestrator = CreateOrchestrator(kqlReader: kqlReader.Object);
+        var contract = CreateSqlContractWithQuality() with
+        {
+            Servers =
+            [
+                new ContractServer
+                {
+                    Name = "fabric-kql",
+                    Type = "azure",
+                    Path = "SalesEvents",
+                    Format = "kql",
+                },
+            ],
+        };
+
+        var result = await orchestrator.RunAsync(
+            contract,
+            new EnforcementCredentials { FabricRestToken = "fabric-token", KustoToken = "kusto-token" },
+            CreateTarget());
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Passed);
+        result.QualityRules.Should().ContainSingle(rule => rule.Status == RuleStatus.Skipped);
+    }
+
+    [Fact]
     public async Task RunAsync_EvaluatorThrows_ReturnsErrorResult()
     {
         // Arrange
@@ -424,6 +508,38 @@ public sealed class EnforcementOrchestratorTests
             },
             Sla = [],
         };
+
+    private static ContractDefinition CreateSqlContractWithQuality() =>
+        CreateContract() with
+        {
+            Servers =
+            [
+                new ContractServer
+                {
+                    Name = "fabric-sql",
+                    Type = "azure",
+                    Path = "dbo.sales",
+                    Format = "sql",
+                },
+            ],
+            Quality =
+            [
+                new QualityRule
+                {
+                    Type = "null_rate",
+                    Column = "customer_id",
+                    Threshold = 0.01,
+                    Severity = "error",
+                },
+            ],
+        };
+
+    private static EnforcementTargetContext CreateTarget() => new()
+    {
+        WorkspaceId = Guid.Parse("11111111-1111-4111-8111-111111111111"),
+        TargetItemId = Guid.Parse("22222222-2222-4222-8222-222222222222"),
+        TargetType = "warehouse",
+    };
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
