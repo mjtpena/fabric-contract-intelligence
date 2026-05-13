@@ -135,7 +135,7 @@ describe('ContractEditorPage', () => {
     view.rerender(editorTree());
 
     expect(await screen.findAllByText('Orqentis Showcase Contract')).not.toHaveLength(0);
-    expect(screen.getByText('Validation panel')).toBeInTheDocument();
+    expect(await screen.findByText('Validation panel')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.example.test/v1/contracts/fb929a52-b626-424c-88c4-67ce5337fc60',
       expect.objectContaining({
