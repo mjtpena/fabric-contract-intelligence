@@ -112,5 +112,5 @@
     }
   },
   "itemJobTypes": ["storeData"],
-  "compatibleItemTypes": ["Lakehouse"]
+  "compatibleItemTypes": ["Lakehouse", "Warehouse", "Eventhouse", "SemanticModel", "SQLDatabase"]
 }

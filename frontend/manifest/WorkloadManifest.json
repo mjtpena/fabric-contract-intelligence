@@ -16,7 +16,7 @@
     {
       "name": "Contract",
       "displayName": "Data Contract",
-      "description": "An ODCS v3.1.0 data contract for a Delta table.",
+      "description": "An ODCS v3.1.0 data contract for any Fabric data source (Lakehouse, Warehouse, Eventhouse, Semantic Model, or Fabric SQL).",
       "iconSmall": "icons/contract-16.svg",
       "iconLarge": "icons/contract-32.svg",
       "capabilities": ["create", "edit", "delete", "run"],
