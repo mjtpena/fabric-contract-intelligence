@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
+using Orqentis.Api.Services;
 
 namespace Orqentis.Api.Controllers;
 
@@ -97,6 +98,86 @@ public sealed class FabricProxyController : ControllerBase
         return Ok(lakehouses);
     }
 
+    /// <summary>Lists Fabric items eligible for a contract target type.</summary>
+    [HttpGet("{workspaceId:guid}/items")]
+    [ProducesResponseType(typeof(IReadOnlyList<FabricItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
+    public async Task<ActionResult<IReadOnlyList<FabricItemDto>>> ListTargetItemsAsync(
+        Guid workspaceId,
+        [FromQuery] string targetType,
+        CancellationToken ct)
+    {
+        var normalizedTargetType = ContractTargetTypes.Normalize(targetType);
+        if (normalizedTargetType is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid target type.",
+                detail: "Target type must be one of lakehouse, warehouse, eventhouse, semantic_model, or fabric_sql.");
+        }
+
+        var allowedFabricTypes = ResolveFabricItemTypes(normalizedTargetType);
+        var userAssertion = GetUserAssertion();
+        if (string.IsNullOrWhiteSpace(userAssertion))
+        {
+            return Unauthorized();
+        }
+
+        string fabricToken;
+        try
+        {
+            fabricToken = await _tokenBroker.GetFabricRestTokenAsync(userAssertion, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "FabricProxy-OboExchange-Failed WorkspaceId={WorkspaceId} TargetType={TargetType}", workspaceId, normalizedTargetType);
+            return StatusCode(StatusCodes.Status502BadGateway, "Failed to exchange token for Fabric REST access.");
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{_fabricApiBase}/workspaces/{workspaceId}/items");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", fabricToken);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "FabricProxy-Items-HttpError WorkspaceId={WorkspaceId} TargetType={TargetType}", workspaceId, normalizedTargetType);
+            return StatusCode(StatusCodes.Status502BadGateway);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "FabricProxy-Items-Upstream WorkspaceId={WorkspaceId} TargetType={TargetType} StatusCode={StatusCode}",
+                workspaceId,
+                normalizedTargetType,
+                (int)response.StatusCode);
+            return StatusCode((int)response.StatusCode);
+        }
+
+        var body = await response.Content.ReadFromJsonAsync<FabricItemListResponse>(ct).ConfigureAwait(false);
+        var items = (body?.Value ?? [])
+            .Where(item => allowedFabricTypes.Contains(item.Type))
+            .Select(item => new FabricItemDto
+            {
+                Id = item.Id,
+                DisplayName = item.DisplayName,
+                Type = item.Type,
+                WorkspaceId = workspaceId,
+            })
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return Ok(items);
+    }
+
     /// <summary>Lists Delta/Parquet tables inside the given Lakehouse via the Fabric REST API.</summary>
     [HttpGet("{workspaceId:guid}/lakehouses/{lakehouseId:guid}/tables")]
     [ProducesResponseType(typeof(IReadOnlyList<FabricTableDto>), StatusCodes.Status200OK)]
@@ -188,6 +269,18 @@ public sealed class FabricProxyController : ControllerBase
         public string DisplayName { get; set; } = string.Empty;
     }
 
+    private sealed class FabricItemListResponse
+    {
+        public List<FabricItem>? Value { get; set; }
+    }
+
+    private sealed class FabricItem
+    {
+        public Guid Id { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+    }
+
     private sealed class FabricTableListResponse
     {
         public List<FabricTableItem>? Data { get; set; }
@@ -199,4 +292,35 @@ public sealed class FabricProxyController : ControllerBase
         public string Type { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
     }
+
+    private static HashSet<string> ResolveFabricItemTypes(string targetType) =>
+        ContractTargetTypes.Normalize(targetType) switch
+        {
+            ContractTargetTypes.Warehouse => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Warehouse",
+            },
+            ContractTargetTypes.Eventhouse => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Eventhouse",
+                "KQLDatabase",
+                "KQL Database",
+            },
+            ContractTargetTypes.SemanticModel => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "SemanticModel",
+                "Semantic Model",
+                "Dataset",
+            },
+            ContractTargetTypes.FabricSql => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "SQLDatabase",
+                "SQL Database",
+                "MirroredDatabase",
+            },
+            _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Lakehouse",
+            },
+        };
 }

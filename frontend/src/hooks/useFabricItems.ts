@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { listLakehouseTables, listWorkspaceLakehouses } from '@/api/fabricItemsClient';
-import type { FabricLakehouse, FabricLakehouseTable } from '@/api/fabricItemsClient';
+import { listLakehouseTables, listWorkspaceLakehouses, listWorkspaceTargetItems } from '@/api/fabricItemsClient';
+import type { FabricLakehouse, FabricLakehouseTable, FabricWorkspaceItem } from '@/api/fabricItemsClient';
+import type { ContractTargetType } from '@/models/Contract';
 
-export type { FabricLakehouse, FabricLakehouseTable };
+export type { FabricLakehouse, FabricLakehouseTable, FabricWorkspaceItem };
 
 interface UseLakehousesParams {
   baseUrl: string;
@@ -56,6 +57,63 @@ export function useLakehouses({ baseUrl, getToken, isReady, workspaceId }: UseLa
   }, [baseUrl, isReady, workspaceId]);
 
   return { isLoading, lakehouses };
+}
+
+interface UseFabricTargetItemsParams {
+  baseUrl: string;
+  getToken: () => Promise<string>;
+  isReady: boolean;
+  targetType: ContractTargetType;
+  workspaceId: string;
+}
+
+interface UseFabricTargetItemsResult {
+  isLoading: boolean;
+  items: FabricWorkspaceItem[];
+}
+
+/**
+ * Fetches Fabric items eligible for the selected contract target type.
+ */
+export function useFabricTargetItems({
+  baseUrl,
+  getToken,
+  isReady,
+  targetType,
+  workspaceId,
+}: UseFabricTargetItemsParams): UseFabricTargetItemsResult {
+  const [items, setItems] = useState<FabricWorkspaceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!baseUrl || !workspaceId || !isReady) {
+      setItems([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    void listWorkspaceTargetItems(baseUrl, workspaceId, targetType, getToken)
+      .then((nextItems) => {
+        if (!cancelled) {
+          setItems(nextItems);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  // getToken is stable — intentionally excluded. isReady triggers re-fetch on SDK init.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseUrl, isReady, targetType, workspaceId]);
+
+  return { isLoading, items };
 }
 
 interface UseLakehouseTablesParams {

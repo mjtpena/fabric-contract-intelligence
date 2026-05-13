@@ -24,6 +24,15 @@ public sealed record FabricLakehouseDto
     public required Guid WorkspaceId { get; init; }
 }
 
+/// <summary>Fabric item returned by the generic target picker proxy.</summary>
+public sealed record FabricItemDto
+{
+    public required Guid Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Type { get; init; }
+    public required Guid WorkspaceId { get; init; }
+}
+
 /// <summary>Delta/Parquet table proxied from the Fabric Lakehouse tables API.</summary>
 public sealed record FabricTableDto
 {

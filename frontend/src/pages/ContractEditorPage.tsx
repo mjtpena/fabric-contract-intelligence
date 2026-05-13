@@ -28,11 +28,16 @@ import { createActivateAction } from '@/components/ItemEditor/actions/createActi
 import { createRunNowAction } from '@/components/ItemEditor/actions/createRunNowAction';
 import { createSaveAction } from '@/components/ItemEditor/actions/createSaveAction';
 import { createVersionHistoryAction } from '@/components/ItemEditor/actions/createVersionHistoryAction';
-import { LakehousePicker, TablePicker } from '@/components/FabricPickers';
+import {
+  FabricTargetItemPicker,
+  TablePicker,
+  TargetTypePicker,
+} from '@/components/FabricPickers';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
-import type { ContractDetail, ContractDraft, ContractValidationResult } from '@/models/Contract';
+import type { ContractDetail, ContractDraft, ContractTargetType, ContractValidationResult } from '@/models/Contract';
+import { getContractTargetTypeLabel } from '@/models/ContractTarget';
 
 interface PersistedEditorState {
   contractId: string | null;
@@ -170,8 +175,9 @@ export function ContractEditorPage() {
       setDraft((currentDraft) =>
         currentDraft ?? createNewDraft({
           name: itemMetadata?.displayName,
-          targetLakehouseId: searchParams.get('lakehouseId') ?? '',
+          targetItemId: searchParams.get('targetItemId') ?? searchParams.get('lakehouseId') ?? '',
           targetTablePath: searchParams.get('targetTablePath') ?? '',
+          targetType: parseTargetType(searchParams.get('targetType')),
         }),
       );
       setItemContractLookupDone(true);
@@ -239,8 +245,9 @@ export function ContractEditorPage() {
         onCreateDraft={() =>
           setDraft(
             createNewDraft({
-              targetLakehouseId: searchParams.get('lakehouseId') ?? '',
+              targetItemId: searchParams.get('targetItemId') ?? searchParams.get('lakehouseId') ?? '',
               targetTablePath: searchParams.get('targetTablePath') ?? '',
+              targetType: parseTargetType(searchParams.get('targetType')),
             }),
           )
         }
@@ -308,8 +315,8 @@ function EditorWorkspace({
       status: nextStatus ?? draft.status,
     });
 
-    if (!isGuid(preparedDraft.targetLakehouseId)) {
-      await sdk.notifyError('Invalid lakehouse ID', 'Enter a valid Fabric lakehouse GUID before saving.');
+    if (!isGuid(preparedDraft.targetItemId)) {
+      await sdk.notifyError('Invalid target item ID', 'Enter a valid Fabric item GUID before saving.');
       return;
     }
 
@@ -477,23 +484,53 @@ function EditorWorkspace({
                 onChange={(_, data) => onChangeDraft({ ...draft, ownerEmail: data.value })}
               />
             </Field>
-            <LakehousePicker
+            <TargetTypePicker
+              value={draft.targetType}
+              onChange={(targetType) =>
+                onChangeDraft({
+                  ...draft,
+                  targetType,
+                  targetItemId: '',
+                  targetLakehouseId: '',
+                  targetTablePath: getDefaultTargetPath(targetType),
+                })
+              }
+            />
+            <FabricTargetItemPicker
               apiBaseUrl={sdk.apiBaseUrl}
               getToken={sdk.getAccessToken}
               isReady={sdk.isReady}
-              value={draft.targetLakehouseId}
+              targetType={draft.targetType}
+              value={draft.targetItemId}
               workspaceId={sdk.workspaceId}
-              onChange={(id) => onChangeDraft({ ...draft, targetLakehouseId: id, targetTablePath: '' })}
+              onChange={(id) => onChangeDraft({
+                ...draft,
+                targetItemId: id,
+                targetLakehouseId: draft.targetType === 'lakehouse' ? id : '',
+                targetTablePath: draft.targetType === 'lakehouse' ? '' : draft.targetTablePath,
+              })}
             />
-            <TablePicker
-              apiBaseUrl={sdk.apiBaseUrl}
-              getToken={sdk.getAccessToken}
-              isReady={sdk.isReady}
-              lakehouseId={draft.targetLakehouseId}
-              value={draft.targetTablePath}
-              workspaceId={sdk.workspaceId}
-              onChange={(path) => onChangeDraft({ ...draft, targetTablePath: path })}
-            />
+            {draft.targetType === 'lakehouse' ? (
+              <TablePicker
+                apiBaseUrl={sdk.apiBaseUrl}
+                getToken={sdk.getAccessToken}
+                isReady={sdk.isReady}
+                lakehouseId={draft.targetItemId}
+                value={draft.targetTablePath}
+                workspaceId={sdk.workspaceId}
+                onChange={(path) => onChangeDraft({ ...draft, targetTablePath: path })}
+              />
+            ) : (
+              <Field
+                hint={getTargetPathHint(draft.targetType)}
+                label={`${getContractTargetTypeLabel(draft.targetType)} object`}
+              >
+                <Input
+                  value={draft.targetTablePath}
+                  onChange={(_, data) => onChangeDraft({ ...draft, targetTablePath: data.value })}
+                />
+              </Field>
+            )}
             <Field label="Version">
               <Input
                 value={draft.version}
@@ -547,11 +584,13 @@ function getInitialView(contract: ContractDetail | null) {
 
 function createNewDraft(seed: {
   name?: string;
-  targetLakehouseId: string;
+  targetItemId: string;
   targetTablePath: string;
+  targetType: ContractTargetType;
 }): ContractDraft {
   const name = seed.name?.trim() || 'New Contract';
   const yaml = createDefaultContractYaml(name);
+  const targetPath = seed.targetTablePath || getDefaultTargetPath(seed.targetType);
 
   return {
     commitMessage: '',
@@ -560,17 +599,16 @@ function createNewDraft(seed: {
     odcsYaml: synchronizeDraftYaml(yaml, {
       name,
       status: 'draft',
-      targetTablePath:
-        seed.targetTablePath ||
-        'abfss://workspace@onelake.dfs.fabric.microsoft.com/Lakehouse.Lakehouse/Tables/example_table',
+      targetTablePath: targetPath,
+      targetType: seed.targetType,
       version: '1.0.0',
     }),
     ownerEmail: '',
     status: 'draft',
-    targetLakehouseId: seed.targetLakehouseId,
-    targetTablePath:
-      seed.targetTablePath ||
-      'abfss://workspace@onelake.dfs.fabric.microsoft.com/Lakehouse.Lakehouse/Tables/example_table',
+    targetItemId: seed.targetItemId,
+    targetLakehouseId: seed.targetType === 'lakehouse' ? seed.targetItemId : '',
+    targetTablePath: targetPath,
+    targetType: seed.targetType,
     version: '1.0.0',
   };
 }
@@ -582,6 +620,7 @@ function prepareDraftForSave(draft: ContractDraft): ContractDraft {
       name: draft.name,
       status: draft.status,
       targetTablePath: draft.targetTablePath,
+      targetType: draft.targetType,
       version: draft.version,
     }),
   };
@@ -596,10 +635,62 @@ function toDraft(contract: ContractDetail): ContractDraft {
     odcsYaml: contract.odcsYaml,
     ownerEmail: contract.ownerEmail,
     status: contract.status,
+    targetItemId: contract.targetItemId ?? contract.targetLakehouseId ?? '',
     targetLakehouseId: contract.targetLakehouseId ?? '',
     targetTablePath: contract.targetTablePath,
+    targetType: contract.targetType ?? 'lakehouse',
     version: contract.version,
   };
+}
+
+function parseTargetType(value: string | null | undefined): ContractTargetType {
+  switch ((value ?? '').trim().replace('-', '_').toLowerCase()) {
+    case 'warehouse':
+      return 'warehouse';
+    case 'eventhouse':
+    case 'kql_database':
+      return 'eventhouse';
+    case 'semantic_model':
+    case 'semanticmodel':
+      return 'semantic_model';
+    case 'fabric_sql':
+    case 'sql_database':
+      return 'fabric_sql';
+    case 'lakehouse':
+    default:
+      return 'lakehouse';
+  }
+}
+
+function getDefaultTargetPath(targetType: ContractTargetType) {
+  switch (targetType) {
+    case 'warehouse':
+      return 'fabric://workspace/warehouse/schema.table';
+    case 'eventhouse':
+      return 'fabric://workspace/eventhouse/database/table';
+    case 'semantic_model':
+      return 'fabric://workspace/semantic-model/model-name';
+    case 'fabric_sql':
+      return 'fabric://workspace/sql-database/schema.table';
+    case 'lakehouse':
+    default:
+      return 'abfss://workspace@onelake.dfs.fabric.microsoft.com/Lakehouse.Lakehouse/Tables/example_table';
+  }
+}
+
+function getTargetPathHint(targetType: ContractTargetType) {
+  switch (targetType) {
+    case 'warehouse':
+    case 'fabric_sql':
+      return 'Use schema.table, view name, or a fabric:// URI for query-based checks.';
+    case 'eventhouse':
+      return 'Use the KQL database/table name or a fabric:// URI for event schema checks.';
+    case 'semantic_model':
+      return 'Use the semantic model name, table/measure scope, or a fabric:// URI.';
+    case 'lakehouse':
+    default:
+      return 'The ABFSS path is auto-filled when you pick a table.';
+  }
 }
 
 function isGuid(value: string) {
@@ -639,7 +730,7 @@ function parsePersistedEditorState(raw: string): PersistedEditorState | null {
   try {
     const parsed = JSON.parse(raw) as Partial<PersistedEditorState>;
     const contractId = typeof parsed.contractId === 'string' ? parsed.contractId : null;
-    const draft = isPersistedDraft(parsed.draft) ? parsed.draft : null;
+    const draft = normalizePersistedDraft(parsed.draft);
 
     if (!contractId && !draft) {
       return null;
@@ -654,13 +745,13 @@ function parsePersistedEditorState(raw: string): PersistedEditorState | null {
   }
 }
 
-function isPersistedDraft(value: unknown): value is ContractDraft {
+function normalizePersistedDraft(value: unknown): ContractDraft | null {
   if (!value || typeof value !== 'object') {
-    return false;
+    return null;
   }
 
   const draft = value as Partial<ContractDraft>;
-  return typeof draft.name === 'string'
+  const isValid = typeof draft.name === 'string'
     && typeof draft.description === 'string'
     && typeof draft.status === 'string'
     && typeof draft.version === 'string'
@@ -669,6 +760,40 @@ function isPersistedDraft(value: unknown): value is ContractDraft {
     && typeof draft.targetTablePath === 'string'
     && typeof draft.targetLakehouseId === 'string'
     && typeof draft.commitMessage === 'string';
+
+  if (!isValid) {
+    return null;
+  }
+
+  const targetType = parseTargetType(draft.targetType);
+  const targetItemId = typeof draft.targetItemId === 'string'
+    ? draft.targetItemId
+    : draft.targetLakehouseId;
+  const commitMessage = typeof draft.commitMessage === 'string' ? draft.commitMessage : '';
+  const description = typeof draft.description === 'string' ? draft.description : '';
+  const name = typeof draft.name === 'string' ? draft.name : 'New Contract';
+  const odcsYaml = typeof draft.odcsYaml === 'string' ? draft.odcsYaml : createDefaultContractYaml(name);
+  const ownerEmail = typeof draft.ownerEmail === 'string' ? draft.ownerEmail : '';
+  const status = typeof draft.status === 'string' ? draft.status : 'draft';
+  const targetTablePath = typeof draft.targetTablePath === 'string'
+    ? draft.targetTablePath
+    : getDefaultTargetPath(targetType);
+  const version = typeof draft.version === 'string' ? draft.version : '1.0.0';
+
+  return {
+    commitMessage,
+    description,
+    id: draft.id,
+    name,
+    odcsYaml,
+    ownerEmail,
+    status,
+    targetItemId: targetItemId ?? '',
+    targetLakehouseId: targetType === 'lakehouse' ? targetItemId ?? '' : '',
+    targetTablePath,
+    targetType,
+    version,
+  };
 }
 
 // ─── Lakehouse Picker ──────────────────────────────────────────────────────────

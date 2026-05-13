@@ -54,9 +54,11 @@ vi.mock('@/hooks/useContract', () => ({
       odcsYaml: 'apiVersion: v3.1.0',
       ownerEmail: 'owner@example.com',
       status: 'active',
+      targetItemId: 'lakehouse-1',
       targetLakehouseId: 'lakehouse-1',
       targetTablePath:
         'abfss://workspace@onelake.dfs.fabric.microsoft.com/Lakehouse.Lakehouse/Tables/patient_encounters',
+      targetType: 'lakehouse',
       updatedAt: '2026-05-08T10:00:00Z',
       version: '2.0.0',
     },

@@ -76,6 +76,24 @@ public sealed class ContractsController : ControllerBase
                 detail: "Mode must be either 'direct' or 'ai_generate'.");
         }
 
+        var targetType = ContractTargetTypes.Normalize(request.TargetType);
+        if (targetType is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid target type.",
+                detail: "Target type must be one of lakehouse, warehouse, eventhouse, semantic_model, or fabric_sql.");
+        }
+
+        var targetItemId = request.TargetItemId ?? request.TargetLakehouseId;
+        if (targetItemId is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Target item missing.",
+                detail: "TargetItemId is required for Fabric contract targets.");
+        }
+
         var isAiGenerated = string.Equals(request.Mode, "ai_generate", StringComparison.OrdinalIgnoreCase);
         var odcsYaml = request.OdcsYaml;
 
@@ -97,6 +115,7 @@ public sealed class ContractsController : ControllerBase
                 request.Name,
                 request.Description,
                 request.OwnerEmail,
+                targetType,
                 request.TargetTablePath,
                 odcsYaml,
                 out var normalizedYaml,
@@ -111,7 +130,8 @@ public sealed class ContractsController : ControllerBase
             var created = await _contractStore.CreateAsync(
                 new CreateContractCommand(
                     _tenantContext.WorkspaceId,
-                    request.TargetLakehouseId,
+                    targetType,
+                    targetItemId.Value,
                     request.Name,
                     contractDefinition.Status.ToLowerInvariant(),
                     contractDefinition.Version,
@@ -155,10 +175,29 @@ public sealed class ContractsController : ControllerBase
         [FromBody] UpdateContractRequest request,
         CancellationToken ct)
     {
+        var targetType = ContractTargetTypes.Normalize(request.TargetType);
+        if (targetType is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid target type.",
+                detail: "Target type must be one of lakehouse, warehouse, eventhouse, semantic_model, or fabric_sql.");
+        }
+
+        var targetItemId = request.TargetItemId ?? request.TargetLakehouseId;
+        if (targetItemId is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Target item missing.",
+                detail: "TargetItemId is required for Fabric contract targets.");
+        }
+
         if (!TryNormalizeContract(
                 request.Name,
                 request.Description,
                 request.OwnerEmail,
+                targetType,
                 request.TargetTablePath,
                 request.OdcsYaml,
                 out var normalizedYaml,
@@ -173,7 +212,8 @@ public sealed class ContractsController : ControllerBase
             var updated = await _contractStore.UpdateAsync(
                 id,
                 new UpdateContractCommand(
-                    request.TargetLakehouseId,
+                    targetType,
+                    targetItemId.Value,
                     request.Name,
                     contractDefinition.Status.ToLowerInvariant(),
                     contractDefinition.Version,
@@ -233,6 +273,7 @@ public sealed class ContractsController : ControllerBase
         string name,
         string? description,
         string ownerEmail,
+        string targetType,
         string targetTablePath,
         string? odcsYaml,
         out string normalizedYaml,
@@ -286,7 +327,11 @@ public sealed class ContractsController : ControllerBase
             return false;
         }
 
-        servers[0] = servers[0] with { Path = targetTablePath };
+        servers[0] = servers[0] with
+        {
+            Path = targetTablePath,
+            Format = ContractTargetTypes.ToServerFormat(targetType),
+        };
         contractDefinition = parsed with
         {
             Name = name,
@@ -318,8 +363,12 @@ public sealed class ContractsController : ControllerBase
             Version = contract.CurrentVersion,
             OdcsYaml = yaml,
             OwnerEmail = contract.OwnerEmail,
+            TargetType = contract.TargetType,
+            TargetItemId = contract.FabricItemId,
             TargetTablePath = parsed?.Servers.FirstOrDefault()?.Path ?? string.Empty,
-            TargetLakehouseId = contract.FabricItemId,
+            TargetLakehouseId = string.Equals(contract.TargetType, ContractTargetTypes.Lakehouse, StringComparison.Ordinal)
+                ? contract.FabricItemId
+                : null,
             AiSuggested = aiSuggested,
             CreatedBy = contract.CreatedBy,
             CreatedAt = ToIsoString(contract.CreatedAt),
@@ -332,6 +381,7 @@ public sealed class ContractsController : ControllerBase
         {
             Id = contract.ContractId,
             Name = contract.Name,
+            TargetType = contract.TargetType,
             Status = contract.Status,
             Version = contract.CurrentVersion,
             LastRunStatus = contract.LatestRun?.Status,

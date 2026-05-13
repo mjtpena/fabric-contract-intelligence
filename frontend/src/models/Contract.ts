@@ -1,3 +1,5 @@
+export type ContractTargetType = 'lakehouse' | 'warehouse' | 'eventhouse' | 'semantic_model' | 'fabric_sql';
+
 /**
  * Contract row returned by `GET /v1/contracts`.
  */
@@ -6,6 +8,8 @@ export interface ContractSummary {
   id: string;
   /** Contract display name. */
   name: string;
+  /** Fabric data product type targeted by the contract. */
+  targetType: ContractTargetType;
   /** Persisted lifecycle status. */
   status: string;
   /** Current contract version. */
@@ -34,9 +38,13 @@ export interface ContractDetail {
   odcsYaml: string;
   /** Owner email captured by the backend DTO. */
   ownerEmail: string;
-  /** OneLake table path targeted by the contract. */
+  /** Fabric data product type targeted by the contract. */
+  targetType: ContractTargetType;
+  /** Target Fabric item identifier when available. */
+  targetItemId: string | null;
+  /** Target object path or identifier inside the Fabric item. */
   targetTablePath: string;
-  /** Target Fabric lakehouse identifier when available. */
+  /** Legacy target Fabric lakehouse identifier when available. */
   targetLakehouseId: string | null;
   /** Whether the contract originated from an AI suggestion. */
   aiSuggested: boolean;
@@ -78,10 +86,14 @@ export interface CreateContractRequest {
   description: string | null;
   /** Owner email captured in the contract metadata. */
   ownerEmail: string;
-  /** OneLake table path. */
+  /** Fabric data product type targeted by the contract. */
+  targetType: ContractTargetType;
+  /** Target Fabric item identifier. */
+  targetItemId: string;
+  /** Target object path or identifier inside the Fabric item. */
   targetTablePath: string;
-  /** Target Fabric lakehouse identifier. */
-  targetLakehouseId: string;
+  /** Legacy target Fabric lakehouse identifier. */
+  targetLakehouseId?: string | null;
   /** ODCS YAML to persist. */
   odcsYaml: string;
   /** Optional AI hints for enterprise generation mode. */
@@ -98,10 +110,14 @@ export interface UpdateContractRequest {
   description: string | null;
   /** Owner email captured in the contract metadata. */
   ownerEmail: string;
-  /** OneLake table path. */
+  /** Fabric data product type targeted by the contract. */
+  targetType: ContractTargetType;
+  /** Target Fabric item identifier. */
+  targetItemId: string;
+  /** Target object path or identifier inside the Fabric item. */
   targetTablePath: string;
-  /** Target Fabric lakehouse identifier. */
-  targetLakehouseId: string;
+  /** Legacy target Fabric lakehouse identifier. */
+  targetLakehouseId?: string | null;
   /** ODCS YAML to persist. */
   odcsYaml: string;
   /** Optional version change note. */
@@ -136,9 +152,13 @@ export interface ContractDraft {
   odcsYaml: string;
   /** Owner email captured by the save form. */
   ownerEmail: string;
-  /** OneLake table path. */
+  /** Fabric data product type targeted by the contract. */
+  targetType: ContractTargetType;
+  /** Fabric item identifier targeted by the contract. */
+  targetItemId: string;
+  /** Target object path or identifier inside the Fabric item. */
   targetTablePath: string;
-  /** Fabric lakehouse identifier. */
+  /** Legacy Fabric lakehouse identifier used by existing item definitions. */
   targetLakehouseId: string;
   /** Optional version change note. */
   commitMessage: string;

@@ -43,6 +43,7 @@ public sealed class OrqentisDbContext : DbContext
             b.HasIndex(c => new { c.TenantId, c.WorkspaceId }).HasDatabaseName("ix_contracts_tenant_workspace");
             b.HasIndex(c => c.Status).HasDatabaseName("ix_contracts_status");
             b.Property(c => c.Status).HasMaxLength(32);
+            b.Property(c => c.TargetType).HasMaxLength(32);
             b.Property(c => c.CurrentVersion).HasMaxLength(64);
         });
 

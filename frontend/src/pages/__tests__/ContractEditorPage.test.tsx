@@ -64,8 +64,10 @@ vi.mock('@/components/ContractEditor/ValidationPanel', () => ({
 }));
 
 vi.mock('@/components/FabricPickers', () => ({
-  LakehousePicker: () => <div>Lakehouse picker</div>,
+  FabricTargetItemPicker: () => <div>Fabric target item picker</div>,
+  TargetTypePicker: () => <div>Target type picker</div>,
   TablePicker: () => <div>Table picker</div>,
+  getContractTargetTypeLabel: () => 'Lakehouse',
 }));
 
 describe('ContractEditorPage', () => {
@@ -116,9 +118,11 @@ describe('ContractEditorPage', () => {
           odcsYaml: 'apiVersion: v3.1.0\nkind: DataContract\nname: Orqentis Showcase Contract',
           ownerEmail: 'owner@example.com',
           status: 'active',
+          targetItemId: '2404814f-f2a1-48c0-b758-3a7f481d29d0',
           targetLakehouseId: '2404814f-f2a1-48c0-b758-3a7f481d29d0',
           targetTablePath:
             'abfss://workspace@onelake.dfs.fabric.microsoft.com/OrqentisShowcaseLakehouse.Lakehouse/Tables/owid_co2_demo',
+          targetType: 'lakehouse',
           updatedAt: '2026-05-12T01:53:33.8820040Z',
           version: '1.0.0',
         });

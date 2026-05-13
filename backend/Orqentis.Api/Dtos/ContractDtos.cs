@@ -7,6 +7,7 @@ public sealed record ContractSummaryDto
 {
     public required Guid Id { get; init; }
     public required string Name { get; init; }
+    public required string TargetType { get; init; }
     public required string Status { get; init; }
     public required string Version { get; init; }
     public string? LastRunStatus { get; init; }
@@ -23,6 +24,8 @@ public sealed record ContractDto
     public required string Version { get; init; }
     public required string OdcsYaml { get; init; }
     public required string OwnerEmail { get; init; }
+    public required string TargetType { get; init; }
+    public Guid? TargetItemId { get; init; }
     public required string TargetTablePath { get; init; }
     public Guid? TargetLakehouseId { get; init; }
     public required bool AiSuggested { get; init; }
@@ -46,11 +49,14 @@ public sealed record CreateContractRequest
     [EmailAddress]
     public required string OwnerEmail { get; init; }
 
+    public string TargetType { get; init; } = "lakehouse";
+
+    public Guid? TargetItemId { get; init; }
+
     [Required]
     public required string TargetTablePath { get; init; }
 
-    [Required]
-    public required Guid TargetLakehouseId { get; init; }
+    public Guid? TargetLakehouseId { get; init; }
 
     public string? OdcsYaml { get; init; }
     public string? AiHints { get; init; }
@@ -68,11 +74,14 @@ public sealed record UpdateContractRequest
     [EmailAddress]
     public required string OwnerEmail { get; init; }
 
+    public string TargetType { get; init; } = "lakehouse";
+
+    public Guid? TargetItemId { get; init; }
+
     [Required]
     public required string TargetTablePath { get; init; }
 
-    [Required]
-    public required Guid TargetLakehouseId { get; init; }
+    public Guid? TargetLakehouseId { get; init; }
 
     [Required]
     public required string OdcsYaml { get; init; }

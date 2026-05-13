@@ -22,6 +22,7 @@ public sealed class Contract
     [Column("tenant_id")] public Guid TenantId { get; set; }
     [Column("workspace_id")] public Guid WorkspaceId { get; set; }
     [Column("fabric_item_id")] public Guid? FabricItemId { get; set; }
+    [Column("target_type")] public string TargetType { get; set; } = "lakehouse";
     [Column("name")] public string Name { get; set; } = string.Empty;
     [Column("status")] public string Status { get; set; } = "draft";
     [Column("current_version")] public string CurrentVersion { get; set; } = "0.1.0";

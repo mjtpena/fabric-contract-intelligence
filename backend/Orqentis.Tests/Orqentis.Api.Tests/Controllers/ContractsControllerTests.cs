@@ -8,6 +8,37 @@ namespace Orqentis.Tests.Orqentis.Api.Tests.Controllers;
 public sealed class ContractsControllerTests
 {
     [Fact]
+    public async Task CreateAsync_WarehouseTarget_PersistsGenericFabricTarget()
+    {
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateAuthenticatedClient();
+        var warehouseId = Guid.Parse("33333333-3333-4333-8333-333333333333");
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/v1/contracts",
+            new CreateContractRequest
+            {
+                Mode = "direct",
+                Name = "Warehouse Sales Contract",
+                Description = "Warehouse contract",
+                OwnerEmail = "owner@example.com",
+                TargetType = "warehouse",
+                TargetItemId = warehouseId,
+                TargetTablePath = "fabric://workspace/warehouse/dbo.sales",
+                OdcsYaml = ContractSample.CreateYaml("1.0.0", "Warehouse Sales Contract"),
+            });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<ContractDto>();
+        created.Should().NotBeNull();
+        created!.TargetType.Should().Be("warehouse");
+        created.TargetItemId.Should().Be(warehouseId);
+        created.TargetLakehouseId.Should().BeNull();
+        created.TargetTablePath.Should().Be("fabric://workspace/warehouse/dbo.sales");
+        created.OdcsYaml.Should().Contain("format: sql");
+    }
+
+    [Fact]
     public async Task CreateAsync_AiGenerateMode_CreatesContractForEnterpriseTenant()
     {
         using var factory = new ApiWebApplicationFactory();

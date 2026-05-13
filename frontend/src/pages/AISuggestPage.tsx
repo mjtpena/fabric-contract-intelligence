@@ -14,10 +14,16 @@ import {
 import { SparkleRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
-import { LakehousePicker, TablePicker } from '@/components/FabricPickers';
+import {
+  FabricTargetItemPicker,
+  TablePicker,
+  TargetTypePicker,
+} from '@/components/FabricPickers';
 import { createAiClient } from '@/api/aiClient';
 import { createContractClient } from '@/api/contractClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import type { ContractTargetType } from '@/models/Contract';
+import { getContractTargetTypeLabel } from '@/models/ContractTarget';
 
 const useStyles = makeStyles({
   root: {
@@ -62,7 +68,8 @@ export function AISuggestPage() {
   const [yaml, setYaml] = useState('');
   const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
-  const [targetLakehouseId, setTargetLakehouseId] = useState('');
+  const [targetType, setTargetType] = useState<ContractTargetType>('lakehouse');
+  const [targetItemId, setTargetItemId] = useState('');
   const [targetTablePath, setTargetTablePath] = useState('');
   const [description, setDescription] = useState('');
 
@@ -92,7 +99,7 @@ export function AISuggestPage() {
 
   const generate = async () => {
     if (!targetTablePath) {
-      await sdk.notifyInfo('No table selected', 'Select a lakehouse and table before generating.');
+      await sdk.notifyInfo('No target selected', 'Select a Fabric target and object before generating.');
       return;
     }
 
@@ -129,8 +136,10 @@ export function AISuggestPage() {
         name: name || tableName || 'AI Generated Contract',
         description,
         ownerEmail,
+        targetType,
+        targetItemId,
         targetTablePath,
-        targetLakehouseId,
+        targetLakehouseId: targetType === 'lakehouse' ? targetItemId : null,
         odcsYaml: yaml,
       });
       await sdk.notifySuccess('Contract created', 'AI draft was saved as a contract.');
@@ -145,30 +154,50 @@ export function AISuggestPage() {
     <section className={styles.root}>
       <div className={styles.header}>
         <Title2>AI Contract Suggest</Title2>
-        <Body1>Generate an ODCS contract from a Delta table, refine in Monaco, then save.</Body1>
+        <Body1>Generate an ODCS contract from a Fabric data product, refine in Monaco, then save.</Body1>
       </div>
 
       <div className={styles.grid}>
-        <LakehousePicker
-          apiBaseUrl={sdk.apiBaseUrl}
-          getToken={sdk.getAccessToken}
-          isReady={sdk.isReady}
-          value={targetLakehouseId}
-          workspaceId={sdk.workspaceId}
-          onChange={(id) => {
-            setTargetLakehouseId(id);
-            setTargetTablePath('');
+        <TargetTypePicker
+          value={targetType}
+          onChange={(nextType) => {
+            setTargetType(nextType);
+            setTargetItemId('');
+            setTargetTablePath(getDefaultTargetPath(nextType));
           }}
         />
-        <TablePicker
+        <FabricTargetItemPicker
           apiBaseUrl={sdk.apiBaseUrl}
           getToken={sdk.getAccessToken}
           isReady={sdk.isReady}
-          lakehouseId={targetLakehouseId}
-          value={targetTablePath}
+          targetType={targetType}
+          value={targetItemId}
           workspaceId={sdk.workspaceId}
-          onChange={setTargetTablePath}
+          onChange={(id) => {
+            setTargetItemId(id);
+            if (targetType === 'lakehouse') {
+              setTargetTablePath('');
+            }
+          }}
         />
+        {targetType === 'lakehouse' ? (
+          <TablePicker
+            apiBaseUrl={sdk.apiBaseUrl}
+            getToken={sdk.getAccessToken}
+            isReady={sdk.isReady}
+            lakehouseId={targetItemId}
+            value={targetTablePath}
+            workspaceId={sdk.workspaceId}
+            onChange={setTargetTablePath}
+          />
+        ) : (
+          <Field
+            hint={getTargetPathHint(targetType)}
+            label={`${getContractTargetTypeLabel(targetType)} object`}
+          >
+            <Input value={targetTablePath} onChange={(_, data) => setTargetTablePath(data.value)} />
+          </Field>
+        )}
         <Field label="Contract name">
           <Input
             placeholder={tableName ? `e.g. ${tableName} Contract` : 'Auto-filled after generate'}
@@ -209,7 +238,7 @@ export function AISuggestPage() {
       {yaml || !targetTablePath ? (
         <div className={styles.editor}>
           <MonacoYamlEditor
-            value={yaml || (targetTablePath ? '' : '# Select a lakehouse and table above, then click Generate draft')}
+            value={yaml || (targetTablePath ? '' : '# Select a Fabric target above, then click Generate draft')}
             onChange={setYaml}
             themeMode={sdk.themeMode}
           />
@@ -217,8 +246,39 @@ export function AISuggestPage() {
       ) : null}
 
       {!targetTablePath ? (
-        <Caption1>Select a lakehouse and table above to enable AI contract generation.</Caption1>
+        <Caption1>Select a Fabric target above to enable AI contract generation.</Caption1>
       ) : null}
     </section>
   );
+}
+
+function getDefaultTargetPath(targetType: ContractTargetType) {
+  switch (targetType) {
+    case 'warehouse':
+      return 'fabric://workspace/warehouse/schema.table';
+    case 'eventhouse':
+      return 'fabric://workspace/eventhouse/database/table';
+    case 'semantic_model':
+      return 'fabric://workspace/semantic-model/model-name';
+    case 'fabric_sql':
+      return 'fabric://workspace/sql-database/schema.table';
+    case 'lakehouse':
+    default:
+      return '';
+  }
+}
+
+function getTargetPathHint(targetType: ContractTargetType) {
+  switch (targetType) {
+    case 'warehouse':
+    case 'fabric_sql':
+      return 'Use schema.table, view name, or a fabric:// URI for query-based checks.';
+    case 'eventhouse':
+      return 'Use the KQL database/table name or a fabric:// URI for event schema checks.';
+    case 'semantic_model':
+      return 'Use the semantic model name, table/measure scope, or a fabric:// URI.';
+    case 'lakehouse':
+    default:
+      return 'The ABFSS path is auto-filled when you pick a table.';
+  }
 }

@@ -39,6 +39,7 @@ public sealed class ContractStore : IContractStore
             .Select(contract => new ContractSummaryRecord(
                 contract.ContractId,
                 contract.Name,
+                contract.TargetType,
                 contract.Status,
                 contract.CurrentVersion,
                 latestRuns.TryGetValue(contract.ContractId, out var latestRun) ? latestRun : null))
@@ -100,7 +101,8 @@ public sealed class ContractStore : IContractStore
             ContractId = Guid.NewGuid(),
             TenantId = _tenantContext.TenantId,
             WorkspaceId = command.WorkspaceId,
-            FabricItemId = command.TargetLakehouseId,
+            FabricItemId = command.TargetItemId,
+            TargetType = command.TargetType,
             Name = command.Name,
             Status = command.Status,
             CurrentVersion = command.CurrentVersion,
@@ -161,7 +163,8 @@ public sealed class ContractStore : IContractStore
         contract.Status = command.Status;
         contract.OwnerEmail = command.OwnerEmail;
         contract.CurrentVersion = command.CurrentVersion;
-        contract.FabricItemId = command.TargetLakehouseId;
+        contract.FabricItemId = command.TargetItemId;
+        contract.TargetType = command.TargetType;
         contract.UpdatedAt = DateTimeOffset.UtcNow;
 
         var version = new ContractVersion
@@ -386,6 +389,7 @@ public sealed class ContractStore : IContractStore
             .Select(contract => new ContractSummaryRecord(
                 contract.ContractId,
                 contract.Name,
+                contract.TargetType,
                 contract.Status,
                 contract.CurrentVersion,
                 latestRuns.TryGetValue(contract.ContractId, out var latestRun) ? latestRun : null))
@@ -475,6 +479,7 @@ public sealed class ContractStore : IContractStore
             contract.TenantId,
             contract.WorkspaceId,
             contract.FabricItemId,
+            contract.TargetType,
             contract.Name,
             contract.Status,
             contract.CurrentVersion,

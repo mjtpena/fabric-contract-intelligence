@@ -1,5 +1,97 @@
 import { Combobox, Field, Option, Spinner } from '@fluentui/react-components';
-import { useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
+import { useFabricTargetItems, useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
+import type { ContractTargetType } from '@/models/Contract';
+import { contractTargetTypeOptions, getContractTargetTypeLabel } from '@/models/ContractTarget';
+
+// ─── TargetTypePicker ────────────────────────────────────────────────────────
+
+export interface TargetTypePickerProps {
+  onChange: (targetType: ContractTargetType) => void;
+  value: ContractTargetType;
+}
+
+export function TargetTypePicker({ onChange, value }: TargetTypePickerProps) {
+  return (
+    <Field label="Contract target type">
+      <Combobox
+        value={getContractTargetTypeLabel(value)}
+        onOptionSelect={(_, data) => {
+          const selected = data.optionValue as ContractTargetType | undefined;
+          if (selected) {
+            onChange(selected);
+          }
+        }}
+      >
+        {contractTargetTypeOptions.map((option) => (
+          <Option key={option.value} text={option.label} value={option.value}>
+            {option.label}
+          </Option>
+        ))}
+      </Combobox>
+    </Field>
+  );
+}
+
+// ─── FabricTargetItemPicker ──────────────────────────────────────────────────
+
+export interface FabricTargetItemPickerProps {
+  apiBaseUrl: string;
+  getToken: () => Promise<string>;
+  isReady: boolean;
+  onChange: (itemId: string) => void;
+  targetType: ContractTargetType;
+  value: string;
+  workspaceId: string;
+}
+
+export function FabricTargetItemPicker({
+  apiBaseUrl,
+  getToken,
+  isReady,
+  onChange,
+  targetType,
+  value,
+  workspaceId,
+}: FabricTargetItemPickerProps) {
+  const { isLoading, items } = useFabricTargetItems({
+    baseUrl: apiBaseUrl,
+    getToken,
+    isReady,
+    targetType,
+    workspaceId,
+  });
+
+  const label = `Target ${getContractTargetTypeLabel(targetType).toLowerCase()}`;
+  const selectedName = items.find((item) => item.id === value)?.displayName ?? (value || undefined);
+
+  return (
+    <Field
+      hint={items.length === 0 && !isLoading && isReady ? 'Paste a Fabric item GUID if the list is unavailable.' : undefined}
+      label={label}
+    >
+      <Combobox
+        freeform
+        placeholder={isLoading ? 'Loading Fabric items…' : 'Select or paste Fabric item ID'}
+        value={selectedName ?? ''}
+        onOptionSelect={(_, data) => {
+          if (data.optionValue) {
+            onChange(data.optionValue);
+          }
+        }}
+        onChange={(e) => {
+          onChange(e.currentTarget.value);
+        }}
+      >
+        {items.map((item) => (
+          <Option key={item.id} text={item.displayName} value={item.id}>
+            <span style={{ fontWeight: 600 }}>{item.displayName}</span>
+            <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.6 }}>{item.type}</span>
+          </Option>
+        ))}
+      </Combobox>
+    </Field>
+  );
+}
 
 // ─── LakehousePicker ──────────────────────────────────────────────────────────
 

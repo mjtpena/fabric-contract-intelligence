@@ -1,13 +1,14 @@
 # Orqentis
 
-> Data contracts, enforced at the Delta layer. Native to Microsoft Fabric.
+> Data contracts for Fabric data products. Native to Microsoft Fabric.
 
 [![CI](https://github.com/mjtpena/fabric-contract-intelligence/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
 Orqentis is a native Microsoft Fabric ISV workload that brings **ODCS v3.1.0**-compliant data
 contract definition, version control, enforcement, and AI-powered suggestions to the Fabric
-platform. Orqentis fills a provably unoccupied gap: no existing tool enforces data contracts
-natively at the Delta table layer inside Microsoft Fabric.
+platform. Contracts can bind to Lakehouses, Warehouses, Eventhouse/KQL databases, Semantic
+Models, and Fabric SQL databases. Lakehouse/Delta enforcement is the first fully executable
+target; the shared target model keeps the contract workflow Fabric-wide.
 
 ## Tiers
 
@@ -31,7 +32,9 @@ A React 18 / Fluent UI v9 micro-frontend hosted inside the Fabric portal iframe 
 Fabric Extensibility SDK, talking to a .NET 8 API in Azure App Service. The
 **Orqentis Enforcement Engine** reads OneLake Delta transaction logs using OBO-delegated tokens,
 diffs live schema against ODCS contracts, evaluates quality + freshness rules, and persists
-results to PostgreSQL. AI features (contract suggestion, breach scoring, NL query) are
+results to PostgreSQL. Contract metadata now targets Fabric data products beyond Lakehouse so
+Warehouse, Eventhouse/KQL, Semantic Model, and Fabric SQL validation adapters can use the same
+binding model. AI features (contract suggestion, breach scoring, NL query) are
 brokered via Azure OpenAI with an Anthropic Claude fallback. Breach alerts fire through
 **Fabric Activator**.
 

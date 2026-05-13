@@ -1,6 +1,15 @@
+import type { ContractTargetType } from '@/models/Contract';
+
 export interface FabricLakehouse {
   id: string;
   displayName: string;
+  workspaceId: string;
+}
+
+export interface FabricWorkspaceItem {
+  id: string;
+  displayName: string;
+  type: string;
   workspaceId: string;
 }
 
@@ -40,6 +49,39 @@ export async function listWorkspaceLakehouses(
     }
 
     return (await response.json()) as FabricLakehouse[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Lists workspace items that can act as a contract target for a Fabric data product type.
+ */
+export async function listWorkspaceTargetItems(
+  baseUrl: string,
+  workspaceId: string,
+  targetType: ContractTargetType,
+  getToken: () => Promise<string>,
+): Promise<FabricWorkspaceItem[]> {
+  if (!baseUrl || !workspaceId || !targetType) {
+    return [];
+  }
+
+  const token = await getToken();
+  if (!token) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/v1/fabric/${workspaceId}/items?targetType=${encodeURIComponent(targetType)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return (await response.json()) as FabricWorkspaceItem[];
   } catch {
     return [];
   }

@@ -75,9 +75,11 @@ export function createMockWorkloadClient(): WorkloadClientAPI {
             ].join('\n'),
             ownerEmail: 'test@example.com',
             status: 'draft',
+            targetItemId: '00000000-0000-0000-0000-000000000000',
             targetLakehouseId: '00000000-0000-0000-0000-000000000000',
             targetTablePath:
               'abfss://workspace@onelake.dfs.fabric.microsoft.com/Lakehouse.Lakehouse/Tables/test_table',
+            targetType: 'lakehouse',
             version: '1.0.0',
           },
         });

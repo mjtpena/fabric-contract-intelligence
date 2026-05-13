@@ -47,9 +47,9 @@ async function mockApiError(page: Page) {
   );
 }
 
-/** Intercept the Fabric proxy calls used by LakehousePicker and TablePicker. */
+/** Intercept the Fabric proxy calls used by Fabric target and table pickers. */
 async function mockFabricPickerApi(page: Page) {
-  await page.route(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses`, (route) =>
+  await page.route(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/items?targetType=lakehouse`, (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -57,6 +57,7 @@ async function mockFabricPickerApi(page: Page) {
         {
           id: TEST_LAKEHOUSE_ID,
           displayName: 'OrqentisShowcaseLakehouse',
+          type: 'Lakehouse',
           workspaceId: TEST_WORKSPACE_ID,
         },
       ]),
@@ -135,8 +136,8 @@ test.describe('1. Bootstrap & Loading', () => {
 test.describe('2. Contract List Page', () => {
   test('2.1 — contract list renders with items', async ({ page }) => {
     await mockApi(page, [
-      { id: '1', title: 'Sales Contract', status: 'active', version: '1.0.0', dataProduct: 'sales' },
-      { id: '2', title: 'HR Contract', status: 'draft', version: '2.0.0', dataProduct: 'hr' },
+      { id: '1', name: 'Sales Contract', status: 'active', targetType: 'warehouse', version: '1.0.0', lastRunStatus: null, lastRunAt: null },
+      { id: '2', name: 'HR Contract', status: 'draft', targetType: 'lakehouse', version: '2.0.0', lastRunStatus: null, lastRunAt: null },
     ]);
 
     await gotoStandalone(page, 'contracts');
@@ -209,7 +210,7 @@ test.describe('3. Contract Editor', () => {
     await page.getByRole('option', { name: /owid_co2_demo/i }).click();
 
     await expect(tableCombobox).toHaveValue('owid_co2_demo');
-    expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses`);
+    expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/items?targetType=lakehouse`);
     expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses/${TEST_LAKEHOUSE_ID}/tables`);
   });
 });

@@ -45,7 +45,8 @@ public interface IContractStore
 /// <summary>Command used to create a contract.</summary>
 public sealed record CreateContractCommand(
     Guid WorkspaceId,
-    Guid TargetLakehouseId,
+    string TargetType,
+    Guid TargetItemId,
     string Name,
     string Status,
     string CurrentVersion,
@@ -56,7 +57,8 @@ public sealed record CreateContractCommand(
 
 /// <summary>Command used to create a new contract version.</summary>
 public sealed record UpdateContractCommand(
-    Guid TargetLakehouseId,
+    string TargetType,
+    Guid TargetItemId,
     string Name,
     string Status,
     string CurrentVersion,
@@ -92,6 +94,7 @@ public sealed record UpdateRunEnrichmentCommand(
 public sealed record ContractSummaryRecord(
     Guid ContractId,
     string Name,
+    string TargetType,
     string Status,
     string CurrentVersion,
     EnforcementRunRecord? LatestRun);
@@ -102,6 +105,7 @@ public sealed record ContractRecord(
     Guid TenantId,
     Guid WorkspaceId,
     Guid? FabricItemId,
+    string TargetType,
     string Name,
     string Status,
     string CurrentVersion,

@@ -5,6 +5,7 @@ import odcsSchema from '@/monaco/odcs-v3.1.0.schema.json';
 import type {
   ContractDetail,
   ContractSummary,
+  ContractTargetType,
   ContractValidationResult,
   ContractVersion,
   CreateContractRequest,
@@ -151,6 +152,7 @@ export function synchronizeDraftYaml(
   metadata: {
     name: string;
     status: string;
+    targetType?: ContractTargetType;
     targetTablePath: string;
     version: string;
   },
@@ -177,7 +179,7 @@ export function synchronizeDraftYaml(
     servers.length > 0 && isRecord(servers[0]) ? { ...servers[0] } : { server: 'fabric-default' };
   firstServer.type = typeof firstServer.type === 'string' && firstServer.type.length > 0 ? firstServer.type : 'azure';
   firstServer.location = metadata.targetTablePath;
-  firstServer.format = typeof firstServer.format === 'string' && firstServer.format.length > 0 ? firstServer.format : 'delta';
+  firstServer.format = getServerFormat(metadata.targetType ?? 'lakehouse');
   servers[0] = firstServer;
   nextValue.servers = servers;
 
@@ -310,6 +312,21 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'contract';
+}
+
+function getServerFormat(targetType: ContractTargetType): string {
+  switch (targetType) {
+    case 'warehouse':
+    case 'fabric_sql':
+      return 'sql';
+    case 'eventhouse':
+      return 'kql';
+    case 'semantic_model':
+      return 'semantic_model';
+    case 'lakehouse':
+    default:
+      return 'delta';
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

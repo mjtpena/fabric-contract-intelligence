@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
+import { getContractTargetTypeLabel } from '@/models/ContractTarget';
 import type { WorkspaceSummary } from '@/models/ops';
 
 const useStyles = makeStyles({
@@ -147,6 +148,11 @@ export function ContractListPage() {
           compare: (left, right) => left.name.localeCompare(right.name),
           renderCell: (item) => item.name,
           renderHeaderCell: () => 'Name',
+        }),
+        createTableColumn<ContractSummary>({
+          columnId: 'targetType',
+          renderCell: (item) => getContractTargetTypeLabel(item.targetType ?? 'lakehouse'),
+          renderHeaderCell: () => 'Target',
         }),
         createTableColumn<ContractSummary>({
           columnId: 'status',

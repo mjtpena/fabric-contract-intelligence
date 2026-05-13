@@ -1,3 +1,5 @@
+import type { ContractTargetType } from '@/models/Contract';
+
 export interface WorkspaceSummary {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface FederatedContractsResponse {
   contracts: Array<{
     id: string;
     name: string;
+    targetType: ContractTargetType;
     status: string;
     version: string;
     lastRunStatus: string | null;
