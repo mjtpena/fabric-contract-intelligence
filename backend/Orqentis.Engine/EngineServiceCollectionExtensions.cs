@@ -17,6 +17,9 @@ public static class EngineServiceCollectionExtensions
         services.TryAddSingleton<OdcsContractSerializer>();
         services.TryAddSingleton<IOdcsContractParser, OdcsContractParser>();
         services.TryAddSingleton<IOdcsContractValidator, OdcsContractValidator>();
+        services.AddHttpClient<IFabricSqlSchemaReader, FabricSqlSchemaReader>();
+        services.AddHttpClient<IFabricKqlSchemaReader, FabricKqlSchemaReader>();
+        services.AddHttpClient<IFabricSemanticModelSchemaReader, FabricSemanticModelSchemaReader>();
         services.TryAddSingleton<ISchemaRuleEvaluator, SchemaRuleEvaluator>();
         services.TryAddSingleton<IFreshnessEvaluator, FreshnessEvaluator>();
         services.TryAddSingleton<IQualityRuleEvaluator, QualityRuleEvaluator>();

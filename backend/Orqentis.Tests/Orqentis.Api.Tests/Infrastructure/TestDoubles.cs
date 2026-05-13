@@ -9,16 +9,36 @@ namespace Orqentis.Tests.Orqentis.Api.Tests.Infrastructure;
 
 internal sealed class CapturingTokenBroker : IOneLakeTokenBroker
 {
+    public int FabricRestCallCount { get; private set; }
+    public int FabricSqlCallCount { get; private set; }
+    public int KustoCallCount { get; private set; }
     public string? LastUserAssertion { get; private set; }
+    public int OneLakeCallCount { get; private set; }
 
     public Task<string> GetFabricRestTokenAsync(string userAssertion, CancellationToken ct = default)
     {
+        FabricRestCallCount++;
         LastUserAssertion = userAssertion;
         return Task.FromResult("fabric-rest-token");
     }
 
+    public Task<string> GetFabricSqlTokenAsync(string userAssertion, CancellationToken ct = default)
+    {
+        FabricSqlCallCount++;
+        LastUserAssertion = userAssertion;
+        return Task.FromResult("fabric-sql-token");
+    }
+
+    public Task<string> GetKustoTokenAsync(string userAssertion, CancellationToken ct = default)
+    {
+        KustoCallCount++;
+        LastUserAssertion = userAssertion;
+        return Task.FromResult("kusto-token");
+    }
+
     public Task<string> GetOneLakeTokenAsync(string userAssertion, CancellationToken ct = default)
     {
+        OneLakeCallCount++;
         LastUserAssertion = userAssertion;
         return Task.FromResult("obo-token");
     }
@@ -50,6 +70,18 @@ internal sealed class StubEnforcementOrchestrator : IEnforcementOrchestrator
         CallCount++;
         LastContract = contract;
         LastToken = oneLakeOboToken;
+        return Task.FromResult(Result);
+    }
+
+    public Task<EnforcementResult> RunAsync(
+        ContractDefinition contract,
+        EnforcementCredentials credentials,
+        EnforcementTargetContext? target,
+        CancellationToken ct = default)
+    {
+        CallCount++;
+        LastContract = contract;
+        LastToken = credentials.OneLakeToken ?? credentials.FabricSqlToken ?? credentials.KustoToken ?? credentials.FabricRestToken;
         return Task.FromResult(Result);
     }
 }

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Orqentis.Engine.Odcs;
 
@@ -29,12 +30,18 @@ public sealed class FabricSqlClient : IFabricSqlClient
         ArgumentException.ThrowIfNullOrWhiteSpace(sql);
         ArgumentException.ThrowIfNullOrWhiteSpace(fabricSqlOboToken);
 
-        if (string.IsNullOrWhiteSpace(server.Host))
+        var host = server.Host;
+        if (string.IsNullOrWhiteSpace(host))
         {
             throw new InvalidOperationException("Contract server host is required for SQL quality evaluation.");
         }
 
-        var endpoint = server.Host!.TrimEnd('/');
+        if (IsSqlConnectionString(host))
+        {
+            return await ExecuteScalarWithSqlConnectionAsync(host, sql, fabricSqlOboToken, ct).ConfigureAwait(false);
+        }
+
+        var endpoint = host.TrimEnd('/');
         _logger.LogInformation("QualitySql-Execute Endpoint={Endpoint}", endpoint);
         if (!Uri.TryCreate($"{endpoint}/query", UriKind.Absolute, out var queryUri))
         {
@@ -56,6 +63,28 @@ public sealed class FabricSqlClient : IFabricSqlClient
             ? value
             : throw new InvalidOperationException("SQL endpoint response did not include a scalar value.");
     }
+
+    private static async Task<double?> ExecuteScalarWithSqlConnectionAsync(
+        string connectionString,
+        string sql,
+        string fabricSqlOboToken,
+        CancellationToken ct)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        connection.AccessToken = fabricSqlOboToken;
+        await connection.OpenAsync(ct).ConfigureAwait(false);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        var result = await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
+        return result is null || result is DBNull
+            ? null
+            : Convert.ToDouble(result, CultureInfo.InvariantCulture);
+    }
+
+    private static bool IsSqlConnectionString(string value) =>
+        value.Contains("Data Source=", StringComparison.OrdinalIgnoreCase) ||
+        value.Contains("Server=", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryExtractScalar(string body, out double? value)
     {

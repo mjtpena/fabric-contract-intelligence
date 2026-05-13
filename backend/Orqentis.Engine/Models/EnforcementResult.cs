@@ -4,7 +4,7 @@ namespace Orqentis.Engine.Models;
 
 /// <summary>
 /// The full result of an enforcement run. Persisted to <c>enforcement_runs.result_json</c>
-/// (spec §5.2). Returned from <see cref="IEnforcementOrchestrator.RunAsync"/>.
+/// (spec §5.2). Returned from <see cref="IEnforcementOrchestrator"/>.
 /// </summary>
 public sealed record EnforcementResult
 {

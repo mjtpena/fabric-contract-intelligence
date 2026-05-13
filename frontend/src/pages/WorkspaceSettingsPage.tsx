@@ -15,6 +15,8 @@ import {
 } from '@fluentui/react-icons';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 
+const SUPPORT_URL = 'https://fabric.orqentis.com/support.html';
+
 const useStyles = makeStyles({
   root: {
     display: 'flex',
@@ -58,8 +60,7 @@ export function WorkspaceSettingsPage() {
       <div>
         <Title2>Workspace settings</Title2>
         <Caption1>
-          Sprint 6 establishes the workspace-level experience for tiering, API access, Activator,
-          and Purview connectivity.
+          Manage workspace tiering, API access, Activator routing, and optional catalog connectivity.
         </Caption1>
       </div>
 
@@ -71,16 +72,22 @@ export function WorkspaceSettingsPage() {
               <div className={styles.value}>{sdk.isHosted ? 'Community' : 'Local preview'}</div>
             </div>
             <Badge appearance="filled" color="informative" shape="rounded">
-              Pending billing API
+              Manual upgrade
             </Badge>
           </div>
           <Body1>
-            Enterprise renewal and grace-period telemetry will be wired once tenant settings land
-            in the backend.
+            Enterprise upgrades are provisioned manually until marketplace billing is live. Contact
+            support with your tenant ID and workspace ID to request an upgrade.
           </Body1>
           <Body1>
             Workspace: {sdk.workspaceId || 'Not supplied by the host context'}
           </Body1>
+          <Button
+            appearance="primary"
+            onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener,noreferrer')}
+          >
+            Contact support to upgrade
+          </Button>
         </article>
 
         <article className={styles.card}>
@@ -100,7 +107,7 @@ export function WorkspaceSettingsPage() {
             onClick={() => {
               void sdk.notifyInfo(
                 'API key generation pending',
-                'Sprint 6 ships the workspace UX only. Secure key issuance requires a server-side tenant settings endpoint.',
+                'Secure key issuance requires the server-side tenant settings endpoint.',
               );
             }}
           >
@@ -112,21 +119,21 @@ export function WorkspaceSettingsPage() {
           <div className={styles.cardHeader}>
             <div>
               <Caption1>Activator setup</Caption1>
-              <div className={styles.value}>Launch later sprint</div>
+              <div className={styles.value}>Policy routing</div>
             </div>
             <RocketRegular />
           </div>
           <Body1>
-            The policy editor and Activator routing wizard arrive in Sprint 9. This launcher keeps
-            the navigation affordance visible today.
+            Configure policy routing from the policy editor. Support can help validate Activator
+            routing for Enterprise workspaces.
           </Body1>
           <Button
             appearance="primary"
             icon={<LinkRegular />}
             onClick={() => {
               void sdk.notifyInfo(
-                'Activator wizard pending',
-                'Deep-link support will activate when the Sprint 9 policy editor route is available.',
+                'Open policy editor',
+                'Open a Contract Policy item to configure Activator routing for this workspace.',
               );
             }}
           >

@@ -68,6 +68,8 @@ Steps 4–6 are pure (Engine), 7–8 are side-effects (API), 9 is the UI.
 | Inbound API call | Fabric-issued Entra JWT | App audience | passthrough |
 | OneLake (data plane) | OBO exchange | `https://storage.azure.com/.default` | in-memory only |
 | Fabric REST (control plane) | OBO exchange | `https://api.fabric.microsoft.com/.default` | in-memory only |
+| Fabric SQL/Warehouse (data plane) | OBO exchange | `https://database.windows.net/.default` | in-memory only |
+| Eventhouse/KQL (data plane) | OBO exchange | `https://kusto.kusto.windows.net/.default` | in-memory only |
 | Activator trigger | OBO exchange | Fabric REST scope | in-memory only |
 | Azure OpenAI | Managed Identity | data plane MI | rotated by Azure |
 | Anthropic Claude | API key from KV | n/a | rotated quarterly |

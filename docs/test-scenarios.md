@@ -52,7 +52,7 @@ Automated coverage:
 | 3.9 | Open an item with an existing definition | Monaco pre-populated with saved YAML |
 | 3.10 | Refresh editor mid-edit | Draft persisted (or warning shown); no data loss |
 | 3.11 | Select a Lakehouse and table from dropdowns | Lakehouse item list is loaded through `/v1/fabric/{workspaceId}/items?targetType=lakehouse`; table list is loaded through `/v1/fabric/{workspaceId}/lakehouses/{lakehouseId}/tables`; the table control displays the table name, not the ABFSS path |
-| 3.12 | Select Warehouse, Eventhouse/KQL, Semantic Model, or Fabric SQL target | Generic Fabric target picker loads eligible items through `/v1/fabric/{workspaceId}/items?targetType=...`; non-Lakehouse targets accept a governed object path/name |
+| 3.12 | Select Warehouse, Eventhouse/KQL, Semantic Model, or Fabric SQL target | Generic Fabric target picker loads eligible items through `/v1/fabric/{workspaceId}/items?targetType=...`; targets accept a governed object path/name and are saved for enforcement |
 
 ---
 
@@ -73,6 +73,7 @@ Automated coverage:
 | 5.2 | Run is in-progress | Spinner / progress indicator shown |
 | 5.3 | Run completes with violations | Violations list rendered with column/rule details |
 | 5.4 | Run completes with no violations | "No violations" message shown |
+| 5.5 | Run a Warehouse, Eventhouse/KQL, Semantic Model, or Fabric SQL target | Run routes to the target-specific adapter, reads target metadata using delegated credentials, and persists schema enforcement results |
 
 ---
 

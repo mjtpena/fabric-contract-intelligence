@@ -506,9 +506,9 @@ export function LandingPage() {
             The AI control plane for trusted Fabric data products
           </Display>
           <div className={styles.heroSub}>
-            Orqentis turns Lakehouses, Warehouses, Eventhouse/KQL databases, Semantic Models,
-            and Fabric SQL into governed data products: AI drafts the contract, enforcement proves
-            it, impact scoring explains risk, and remediation guidance turns breaches into action.
+            Orqentis binds contracts across Lakehouses, Warehouses, Eventhouse/KQL databases,
+            Semantic Models, and Fabric SQL. Lakehouse/Delta enforcement proves the launch path,
+            while AI drafts contracts, explains risk, and recommends remediation.
           </div>
           <div className={styles.heroActions}>
             <Button
@@ -552,7 +552,7 @@ export function LandingPage() {
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>AI</span>
-            <span className={styles.statLabel}>Author / score / remediate</span>
+          <span className={styles.statLabel}>Author / score / remediate</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>ODCS v3.1.0</span>
@@ -563,7 +563,7 @@ export function LandingPage() {
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <section className={styles.section}>
           <div className={styles.sectionLabel}>AI value proposition</div>
-          <Title2 className={styles.sectionTitle}>From static contracts to autonomous governance</Title2>
+          <Title2 className={styles.sectionTitle}>From static contracts to AI-assisted governance</Title2>
           <div className={styles.sectionSub}>
             The investable wedge is not "AI writes YAML". It is a governed feedback loop that helps
             Fabric teams create contracts faster, understand blast radius, and move from breach
@@ -786,14 +786,6 @@ export function LandingPage() {
               onClick={() => openExternal(FABRIC_URL)}
             >
               Open in Fabric
-            </Button>
-            <Button
-              appearance="outline"
-              size="large"
-              style={{ borderColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
-              onClick={() => openExternal(FABRIC_URL)}
-            >
-              Open in Microsoft Fabric
             </Button>
             <Button
               appearance="outline"

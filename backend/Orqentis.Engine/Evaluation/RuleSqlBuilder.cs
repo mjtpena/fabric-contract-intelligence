@@ -35,24 +35,30 @@ public static class RuleSqlBuilder
     {
         var marker = "/Tables/";
         var markerIndex = path.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0)
+        if (markerIndex >= 0)
         {
-            return new SqlSource("dbo", "unknown_table");
+            var tableSegment = path[(markerIndex + marker.Length)..].Trim('/');
+            if (string.IsNullOrWhiteSpace(tableSegment))
+            {
+                return new SqlSource("dbo", "unknown_table");
+            }
+
+            var tableSegments = tableSegment.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return tableSegments.Length >= 2
+                ? new SqlSource(tableSegments[0], tableSegments[1])
+                : new SqlSource("dbo", tableSegments[0]);
         }
 
-        var tableSegment = path[(markerIndex + marker.Length)..].Trim('/');
-        if (string.IsNullOrWhiteSpace(tableSegment))
-        {
-            return new SqlSource("dbo", "unknown_table");
-        }
-
-        var segments = tableSegment.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var normalized = path.Trim().Trim('/').Replace("/", ".", StringComparison.Ordinal);
+        var segments = normalized.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (segments.Length >= 2)
         {
-            return new SqlSource(segments[0], segments[1]);
+            return new SqlSource(segments[^2], segments[^1]);
         }
 
-        return new SqlSource("dbo", segments[0]);
+        return segments.Length == 1
+            ? new SqlSource("dbo", segments[0])
+            : new SqlSource("dbo", "unknown_table");
     }
 
     private static string RequiredColumn(QualityRule rule) =>

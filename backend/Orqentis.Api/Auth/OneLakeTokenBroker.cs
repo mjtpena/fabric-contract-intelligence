@@ -10,6 +10,8 @@ public sealed class OneLakeTokenBroker : IOneLakeTokenBroker
 {
     private static readonly string[] _oneLakeScopes = ["https://storage.azure.com/.default"];
     private static readonly string[] _fabricScopes = ["https://api.fabric.microsoft.com/.default"];
+    private static readonly string[] _fabricSqlScopes = ["https://database.windows.net/.default"];
+    private static readonly string[] _kustoScopes = ["https://kusto.kusto.windows.net/.default"];
 
     private readonly AzureAdOptions _options;
     private readonly ITenantContext _tenantContext;
@@ -32,6 +34,14 @@ public sealed class OneLakeTokenBroker : IOneLakeTokenBroker
     /// <inheritdoc />
     public Task<string> GetFabricRestTokenAsync(string userAssertion, CancellationToken ct = default) =>
         GetTokenAsync(userAssertion, _fabricScopes, "api.fabric.microsoft.com", ct);
+
+    /// <inheritdoc />
+    public Task<string> GetFabricSqlTokenAsync(string userAssertion, CancellationToken ct = default) =>
+        GetTokenAsync(userAssertion, _fabricSqlScopes, "database.windows.net", ct);
+
+    /// <inheritdoc />
+    public Task<string> GetKustoTokenAsync(string userAssertion, CancellationToken ct = default) =>
+        GetTokenAsync(userAssertion, _kustoScopes, "kusto.kusto.windows.net", ct);
 
     private async Task<string> GetTokenAsync(
         string userAssertion,

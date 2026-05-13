@@ -77,8 +77,17 @@ public sealed class RunsController : ControllerBase
                 detail: parseResult.Error ?? "The persisted contract YAML could not be parsed.");
         }
 
-        var oneLakeToken = await _tokenBroker.GetOneLakeTokenAsync(bearerToken, ct).ConfigureAwait(false);
-        var result = await _orchestrator.RunAsync(parseResult.Value, oneLakeToken, ct).ConfigureAwait(false);
+        var format = NormalizeFormat(parseResult.Value.Servers.FirstOrDefault()?.Format);
+        var credentials = await GetCredentialsAsync(format, bearerToken, ct).ConfigureAwait(false);
+        var targetContext = contract.FabricItemId is null
+            ? null
+            : new EnforcementTargetContext
+            {
+                WorkspaceId = contract.WorkspaceId,
+                TargetItemId = contract.FabricItemId.Value,
+                TargetType = contract.TargetType,
+            };
+        var result = await _orchestrator.RunAsync(parseResult.Value, credentials, targetContext, ct).ConfigureAwait(false);
         var breachScore = await _breachImpactScorer.ScoreAsync(result, parseResult.Value, ct).ConfigureAwait(false);
         var remediationSuggestions = await _remediationAdvisor.SuggestAsync(result, parseResult.Value, ct).ConfigureAwait(false);
         var breakdownJson = breachScore is null
@@ -175,6 +184,39 @@ public sealed class RunsController : ControllerBase
             ? headerValue[prefix.Length..].Trim()
             : null;
     }
+
+    private async Task<EnforcementCredentials> GetCredentialsAsync(string format, string bearerToken, CancellationToken ct) =>
+        format switch
+        {
+            "delta" => new EnforcementCredentials
+            {
+                OneLakeToken = await _tokenBroker.GetOneLakeTokenAsync(bearerToken, ct).ConfigureAwait(false),
+                FabricSqlToken = await _tokenBroker.GetFabricSqlTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "sql" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+                FabricSqlToken = await _tokenBroker.GetFabricSqlTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "kql" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+                KustoToken = await _tokenBroker.GetKustoTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "semantic_model" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            _ => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+        };
+
+    private static string NormalizeFormat(string? format) =>
+        string.IsNullOrWhiteSpace(format)
+            ? "delta"
+            : format.Trim().Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant();
 
     private static RunSummaryDto MapSummary(EnforcementRunRecord run) =>
         new()

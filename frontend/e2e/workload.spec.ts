@@ -7,7 +7,7 @@
  * Coverage map (docs/test-scenarios.md):
  *   Area 1  (Bootstrap)   → 1.1, 1.3, 1.4
  *   Area 2  (Contract list) → 2.1, 2.2, 2.5
- *   Area 3  (Contract editor) → 3.1, 3.2
+ *   Area 3  (Contract editor) → 3.1, 3.2, 3.11, 3.12
  *   Area 9  (Security)    → 9.4, 9.5
  *   Area 10 (Navigation)  → 10.2
  *   Area 11 (Theme)       → 11.1, 11.2
@@ -22,6 +22,7 @@ const API_BASE = 'https://orqentis-api.azurewebsites.net';
 const MOCK_ITEM_ID = 'aaaabbbb-cccc-dddd-eeee-000000000001';
 const TEST_WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 const TEST_LAKEHOUSE_ID = '11111111-1111-4111-8111-111111111111';
+const TEST_WAREHOUSE_ID = '33333333-3333-4333-8333-333333333333';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,21 @@ async function mockFabricPickerApi(page: Page) {
           id: TEST_LAKEHOUSE_ID,
           displayName: 'OrqentisShowcaseLakehouse',
           type: 'Lakehouse',
+          workspaceId: TEST_WORKSPACE_ID,
+        },
+      ]),
+    }),
+  );
+
+  await page.route(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/items?targetType=warehouse`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: TEST_WAREHOUSE_ID,
+          displayName: 'SalesWarehouse',
+          type: 'Warehouse',
           workspaceId: TEST_WORKSPACE_ID,
         },
       ]),
@@ -212,6 +228,35 @@ test.describe('3. Contract Editor', () => {
     await expect(tableCombobox).toHaveValue('owid_co2_demo');
     expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/items?targetType=lakehouse`);
     expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/lakehouses/${TEST_LAKEHOUSE_ID}/tables`);
+  });
+
+  test('3.12 — warehouse target dropdown populates from Fabric proxy responses', async ({ page }) => {
+    const requestedFabricProxyUrls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().startsWith(`${API_BASE}/v1/fabric/`)) {
+        requestedFabricProxyUrls.push(request.url());
+        expect(request.headers().authorization).toBe('Bearer mock-access-token');
+      }
+    });
+
+    await mockFabricPickerApi(page);
+    await gotoStandalone(page, `contracts/new?workspaceId=${TEST_WORKSPACE_ID}`);
+
+    await page.getByRole('button', { name: /start drafting/i }).click();
+
+    const targetTypeCombobox = page.getByRole('combobox', { name: /contract target type/i });
+    await targetTypeCombobox.click();
+    await page.getByRole('option', { name: 'Warehouse' }).click();
+
+    const warehouseCombobox = page.getByRole('combobox', { name: /target warehouse/i });
+    await expect(warehouseCombobox).toBeVisible({ timeout: 10_000 });
+    await warehouseCombobox.click();
+    await page.getByRole('option', { name: /SalesWarehouse/i }).click();
+
+    await expect(warehouseCombobox).toHaveValue('SalesWarehouse');
+    await expect(page.getByLabel(/Warehouse object/i)).toBeVisible();
+    expect(requestedFabricProxyUrls).toContain(`${API_BASE}/v1/fabric/${TEST_WORKSPACE_ID}/items?targetType=warehouse`);
   });
 });
 

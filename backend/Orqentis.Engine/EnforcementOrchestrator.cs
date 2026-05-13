@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Orqentis.Engine.Common;
 using Orqentis.Engine.Delta;
 using Orqentis.Engine.Evaluation;
 using Orqentis.Engine.Models;
@@ -13,6 +14,9 @@ namespace Orqentis.Engine;
 public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
 {
     private readonly IDeltaLogReader _deltaReader;
+    private readonly IFabricKqlSchemaReader _kqlSchemaReader;
+    private readonly IFabricSemanticModelSchemaReader _semanticModelSchemaReader;
+    private readonly IFabricSqlSchemaReader _sqlSchemaReader;
     private readonly ISchemaRuleEvaluator _schemaEvaluator;
     private readonly IFreshnessEvaluator _freshnessEvaluator;
     private readonly IQualityRuleEvaluator _qualityEvaluator;
@@ -21,6 +25,9 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
 
     public EnforcementOrchestrator(
         IDeltaLogReader deltaReader,
+        IFabricSqlSchemaReader sqlSchemaReader,
+        IFabricKqlSchemaReader kqlSchemaReader,
+        IFabricSemanticModelSchemaReader semanticModelSchemaReader,
         ISchemaRuleEvaluator schemaEvaluator,
         IFreshnessEvaluator freshnessEvaluator,
         IQualityRuleEvaluator qualityEvaluator,
@@ -28,6 +35,9 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
         TimeProvider? clock = null)
     {
         _deltaReader = deltaReader;
+        _sqlSchemaReader = sqlSchemaReader;
+        _kqlSchemaReader = kqlSchemaReader;
+        _semanticModelSchemaReader = semanticModelSchemaReader;
         _schemaEvaluator = schemaEvaluator;
         _freshnessEvaluator = freshnessEvaluator;
         _qualityEvaluator = qualityEvaluator;
@@ -40,8 +50,26 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
         string oneLakeOboToken,
         CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
         ArgumentException.ThrowIfNullOrWhiteSpace(oneLakeOboToken);
+        return await RunAsync(
+            contract,
+            new EnforcementCredentials
+            {
+                OneLakeToken = oneLakeOboToken,
+                FabricSqlToken = oneLakeOboToken,
+            },
+            target: null,
+            ct).ConfigureAwait(false);
+    }
+
+    public async Task<EnforcementResult> RunAsync(
+        ContractDefinition contract,
+        EnforcementCredentials credentials,
+        EnforcementTargetContext? target,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        ArgumentNullException.ThrowIfNull(credentials);
 
         var runId = Guid.NewGuid();
         var contractId = Guid.TryParse(contract.Id.Split(':').Last(), out var g) ? g : Guid.NewGuid();
@@ -58,7 +86,8 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
             var server = contract.Servers.FirstOrDefault()
                 ?? throw new InvalidOperationException("Contract has no server entry.");
 
-            var snapshotResult = await _deltaReader.ReadAsync(server.Path, oneLakeOboToken, ct).ConfigureAwait(false);
+            var format = NormalizeFormat(server.Format);
+            var snapshotResult = await ReadSnapshotAsync(server, credentials, target, format, ct).ConfigureAwait(false);
             if (!snapshotResult.IsSuccess || snapshotResult.Value is null)
             {
                 _logger.LogError("Run-Error RunId={RunId} Reason={Reason}", runId, snapshotResult.Error);
@@ -68,9 +97,7 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
             var snapshot = snapshotResult.Value;
             var schemaRules = _schemaEvaluator.Evaluate(snapshot.Schema, contract.Schema, snapshot.PartitionColumns);
             var freshnessRule = _freshnessEvaluator.Evaluate(snapshot.LastModifiedUtc, contract.Freshness, now);
-            var qualityRules = await _qualityEvaluator
-                .EvaluateAsync(contract.Quality, server, oneLakeOboToken, ct)
-                .ConfigureAwait(false);
+            var qualityRules = await EvaluateQualityAsync(contract.Quality, server, credentials, target, format, ct).ConfigureAwait(false);
             var schemaDiff = SchemaDiff.Compute(snapshot.Schema, contract.Schema, snapshot.PartitionColumns);
             var overall = AggregateStatus(schemaRules, qualityRules, freshnessRule);
 
@@ -131,4 +158,94 @@ public sealed class EnforcementOrchestrator : IEnforcementOrchestrator
             RemediationSuggestions = [],
             ErrorMessage = errorMessage,
         };
+
+    private Task<Result<DeltaTableSnapshot>> ReadSnapshotAsync(
+        ContractServer server,
+        EnforcementCredentials credentials,
+        EnforcementTargetContext? target,
+        string format,
+        CancellationToken ct) =>
+        format switch
+        {
+            "delta" => !string.IsNullOrWhiteSpace(credentials.OneLakeToken)
+                ? _deltaReader.ReadAsync(server.Path, credentials.OneLakeToken, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("A delegated OneLake token is required for Delta enforcement.", "OneLakeTokenMissing")),
+            "sql" => target is not null
+                ? _sqlSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for SQL enforcement.", "TargetContextMissing")),
+            "kql" => target is not null
+                ? _kqlSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for KQL enforcement.", "TargetContextMissing")),
+            "semantic_model" => target is not null
+                ? _semanticModelSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for Semantic Model enforcement.", "TargetContextMissing")),
+            _ => Task.FromResult(Result<DeltaTableSnapshot>.Failure($"Target format '{format}' is not supported.", "TargetFormatUnsupported")),
+        };
+
+    private async Task<IReadOnlyList<RuleResult>> EvaluateQualityAsync(
+        IReadOnlyList<QualityRule> qualityRules,
+        ContractServer server,
+        EnforcementCredentials credentials,
+        EnforcementTargetContext? target,
+        string format,
+        CancellationToken ct)
+    {
+        if (qualityRules.Count == 0)
+        {
+            return [];
+        }
+
+        if (format == "sql" && target is not null)
+        {
+            var connectionString = await _sqlSchemaReader.ResolveConnectionStringAsync(server, credentials, target, ct).ConfigureAwait(false);
+            if (!connectionString.IsSuccess || string.IsNullOrWhiteSpace(connectionString.Value))
+            {
+                return qualityRules.Select(rule => CreateQualityTokenMissingResult(rule, connectionString.Error ?? "Unable to resolve delegated SQL connection metadata.")).ToArray();
+            }
+
+            var token = credentials.FabricSqlToken;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return qualityRules.Select(rule => CreateQualityTokenMissingResult(rule, "Quality rule execution failed because a delegated SQL token is unavailable.")).ToArray();
+            }
+
+            return await _qualityEvaluator
+                .EvaluateAsync(qualityRules, server with { Host = connectionString.Value }, token, ct)
+                .ConfigureAwait(false);
+        }
+
+        if (format == "delta")
+        {
+            var token = !string.IsNullOrWhiteSpace(credentials.FabricSqlToken)
+                ? credentials.FabricSqlToken
+                : credentials.OneLakeToken;
+            return !string.IsNullOrWhiteSpace(token)
+                ? await _qualityEvaluator.EvaluateAsync(qualityRules, server, token, ct).ConfigureAwait(false)
+                : qualityRules.Select(rule => CreateQualityTokenMissingResult(rule, "Quality rule execution failed because a delegated SQL token is unavailable.")).ToArray();
+        }
+
+        return qualityRules.Select(rule => new RuleResult
+        {
+            RuleId = $"quality.{rule.Type.Trim().ToLowerInvariant()}",
+            Column = rule.Column,
+            Status = RuleStatus.Skipped,
+            Threshold = rule.Threshold,
+            Message = $"Quality rule '{rule.Type}' was skipped because {format} target quality evaluation requires a target-specific query adapter.",
+        }).ToArray();
+    }
+
+    private static RuleResult CreateQualityTokenMissingResult(QualityRule rule, string message) =>
+        new()
+        {
+            RuleId = $"quality.{rule.Type.Trim().ToLowerInvariant()}",
+            Column = rule.Column,
+            Status = RuleStatus.Failed,
+            Threshold = rule.Threshold,
+            Message = message,
+        };
+
+    private static string NormalizeFormat(string? format) =>
+        string.IsNullOrWhiteSpace(format)
+            ? "delta"
+            : format.Trim().Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant();
 }

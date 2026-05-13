@@ -46,6 +46,7 @@ $requiredFiles = @(
     "docs/operations-runbook.md",
     "docs/security-compliance.md",
     "docs/customer-onboarding.md",
+    "docs/entitlement-process.md",
     "docs/test-scenarios.md",
     "frontend/public/support.html",
     "frontend/public/legal/privacy.html",
@@ -70,6 +71,7 @@ Assert-Contains -RelativePath "docs/isv-publish-checklist.md" -Pattern "Partner 
 Assert-Contains -RelativePath "docs/operations-runbook.md" -Pattern "/health/ready" -Description "health check operations"
 Assert-Contains -RelativePath "docs/security-compliance.md" -Pattern "On-Behalf-Of" -Description "OBO data-plane security"
 Assert-Contains -RelativePath "docs/customer-onboarding.md" -Pattern "Offboarding" -Description "customer offboarding process"
+Assert-Contains -RelativePath "docs/entitlement-process.md" -Pattern "Community to Enterprise" -Description "manual entitlement process"
 Assert-Contains -RelativePath "docs/test-scenarios.md" -Pattern "Live authenticated Fabric gates" -Description "live Fabric validation gate"
 
 $productPath = Join-Path $Root "frontend/manifest/Product.json"

@@ -38,6 +38,8 @@
 | GET    | `/reports/audit` | Audit log | Enterprise |
 | GET    | `/workspaces` | List workspaces accessible to user | Both |
 | GET    | `/workspaces/{id}/tables` | List Delta tables | Both |
+| GET    | `/fabric/{workspaceId}/items?targetType={type}` | List Fabric items eligible for a target type through the OBO backend proxy | Both |
+| GET    | `/fabric/{workspaceId}/lakehouses/{lakehouseId}/tables` | List Lakehouse tables through the OBO backend proxy | Both |
 | GET    | `/health/live`, `/health/ready` | No auth. Liveness/readiness | n/a |
 
 ## `POST /contracts` request body
@@ -51,6 +53,8 @@ Two modes — direct YAML or AI generate:
   "name": "Patient Encounters Contract",
   "description": "Governs patient_encounters table",
   "ownerEmail": "owner@example.com",
+  "targetType": "lakehouse",
+  "targetItemId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "targetTablePath": "abfss://workspace@onelake.../Tables/patient_encounters",
   "targetLakehouseId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "odcsYaml": "apiVersion: v3.1.0\nkind: DataContract\n..."
@@ -61,11 +65,56 @@ Two modes — direct YAML or AI generate:
   "mode": "ai_generate",
   "name": "Patient Encounters Contract",
   "ownerEmail": "owner@example.com",
+  "targetType": "lakehouse",
+  "targetItemId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "targetTablePath": "abfss://workspace@onelake.../Tables/patient_encounters",
   "targetLakehouseId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "aiHints": "Healthcare data, HIPAA context, encounter_id must be unique and non-null"
 }
 ```
+
+## Contract target fields
+
+`targetType` accepts:
+
+| Value | Launch behavior | Required target fields |
+|---|---|---|
+| `lakehouse` | Lakehouse/Delta schema, quality, and freshness enforcement | `targetItemId`, `targetLakehouseId`, `targetTablePath` |
+| `warehouse` | SQL-native schema and quality enforcement using Fabric Warehouse metadata and delegated SQL tokens | `targetItemId`, `targetTablePath` |
+| `eventhouse` | KQL table schema enforcement using Eventhouse/KQL database metadata and delegated Kusto tokens | `targetItemId`, `targetTablePath` |
+| `semantic_model` | Semantic Model schema enforcement from Fabric REST definition/TMDL metadata | `targetItemId` |
+| `fabric_sql` | SQL-native schema and quality enforcement using Fabric SQL database metadata and delegated SQL tokens | `targetItemId`, `targetTablePath` |
+
+`targetItemId` is the generic Fabric item UUID. `targetLakehouseId` remains accepted for
+backward compatibility and should match `targetItemId` for Lakehouse contracts.
+
+Example Warehouse target:
+
+```jsonc
+{
+  "mode": "direct",
+  "name": "Warehouse Sales Contract",
+  "description": "Governed Warehouse table contract",
+  "ownerEmail": "owner@example.com",
+  "targetType": "warehouse",
+  "targetItemId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "targetTablePath": "dbo.sales",
+  "targetLakehouseId": null,
+  "odcsYaml": "apiVersion: v3.1.0\nkind: DataContract\n..."
+}
+```
+
+## `POST /contracts/{id}/runs` request body
+
+Manual enforcement uses the contract's stored target binding and does not require request fields:
+
+```jsonc
+{}
+```
+
+Runs execute through the adapter implied by the stored contract target. Lakehouse uses the
+OneLake Delta log path; Warehouse and Fabric SQL use delegated SQL metadata/query execution; Eventhouse uses
+delegated Kusto metadata; Semantic Model uses Fabric REST definition metadata.
 
 ## `EnforcementRun.result_json` shape
 

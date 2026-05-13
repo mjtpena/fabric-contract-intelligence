@@ -189,6 +189,119 @@ public sealed class EnforcementOrchestratorTests
         result.ErrorMessage.Should().Be("boom");
     }
 
+    [Theory]
+    [InlineData("sql")]
+    [InlineData("kql")]
+    [InlineData("semantic_model")]
+    public async Task RunAsync_NonDeltaServerFormat_RoutesToFabricTargetReader(string format)
+    {
+        // Arrange
+        var deltaReader = new Mock<IDeltaLogReader>(MockBehavior.Strict);
+        var sqlReader = new Mock<IFabricSqlSchemaReader>(MockBehavior.Strict);
+        var kqlReader = new Mock<IFabricKqlSchemaReader>(MockBehavior.Strict);
+        var semanticReader = new Mock<IFabricSemanticModelSchemaReader>(MockBehavior.Strict);
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = -1,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero),
+        };
+
+        if (format == "sql")
+        {
+            sqlReader
+                .Setup(reader => reader.ReadAsync(
+                    It.IsAny<ContractServer>(),
+                    It.Is<EnforcementCredentials>(credentials => credentials.FabricSqlToken == "sql-token"),
+                    It.IsAny<EnforcementTargetContext>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        }
+        else if (format == "kql")
+        {
+            kqlReader
+                .Setup(reader => reader.ReadAsync(
+                    It.IsAny<ContractServer>(),
+                    It.Is<EnforcementCredentials>(credentials => credentials.FabricRestToken == "fabric-token" && credentials.KustoToken == "kusto-token"),
+                    It.IsAny<EnforcementTargetContext>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        }
+        else
+        {
+            semanticReader
+                .Setup(reader => reader.ReadAsync(
+                    It.IsAny<ContractServer>(),
+                    It.Is<EnforcementCredentials>(credentials => credentials.FabricRestToken == "fabric-token"),
+                    It.IsAny<EnforcementTargetContext>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        }
+
+        var orchestrator = CreateOrchestrator(
+            deltaReader: deltaReader.Object,
+            sqlReader: sqlReader.Object,
+            kqlReader: kqlReader.Object,
+            semanticReader: semanticReader.Object);
+        var contract = CreateContract() with
+        {
+            Servers =
+            [
+                new ContractServer
+                {
+                    Name = "fabric-warehouse",
+                    Type = "azure",
+                    Path = "fabric://workspace/warehouse/dbo.sales",
+                    Format = format,
+                },
+            ],
+        };
+        var credentials = new EnforcementCredentials
+        {
+            FabricRestToken = "fabric-token",
+            FabricSqlToken = "sql-token",
+            KustoToken = "kusto-token",
+        };
+        var target = new EnforcementTargetContext
+        {
+            WorkspaceId = Guid.Parse("11111111-1111-4111-8111-111111111111"),
+            TargetItemId = Guid.Parse("22222222-2222-4222-8222-222222222222"),
+            TargetType = "warehouse",
+        };
+
+        // Act
+        var result = await orchestrator.RunAsync(contract, credentials, target);
+
+        // Assert
+        result.OverallStatus.Should().Be(EnforcementStatus.Passed);
+        result.DeltaTableVersion.Should().Be(-1);
+        deltaReader.Verify(
+            reader => reader.ReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        sqlReader.Verify(
+            reader => reader.ReadAsync(
+                It.IsAny<ContractServer>(),
+                It.Is<EnforcementCredentials>(credentials => credentials.FabricSqlToken == "sql-token"),
+                It.IsAny<EnforcementTargetContext>(),
+                It.IsAny<CancellationToken>()),
+            format == "sql" ? Times.Once : Times.Never);
+        kqlReader.Verify(
+            reader => reader.ReadAsync(
+                It.IsAny<ContractServer>(),
+                It.Is<EnforcementCredentials>(credentials => credentials.FabricRestToken == "fabric-token" && credentials.KustoToken == "kusto-token"),
+                It.IsAny<EnforcementTargetContext>(),
+                It.IsAny<CancellationToken>()),
+            format == "kql" ? Times.Once : Times.Never);
+        semanticReader.Verify(
+            reader => reader.ReadAsync(
+                It.IsAny<ContractServer>(),
+                It.Is<EnforcementCredentials>(credentials => credentials.FabricRestToken == "fabric-token"),
+                It.IsAny<EnforcementTargetContext>(),
+                It.IsAny<CancellationToken>()),
+            format == "semantic_model" ? Times.Once : Times.Never);
+    }
+
     [Fact]
     public async Task RunAsync_EvaluatorThrows_ReturnsErrorResult()
     {
@@ -226,7 +339,10 @@ public sealed class EnforcementOrchestratorTests
         ISchemaRuleEvaluator? schemaEvaluator = null,
         IFreshnessEvaluator? freshnessEvaluator = null,
         IQualityRuleEvaluator? qualityEvaluator = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IFabricSqlSchemaReader? sqlReader = null,
+        IFabricKqlSchemaReader? kqlReader = null,
+        IFabricSemanticModelSchemaReader? semanticReader = null)
     {
         if (schemaEvaluator is null)
         {
@@ -257,6 +373,9 @@ public sealed class EnforcementOrchestratorTests
 
         return new EnforcementOrchestrator(
             deltaReader ?? Mock.Of<IDeltaLogReader>(),
+            sqlReader ?? Mock.Of<IFabricSqlSchemaReader>(),
+            kqlReader ?? Mock.Of<IFabricKqlSchemaReader>(),
+            semanticReader ?? Mock.Of<IFabricSemanticModelSchemaReader>(),
             schemaEvaluator,
             freshnessEvaluator,
             qualityEvaluator,

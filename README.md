@@ -6,9 +6,8 @@
 
 Orqentis is a native Microsoft Fabric ISV workload that brings **ODCS v3.1.0**-compliant data
 contract definition, version control, enforcement, and AI-powered suggestions to the Fabric
-platform. Contracts can bind to Lakehouses, Warehouses, Eventhouse/KQL databases, Semantic
-Models, and Fabric SQL databases. Lakehouse/Delta enforcement is the first fully executable
-target; the shared target model keeps the contract workflow Fabric-wide.
+platform. Contracts can bind to and execute against Lakehouses, Warehouses, Eventhouse/KQL
+databases, Semantic Models, and Fabric SQL databases using delegated Fabric access.
 
 ## AI value proposition
 
@@ -23,8 +22,8 @@ customers and investors is a governed feedback loop:
 | Natural-language governance | Platform owners can ask who owns a data product, what changed, and which contracts are failing without reading YAML or logs. |
 
 This positions Orqentis as the **AI control plane for trusted Fabric data products**: contract
-authoring, enforcement evidence, risk explanation, and remediation workflow in one native Fabric
-experience.
+authoring, enforcement evidence, risk explanation, and remediation recommendations in one native
+Fabric experience.
 
 ## Tiers
 
@@ -48,9 +47,9 @@ A React 18 / Fluent UI v9 micro-frontend hosted inside the Fabric portal iframe 
 Fabric Extensibility SDK, talking to a .NET 8 API in Azure App Service. The
 **Orqentis Enforcement Engine** reads OneLake Delta transaction logs using OBO-delegated tokens,
 diffs live schema against ODCS contracts, evaluates quality + freshness rules, and persists
-results to PostgreSQL. Contract metadata now targets Fabric data products beyond Lakehouse so
-Warehouse, Eventhouse/KQL, Semantic Model, and Fabric SQL validation adapters can use the same
-binding model. AI features (contract suggestion, breach scoring, NL query) are
+results to PostgreSQL. Target adapters read Warehouse/Fabric SQL metadata through delegated SQL,
+Eventhouse/KQL metadata through delegated Kusto, and Semantic Model definitions through Fabric
+REST/TMDL. AI features (contract suggestion, breach scoring, NL query) are
 brokered via Azure OpenAI with an Anthropic Claude fallback. Breach alerts fire through
 **Fabric Activator**.
 
@@ -130,8 +129,9 @@ MIT — see [`LICENSE`](LICENSE). Bundled OSS dependencies retain their original
 
 ## Status
 
-**Production pilot ready.** Core workload features are implemented, CI/CD is green,
-Engine/AI coverage gates are enforced, and live Fabric evidence is tracked in
-[`docs/test-scenarios.md`](docs/test-scenarios.md). Public ISV launch readiness is
-tracked by [`docs/isv-publish-checklist.md`](docs/isv-publish-checklist.md) and enforced by
-`scripts/Test-PublicReadiness.ps1`.
+**Production pilot ready and public ISV launch candidate.** Core workload features are implemented,
+CI/CD is green, Engine/AI coverage gates are enforced, and live Fabric evidence is tracked in
+[`docs/test-scenarios.md`](docs/test-scenarios.md). Public ISV launch readiness is tracked by
+[`docs/isv-publish-checklist.md`](docs/isv-publish-checklist.md), the interim Enterprise upgrade
+flow is documented in [`docs/entitlement-process.md`](docs/entitlement-process.md), and readiness
+artifacts are enforced by `scripts\Test-PublicReadiness.ps1`.

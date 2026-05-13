@@ -52,7 +52,7 @@ Public publish is allowed only when every required gate below is complete and th
 | Tenant onboarding | Steps in `docs/customer-onboarding.md` completed for a pilot tenant |
 | Tenant offboarding | Data export/delete and workload disable process documented |
 | Tier enforcement | Community/Enterprise limits configured and tested |
-| Entitlement process | Manual entitlement process documented until marketplace billing integration is live |
+| Entitlement process | Manual entitlement process documented in `docs/entitlement-process.md` until marketplace billing integration is live |
 | Support SLA | Public support page states channels, severities, and response targets |
 | Buyer narrative | Sales/demo script positions Orqentis as the AI control plane for trusted Fabric data products, not only a Lakehouse validator |
 

@@ -8,7 +8,7 @@ This document records the public-launch security posture for the Orqentis Fabric
 |---|---|
 | Fabric portal to workload iframe | Fabric workload client SDK, CSP, and frame ancestors restricted to Fabric/Power BI hosts |
 | Frontend to API | Entra token with Orqentis API scope and `X-Correlation-Id` propagation |
-| API to OneLake/Fabric | On-Behalf-Of delegated token only; application identity is forbidden for data plane reads |
+| API to Fabric data planes | On-Behalf-Of delegated tokens only for OneLake, Fabric REST, SQL/Warehouse, and Eventhouse/KQL; application identity is forbidden for data plane reads |
 | API to PostgreSQL | Managed app configuration and Key Vault-backed secrets |
 | API to AI providers | Timeout, retry, provider fallback, and no secret logging |
 | API to Activator/webhooks | Structured logging, correlation ID, and policy-driven routing |

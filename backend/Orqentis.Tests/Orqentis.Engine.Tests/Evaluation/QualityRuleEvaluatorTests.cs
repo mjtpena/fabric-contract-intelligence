@@ -108,6 +108,28 @@ public sealed class QualityRuleEvaluatorTests
         result[0].Message.Should().Contain("placeholders");
     }
 
+    [Fact]
+    public async Task EvaluateAsync_SqlTargetPath_UsesSchemaAndTableName()
+    {
+        var sqlClient = new CapturingFabricSqlClient(0);
+        var evaluator = CreateEvaluator(sqlClient);
+
+        await evaluator.EvaluateAsync(
+            [
+                new QualityRule
+                {
+                    Type = "null_rate",
+                    Column = "customer_id",
+                    Threshold = 0.01,
+                    Severity = "error",
+                },
+            ],
+            CreateServer() with { Path = "sales.customer_orders" },
+            "token");
+
+        sqlClient.LastSql.Should().Contain("[sales].[customer_orders]");
+    }
+
     private static QualityRuleEvaluator CreateEvaluator(IFabricSqlClient sqlClient) =>
         new(sqlClient, NullLogger<QualityRuleEvaluator>.Instance);
 
@@ -131,5 +153,16 @@ public sealed class QualityRuleEvaluatorTests
 
         public Task<double?> ExecuteScalarAsync(ContractServer server, string sql, string fabricSqlOboToken, CancellationToken ct = default) =>
             Task.FromResult(_value);
+    }
+
+    private sealed class CapturingFabricSqlClient(double? value) : IFabricSqlClient
+    {
+        public string? LastSql { get; private set; }
+
+        public Task<double?> ExecuteScalarAsync(ContractServer server, string sql, string fabricSqlOboToken, CancellationToken ct = default)
+        {
+            LastSql = sql;
+            return Task.FromResult(value);
+        }
     }
 }
