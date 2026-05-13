@@ -17,12 +17,12 @@ import {
   CheckmarkCircleRegular,
   TableLightningRegular,
   DatabaseLinkRegular,
-  BotRegular,
   ClipboardTaskRegular,
 } from '@fluentui/react-icons';
-import { useNavigate } from 'react-router-dom';
 
 const FABRIC_URL = 'https://app.fabric.microsoft.com/workloadhub/Org.Orqentis';
+const GETTING_STARTED_URL = '/docs/getting-started.html';
+const SUPPORT_URL = '/support.html';
 
 const useStyles = makeStyles({
   root: {
@@ -446,26 +446,25 @@ function Feature({ icon, title, description }: FeatureProps) {
 
 export function LandingPage() {
   const styles = useStyles();
-  const navigate = useNavigate();
   const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
   const productShots = [
     {
-      src: '/images/screenshots/contract-library.png',
-      alt: 'Contract library page in Orqentis workload',
-      title: 'Contract library',
-      text: 'Browse contracts, open details, and trigger enforcement runs from the central workload surface.',
+      src: '/images/screenshots/fabric-contract-editor.png',
+      alt: 'Orqentis Showcase Contract editor running inside Microsoft Fabric',
+      title: 'Active contract editor in Fabric',
+      text: 'The production Fabric item restores the active Orqentis Showcase Contract, including Lakehouse/table selectors, validation, and schema preview.',
     },
     {
-      src: '/images/screenshots/ai-suggest-workflow.png',
-      alt: 'AI suggest flow in Orqentis workload',
-      title: 'AI suggest workflow',
-      text: 'Generate ODCS drafts with AI assistance, then refine and save directly in the contract authoring flow.',
+      src: '/images/screenshots/fabric-contract-report.png',
+      alt: 'Orqentis Contract Report item running inside Microsoft Fabric',
+      title: 'Persisted enforcement report',
+      text: 'The report item shows the real persisted OWID CO2 enforcement run with passed status, breach score, and run timestamp.',
     },
     {
-      src: '/images/screenshots/alerts-dashboard.png',
-      alt: 'Alerts dashboard in Orqentis workload',
-      title: 'Alerts dashboard',
-      text: 'Review breach alerts and routing outcomes to triage issues and close remediation loops quickly.',
+      src: '/images/screenshots/fabric-lakehouse-table.png',
+      alt: 'Orqentis showcase Lakehouse table open in Microsoft Fabric',
+      title: 'Real Lakehouse table evidence',
+      text: 'The showcase Lakehouse contains the owid_co2_demo Delta table with 25 public OWID rows used by the live contract.',
     },
   ];
 
@@ -480,8 +479,8 @@ export function LandingPage() {
           <Body1Strong style={{ color: '#fff', fontSize: 18 }}>Orqentis</Body1Strong>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <Button appearance="secondary" onClick={() => navigate('/contracts')}>
-            Open app
+          <Button appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
+            Getting started
           </Button>
           <Button
             appearance="primary"
@@ -500,14 +499,14 @@ export function LandingPage() {
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <CheckmarkCircleRegular style={{ fontSize: 14 }} />
-            ODCS v3.1.0 · Microsoft Fabric ISV Workload
+            Production-verified Microsoft Fabric workload
           </div>
           <Display className={styles.heroTitle}>
-            Data contracts that enforce themselves
+            Data contracts running inside Fabric
           </Display>
           <div className={styles.heroSub}>
-            Orqentis is now fully operational in Fabric — create contracts, run Delta enforcement, manage
-            policies, triage alerts, and use AI flows from one workload.
+            Orqentis is live against a real Fabric showcase workspace: an active ODCS contract,
+            a persisted enforcement report, and a Lakehouse Delta table are all verified in production.
           </div>
           <div className={styles.heroActions}>
             <Button
@@ -515,25 +514,25 @@ export function LandingPage() {
               size="large"
               icon={<ArrowRightRegular />}
               iconPosition="after"
-              onClick={() => navigate('/contracts')}
+              onClick={() => openExternal(FABRIC_URL)}
             >
-              Open contract library
+              Open in Fabric
             </Button>
             <Button
               appearance="secondary"
               size="large"
-              icon={<BotRegular />}
-              onClick={() => navigate('/contracts/ai-suggest')}
+              icon={<ClipboardTaskRegular />}
+              onClick={() => openExternal(GETTING_STARTED_URL)}
             >
-              AI suggest
+              Getting started
             </Button>
             <Button
               appearance="outline"
               size="large"
               style={{ borderColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
-              onClick={() => openExternal('https://github.com/mjtpena/fabric-contract-intelligence')}
+              onClick={() => openExternal(SUPPORT_URL)}
             >
-              View on GitHub
+              Support
             </Button>
           </div>
         </div>
@@ -542,20 +541,20 @@ export function LandingPage() {
       {/* Stats */}
       <div className={styles.statsBar}>
         <div className={styles.stat}>
+          <span className={styles.statValue}>3</span>
+          <span className={styles.statLabel}>Fabric item types verified</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statValue}>25</span>
+          <span className={styles.statLabel}>OWID Delta rows</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statValue}>0.05</span>
+          <span className={styles.statLabel}>Showcase breach score</span>
+        </div>
+        <div className={styles.stat}>
           <span className={styles.statValue}>ODCS v3.1.0</span>
           <span className={styles.statLabel}>Schema standard</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>5</span>
-          <span className={styles.statLabel}>Core app surfaces</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>Activator</span>
-          <span className={styles.statLabel}>Alert routing</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>OneLake</span>
-          <span className={styles.statLabel}>Delta enforcement</span>
         </div>
       </div>
 
@@ -564,28 +563,28 @@ export function LandingPage() {
           <div className={styles.sectionLabel}>Quick start</div>
           <Title2 className={styles.sectionTitle}>Launch in three steps</Title2>
           <div className={styles.sectionSub}>
-            Start with a contract, attach a policy, then monitor outcomes in alerts and reports.
+            This is the verified path in the production showcase workspace.
           </div>
           <div className={styles.stepGrid}>
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>Step 1</div>
-              <div className={styles.stepTitle}>Create or import a contract</div>
-              <div className={styles.stepText}>
-                Use the Contract editor or AI Suggest to generate ODCS YAML tied to a Delta table path.
+                <div className={styles.stepTitle}>Create or import a contract</div>
+                <div className={styles.stepText}>
+                  Open the Orqentis Showcase Contract and bind it to the OWID CO2 Delta table.
               </div>
             </div>
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>Step 2</div>
-              <div className={styles.stepTitle}>Define enforcement policy</div>
-              <div className={styles.stepText}>
-                Configure thresholds and alert actions, including Fabric Activator or webhook dispatch.
+                <div className={styles.stepTitle}>Define enforcement policy</div>
+                <div className={styles.stepText}>
+                  Attach policy configuration for enforcement thresholds and alert routing.
               </div>
             </div>
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>Step 3</div>
-              <div className={styles.stepTitle}>Run and triage</div>
-              <div className={styles.stepText}>
-                Trigger a run, inspect breach scoring, and review alerts to close the loop with producers.
+                <div className={styles.stepTitle}>Run and triage</div>
+                <div className={styles.stepText}>
+                  Review the persisted Contract Report and Lakehouse data used by the run.
               </div>
             </div>
           </div>
@@ -595,10 +594,10 @@ export function LandingPage() {
       {/* Browser captures */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <section className={styles.section}>
-          <div className={styles.sectionLabel}>Live workload capture</div>
-          <Title2 className={styles.sectionTitle}>Screenshots from running Orqentis app routes</Title2>
+          <div className={styles.sectionLabel}>Production evidence</div>
+          <Title2 className={styles.sectionTitle}>Screenshots from the live Fabric tenant</Title2>
           <div className={styles.sectionSub}>
-            Captured in Chrome from live workload routes to reflect the actual in-app experience users run through.
+            Captured from Microsoft Fabric after the latest production deployment, not mock standalone routes.
           </div>
           <div className={styles.screenshotGrid}>
             {productShots.map((shot) => (
@@ -627,19 +626,19 @@ export function LandingPage() {
               badge="Fabric item"
               icon={<DocumentCheckmarkRegular />}
               title="Data Contract"
-              description="Author ODCS v3.1.0 YAML contracts with Monaco editor, AI-assisted field suggestions, and inline JSON Schema validation. Attach a contract to any Delta table in OneLake."
+              description="Author and restore ODCS v3.1.0 contracts with Lakehouse/table dropdowns, Monaco YAML, and inline JSON Schema validation."
             />
             <ItemCard
               badge="Fabric item"
               icon={<ShieldCheckmarkRegular />}
               title="Contract Policy"
-              description="Define enforcement rules — schema drift, freshness windows, null tolerances. Route breach events to Microsoft Fabric Activator for real-time alerting and automated remediation."
+              description="Configure enforcement thresholds and policy routing for contract breach handling."
             />
             <ItemCard
               badge="Fabric item"
               icon={<ChartMultipleRegular />}
               title="Contract Report"
-              description="Read-only run history with per-column breach scores, schema diff views, and trend analytics. Share audit evidence without granting write access to the contract."
+              description="Open persisted run history with status, breach score, trigger timestamp, and audit drill-through."
             />
           </div>
         </section>
@@ -663,7 +662,7 @@ export function LandingPage() {
               <Feature
                 icon={<TableLightningRegular style={{ fontSize: 28 }} />}
                 title="AI-assisted authoring"
-                description="GPT-4o generates contract field suggestions and scores contract quality. Claude Sonnet serves as a low-latency fallback with automatic Polly retry."
+                description="AI flows are implemented with timeout, retry, and fallback behavior for contract suggestion, scoring, remediation, and natural-language query."
               />
               <Feature
                 icon={<DatabaseLinkRegular style={{ fontSize: 28 }} />}
@@ -678,7 +677,7 @@ export function LandingPage() {
             <Feature
               icon={<ArrowRightRegular style={{ fontSize: 28 }} />}
               title="Activator integration"
-              description="Breach events are forwarded to Microsoft Fabric Activator via the Fabric REST API, enabling no-code automated alert workflows."
+              description="Policy-based breach dispatch supports Activator/webhook-style routing with correlation-aware logging."
             />
               <Feature
                 icon={<ChartMultipleRegular style={{ fontSize: 28 }} />}
@@ -692,8 +691,8 @@ export function LandingPage() {
                 <div className={styles.quickCardTitle}>Contracts</div>
                 <div className={styles.quickCardText}>Author, validate, activate, and run ODCS contracts.</div>
                 <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => navigate('/contracts')}>
-                    Open
+                  <Button size="small" appearance="secondary" onClick={() => openExternal(FABRIC_URL)}>
+                    Open in Fabric
                   </Button>
                 </div>
               </div>
@@ -701,8 +700,8 @@ export function LandingPage() {
                 <div className={styles.quickCardTitle}>Policies</div>
                 <div className={styles.quickCardText}>Configure thresholds and dispatch channels per workspace.</div>
                 <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => navigate('/contracts/policies')}>
-                    Open
+                  <Button size="small" appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
+                    Learn more
                   </Button>
                 </div>
               </div>
@@ -710,8 +709,8 @@ export function LandingPage() {
                 <div className={styles.quickCardTitle}>Alerts</div>
                 <div className={styles.quickCardText}>Review recent breaches and operational routing outcomes.</div>
                 <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => navigate('/contracts/alerts')}>
-                    Open
+                  <Button size="small" appearance="secondary" onClick={() => openExternal(SUPPORT_URL)}>
+                    Support
                   </Button>
                 </div>
               </div>
@@ -719,8 +718,8 @@ export function LandingPage() {
                 <div className={styles.quickCardTitle}>AI query</div>
                 <div className={styles.quickCardText}>Ask natural-language questions across contract metadata.</div>
                 <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => navigate('/contracts/ai-query')}>
-                    Open
+                  <Button size="small" appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
+                    Learn more
                   </Button>
                 </div>
               </div>
@@ -744,9 +743,9 @@ export function LandingPage() {
               size="large"
               icon={<ArrowRightRegular />}
               iconPosition="after"
-              onClick={() => navigate('/contracts')}
+              onClick={() => openExternal(FABRIC_URL)}
             >
-              Launch workload
+              Open in Fabric
             </Button>
             <Button
               appearance="outline"
@@ -761,9 +760,9 @@ export function LandingPage() {
               size="large"
               icon={<ClipboardTaskRegular />}
               style={{ borderColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
-              onClick={() => navigate('/contracts/alerts')}
+              onClick={() => openExternal(GETTING_STARTED_URL)}
             >
-              View alerts
+              View guide
             </Button>
           </div>
         </div>

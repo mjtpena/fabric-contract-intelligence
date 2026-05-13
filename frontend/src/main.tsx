@@ -6,6 +6,11 @@ if (url.pathname?.startsWith('/close')) {
   window.close();
 }
 
+const isFabricBootstrapRequest = url.searchParams.has('__iframeType')
+  || url.searchParams.has('__iframeId')
+  || url.searchParams.has('__bootstrapPath')
+  || url.searchParams.has('__extensionName');
+
 /**
  * Standalone mode: ?__standalone=1 bypasses Fabric bootstrap entirely.
  *
@@ -15,6 +20,8 @@ if (url.pathname?.startsWith('/close')) {
  */
 if (url.searchParams.get('__standalone') === '1') {
   void import('./standalone').then(({ bootstrapStandalone }) => bootstrapStandalone());
+} else if (!isFabricBootstrapRequest) {
+  void import('./publicLanding').then(({ bootstrapPublicLanding }) => bootstrapPublicLanding());
 } else {
   /**
    * Production path: bootstrap() detects whether this iframe is loaded in:

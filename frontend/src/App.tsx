@@ -8,6 +8,7 @@ import { AISuggestPage } from './pages/AISuggestPage';
 import { NLQueryPage } from './pages/NLQueryPage';
 import { PolicyEditorPage } from './pages/PolicyEditorPage';
 import { AlertsDashboardPage } from './pages/AlertsDashboardPage';
+import { LandingPage } from './pages/LandingPage';
 
 /**
  * App routes for the Fabric workload iframe.
@@ -26,6 +27,8 @@ import { AlertsDashboardPage } from './pages/AlertsDashboardPage';
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+
       {/* ── Fabric item editor routes (opened by Fabric's navigation) ────── */}
       {/* Contract item: manifest editor path = /contracts/editor */}
       <Route path="/contracts/editor/:itemObjectId" element={<ContractEditorPage />} />
