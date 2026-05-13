@@ -350,7 +350,10 @@ internal static class FabricTargetPath
 {
     public static SqlSource ParseSql(string path)
     {
-        var candidate = ParseSingleName(path).Replace("/", ".", StringComparison.Ordinal);
+        var trimmed = path.Trim().Trim('/');
+        var candidate = !trimmed.Contains("://", StringComparison.Ordinal) && trimmed.Contains('/', StringComparison.Ordinal)
+            ? trimmed.Replace("/", ".", StringComparison.Ordinal)
+            : ParseSingleName(path).Replace("/", ".", StringComparison.Ordinal);
         var segments = candidate.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return segments.Length >= 2
             ? new SqlSource(segments[^2], segments[^1])
