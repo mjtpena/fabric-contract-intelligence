@@ -507,8 +507,8 @@ export function LandingPage() {
           </Display>
           <div className={styles.heroSub}>
             Orqentis binds contracts across Lakehouses, Warehouses, Eventhouse/KQL databases,
-            Semantic Models, and Fabric SQL. Lakehouse/Delta enforcement proves the launch path,
-            while AI drafts contracts, explains risk, and recommends remediation.
+            Semantic Models, and Fabric SQL using delegated Fabric adapters, while AI drafts
+            contracts, explains risk, and recommends remediation.
           </div>
           <div className={styles.heroActions}>
             <Button
