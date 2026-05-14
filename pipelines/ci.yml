@@ -19,7 +19,7 @@ variables:
   DOTNET_NOLOGO: 1
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default
 
 stages:
 

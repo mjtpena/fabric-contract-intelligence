@@ -39,13 +39,7 @@ variables:
   value: 1
 
 pool:
-  vmImage: ubuntu-latest
-
-stages:
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage: Build
-# ─────────────────────────────────────────────────────────────────────────────
+  name: Default
 - stage: Build
   displayName: Build
   jobs:

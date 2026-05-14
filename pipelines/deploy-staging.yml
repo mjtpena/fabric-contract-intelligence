@@ -43,13 +43,7 @@ variables:
   value: 1
 
 pool:
-  vmImage: ubuntu-latest
-
-stages:
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage: Build — produce artifacts for deployment
-# ─────────────────────────────────────────────────────────────────────────────
+  name: Default
 - stage: Build
   displayName: Build
   jobs:
