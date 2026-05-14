@@ -347,16 +347,23 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
             return Result<DeltaTableSnapshot>.Failure($"Semantic model definition request failed with status {(int)response.StatusCode}.", "SemanticModelDefinitionFailed");
         }
 
-        var columns = SemanticModelDefinitionParser.ParseColumns(body, FabricTargetPath.ParseSingleName(server.Path));
-        return columns.Count == 0
-            ? Result<DeltaTableSnapshot>.Failure("Semantic model definition did not include matching table columns.", "SemanticModelSchemaEmpty")
-            : Result<DeltaTableSnapshot>.Success(new DeltaTableSnapshot
-            {
-                Version = 0,
-                Schema = new DeltaSchema { Columns = columns },
-                PartitionColumns = [],
-                LastModifiedUtc = DateTimeOffset.UtcNow,
-            });
+        var columns = string.IsNullOrWhiteSpace(body)
+            ? []
+            : SemanticModelDefinitionParser.ParseColumns(body, FabricTargetPath.ParseSingleName(server.Path));
+        if (columns.Count == 0)
+        {
+            var bodySnippet = (body?.Length ?? 0) > 200 ? body![..200] : (body ?? "(empty)");
+            return Result<DeltaTableSnapshot>.Failure(
+                $"Semantic model definition did not include matching table columns. Response snippet: {bodySnippet}",
+                "SemanticModelSchemaEmpty");
+        }
+        return Result<DeltaTableSnapshot>.Success(new DeltaTableSnapshot
+        {
+            Version = 0,
+            Schema = new DeltaSchema { Columns = columns },
+            PartitionColumns = [],
+            LastModifiedUtc = DateTimeOffset.UtcNow,
+        });
     }
 
     private static string? TryExtractPollUrl(string body)
@@ -398,12 +405,12 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
                     return body;
                 }
 
-                var status = statusProp.GetString();
+                var status = statusProp.ValueKind == JsonValueKind.String ? statusProp.GetString() : null;
                 if (status == "Succeeded")
                 {
                     // The definition is nested: { "status": "Succeeded", "result": { "definition": {...} } }
                     // Unwrap to the definition level so the parser finds it directly.
-                    if (root.TryGetProperty("result", out var result))
+                    if (root.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Object)
                     {
                         return result.ToString();
                     }
@@ -544,78 +551,93 @@ internal static class SemanticModelDefinitionParser
 {
     public static IReadOnlyList<DeltaColumn> ParseColumns(string responseBody, string tableName)
     {
-        using var document = JsonDocument.Parse(responseBody);
-        var root = document.RootElement;
-
-        // Handle both { "definition": { "parts": [...] } }
-        // and the raw operation result { "parts": [...] } (when already unwrapped by the poller).
-        JsonElement parts;
-        if (root.TryGetProperty("definition", out var definition))
-        {
-            if (!definition.TryGetProperty("parts", out parts) || parts.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-        }
-        else if (root.TryGetProperty("parts", out parts) && parts.ValueKind == JsonValueKind.Array)
-        {
-            // Already at the parts level.
-        }
-        else
+        if (string.IsNullOrWhiteSpace(responseBody))
         {
             return [];
         }
 
-        var columns = new List<DeltaColumn>();
-        foreach (var part in parts.EnumerateArray())
+        JsonDocument document;
+        try { document = JsonDocument.Parse(responseBody); }
+        catch { return []; }
+
+        using (document)
         {
-            var path = part.TryGetProperty("path", out var pathProperty) ? pathProperty.GetString() : null;
-            // TMDL table path: "definition/tables/{tableName}.tmdl"
-            // Check for both "tables/{name}" and "{name}.tmdl" patterns.
-            if (string.IsNullOrWhiteSpace(path) ||
-                !path.Contains("tables/", StringComparison.OrdinalIgnoreCase) ||
-                !path.Contains(tableName, StringComparison.OrdinalIgnoreCase) ||
-                !part.TryGetProperty("payload", out var payloadProperty))
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
             {
-                continue;
+                return [];
             }
 
-            // Payload may be base64 (InlineBase64) or raw text (PlainText).
-            var payloadType = part.TryGetProperty("payloadType", out var pt) ? pt.GetString() : null;
-            var rawPayload = payloadProperty.GetString() ?? string.Empty;
-            string tmdlText;
-            try
+            // Handle both { "definition": { "parts": [...] } }
+            // and the raw operation result { "parts": [...] } (when already unwrapped by the poller).
+            JsonElement parts;
+            if (root.TryGetProperty("definition", out var definition) && definition.ValueKind == JsonValueKind.Object)
             {
-                tmdlText = (payloadType?.Equals("InlineBase64", StringComparison.OrdinalIgnoreCase) == true)
-                    || (!rawPayload.Contains('\n') && rawPayload.Length % 4 == 0)
-                    ? Encoding.UTF8.GetString(Convert.FromBase64String(rawPayload))
-                    : rawPayload;
+                if (!definition.TryGetProperty("parts", out parts) || parts.ValueKind != JsonValueKind.Array)
+                {
+                    return [];
+                }
             }
-            catch
+            else if (root.TryGetProperty("parts", out parts) && parts.ValueKind == JsonValueKind.Array)
             {
-                tmdlText = rawPayload;
+                // Already at the parts level.
+            }
+            else
+            {
+                return [];
             }
 
-            foreach (var line in tmdlText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            var columns = new List<DeltaColumn>();
+            foreach (var part in parts.EnumerateArray())
             {
-                if (!line.StartsWith("column ", StringComparison.OrdinalIgnoreCase))
+                var path = part.TryGetProperty("path", out var pathProperty) ? pathProperty.GetString() : null;
+                // TMDL table path: "definition/tables/{tableName}.tmdl"
+                // Check for both "tables/{name}" and "{name}.tmdl" patterns.
+                if (string.IsNullOrWhiteSpace(path) ||
+                    !path.Contains("tables/", StringComparison.OrdinalIgnoreCase) ||
+                    !path.Contains(tableName, StringComparison.OrdinalIgnoreCase) ||
+                    !part.TryGetProperty("payload", out var payloadProperty))
                 {
                     continue;
                 }
 
-                var segments = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (segments.Length >= 2)
+                // Payload may be base64 (InlineBase64) or raw text (PlainText).
+                var payloadType = part.TryGetProperty("payloadType", out var pt) ? pt.GetString() : null;
+                var rawPayload = payloadProperty.GetString() ?? string.Empty;
+                string tmdlText;
+                try
                 {
-                    columns.Add(new DeltaColumn
+                    tmdlText = (payloadType?.Equals("InlineBase64", StringComparison.OrdinalIgnoreCase) == true)
+                        || (!rawPayload.Contains('\n') && rawPayload.Length % 4 == 0)
+                        ? Encoding.UTF8.GetString(Convert.FromBase64String(rawPayload))
+                        : rawPayload;
+                }
+                catch
+                {
+                    tmdlText = rawPayload;
+                }
+
+                foreach (var line in tmdlText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (!line.StartsWith("column ", StringComparison.OrdinalIgnoreCase))
                     {
-                        Name = segments[1].Trim('\'', '"'),
-                        Type = segments.Length >= 3 ? segments[2] : "semantic",
-                        Nullable = true,
-                    });
+                        continue;
+                    }
+
+                    var segments = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (segments.Length >= 2)
+                    {
+                        columns.Add(new DeltaColumn
+                        {
+                            Name = segments[1].Trim('\'', '"'),
+                            Type = segments.Length >= 3 ? segments[2] : "semantic",
+                            Nullable = true,
+                        });
+                    }
                 }
             }
-        }
 
-        return columns;
+            return columns;
+        }
     }
 }
