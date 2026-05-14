@@ -146,6 +146,7 @@ public sealed class RunsController : ControllerBase
             new RunAcceptedDto
             {
                 RunId = persisted.RunId,
+                ContractId = id,
                 Status = "accepted",
             });
     }

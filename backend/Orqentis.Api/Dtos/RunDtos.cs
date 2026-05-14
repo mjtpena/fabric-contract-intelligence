@@ -6,6 +6,7 @@ namespace Orqentis.Api.Dtos;
 public sealed record RunAcceptedDto
 {
     public required Guid RunId { get; init; }
+    public required Guid ContractId { get; init; }
     public required string Status { get; init; }
 }
 
