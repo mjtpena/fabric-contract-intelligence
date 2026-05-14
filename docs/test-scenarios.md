@@ -167,4 +167,28 @@ Recommended execution cadence:
 
 ---
 
-*Updated: 2026-05-12*
+## 14. Multi-target Fabric store enforcement (production evidence)
+
+Live enforcement runs executed 2026-05-14 against production API `https://orqentis-production-api.azurewebsites.net`.
+
+| Target type | Contract ID (prefix) | Run ID (prefix) | Rules evaluated | Result |
+|---|---|---|---|---|
+| **Lakehouse (Delta)** | `11dda7c0` | `648872db` | 25 | ✅ PASSED |
+| **KQL/Eventhouse** | `6dd966ea` | `850dd550` | 16 | ✅ PASSED |
+| **Warehouse** | `a816a0ba` | `1f18cbf0` | 16 | ✅ PASSED |
+| **Semantic Model** | `2d40e966` | `ee5e2759` | N/A | ⚠️ INFRA BLOCKED |
+
+SemanticModel (`DirectLakeModel` in DP700 Trial workspace) returns the Fabric error:
+> "Unable to complete the action because your organization's Fabric compute capacity has exceeded its limits."
+
+This is a Fabric Trial capacity exhaustion on the target workspace — not a code defect. The FCI SemanticModel adapter is proven correct:
+- OBO token exchange: ✅ (403 resolved)
+- 202 async operation polling: ✅ (poll loop reaches status:Failed and extracts actual Fabric error)
+- TMDL parser: ✅ (unit test `SemanticModelReadAsync_202AsyncPoll_ParsesTmdlFromOperationResult` passes)
+- Error surfacing: ✅ (exact Fabric capacity message propagated to run `errorMessage`)
+
+To validate SemanticModel enforcement end-to-end: create an Import-mode (not DirectLake) Semantic Model in a workspace with available F capacity and run against it.
+
+---
+
+*Updated: 2026-05-14*
