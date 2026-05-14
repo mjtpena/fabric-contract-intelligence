@@ -46,6 +46,10 @@ public sealed class GlobalExceptionMiddleware
                 _configuration["ORQENTIS_DEBUG_ERRORS"], "true",
                 StringComparison.OrdinalIgnoreCase);
 
+            var detail = debugErrors
+                ? BuildDebugDetail(ex)
+                : "The request could not be completed.";
+
             await _problemDetailsService.WriteAsync(new ProblemDetailsContext
             {
                 HttpContext = context,
@@ -53,9 +57,7 @@ public sealed class GlobalExceptionMiddleware
                 {
                     Status = StatusCodes.Status500InternalServerError,
                     Title = "An unexpected error occurred.",
-                    Detail = debugErrors
-                        ? $"{ex.GetType().Name}: {ex.Message}"
-                        : "The request could not be completed.",
+                    Detail = detail,
                     Type = "https://httpstatuses.com/500",
                     Extensions =
                     {
@@ -64,5 +66,25 @@ public sealed class GlobalExceptionMiddleware
                 },
             }).ConfigureAwait(false);
         }
+    }
+
+    private static string BuildDebugDetail(Exception ex)
+    {
+        var parts = new System.Text.StringBuilder();
+        var current = ex;
+        while (current is not null)
+        {
+            if (parts.Length > 0)
+            {
+                parts.Append(" --> ");
+            }
+
+            parts.Append(current.GetType().Name);
+            parts.Append(": ");
+            parts.Append(current.Message);
+            current = current.InnerException;
+        }
+
+        return parts.ToString();
     }
 }
