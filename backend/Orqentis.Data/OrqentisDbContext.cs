@@ -52,6 +52,10 @@ public sealed class OrqentisDbContext : DbContext
             b.HasKey(v => v.VersionId);
             b.HasIndex(v => new { v.ContractId, v.Version }).IsUnique();
             b.Property(v => v.Version).HasMaxLength(64);
+            b.HasOne<Contract>()
+                .WithMany()
+                .HasForeignKey(v => v.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<EnforcementRun>(b =>
@@ -62,12 +66,20 @@ public sealed class OrqentisDbContext : DbContext
             b.Property(r => r.Status).HasMaxLength(32);
             b.Property(r => r.ResultJson).HasColumnType("jsonb");
             b.Property(r => r.BreachScoreBreakdown).HasColumnType("jsonb");
+            b.HasOne<Contract>()
+                .WithMany()
+                .HasForeignKey(r => r.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ContractPolicy>(b =>
         {
             b.HasKey(p => p.PolicyId);
             b.Property(p => p.ActionConfigJson).HasColumnType("jsonb");
+            b.HasOne<Contract>()
+                .WithMany()
+                .HasForeignKey(p => p.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<WorkspaceLink>(b =>
