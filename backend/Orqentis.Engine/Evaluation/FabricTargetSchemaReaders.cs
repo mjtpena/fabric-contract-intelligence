@@ -373,21 +373,53 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
 
     private async Task<string?> PollDefinitionAsync(string pollUrl, string token, CancellationToken ct)
     {
-        // Poll up to 8 times with 2-second delays (16s total — within the 15s AI/30s run budget).
-        for (var attempt = 0; attempt < 8; attempt++)
+        // Poll up to 12 times with 3-second delays (36s total).
+        // The Fabric operations endpoint returns 200 with {"status":"Running"/"Succeeded"/"Failed"}.
+        for (var attempt = 0; attempt < 12; attempt++)
         {
-            await Task.Delay(2000, ct).ConfigureAwait(false);
+            await Task.Delay(3000, ct).ConfigureAwait(false);
             using var poll = new HttpRequestMessage(HttpMethod.Get, pollUrl);
             poll.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using var pollResp = await _httpClient.SendAsync(poll, ct).ConfigureAwait(false);
-            if (pollResp.IsSuccessStatusCode)
-            {
-                return await pollResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            }
 
-            if (pollResp.StatusCode != System.Net.HttpStatusCode.Accepted)
+            if (!pollResp.IsSuccessStatusCode)
             {
                 break;
+            }
+
+            var body = await pollResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("status", out var statusProp))
+                {
+                    // No status field — treat as the raw definition response.
+                    return body;
+                }
+
+                var status = statusProp.GetString();
+                if (status == "Succeeded")
+                {
+                    // The definition is nested: { "status": "Succeeded", "result": { "definition": {...} } }
+                    // Unwrap to the definition level so the parser finds it directly.
+                    if (root.TryGetProperty("result", out var result))
+                    {
+                        return result.ToString();
+                    }
+                    return body;
+                }
+
+                if (status == "Failed")
+                {
+                    return null;
+                }
+
+                // status == "Running" / "NotStarted" — keep polling.
+            }
+            catch
+            {
+                return body;
             }
         }
 
@@ -513,9 +545,23 @@ internal static class SemanticModelDefinitionParser
     public static IReadOnlyList<DeltaColumn> ParseColumns(string responseBody, string tableName)
     {
         using var document = JsonDocument.Parse(responseBody);
-        if (!document.RootElement.TryGetProperty("definition", out var definition) ||
-            !definition.TryGetProperty("parts", out var parts) ||
-            parts.ValueKind != JsonValueKind.Array)
+        var root = document.RootElement;
+
+        // Handle both { "definition": { "parts": [...] } }
+        // and the raw operation result { "parts": [...] } (when already unwrapped by the poller).
+        JsonElement parts;
+        if (root.TryGetProperty("definition", out var definition))
+        {
+            if (!definition.TryGetProperty("parts", out parts) || parts.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+        }
+        else if (root.TryGetProperty("parts", out parts) && parts.ValueKind == JsonValueKind.Array)
+        {
+            // Already at the parts level.
+        }
+        else
         {
             return [];
         }
@@ -524,16 +570,33 @@ internal static class SemanticModelDefinitionParser
         foreach (var part in parts.EnumerateArray())
         {
             var path = part.TryGetProperty("path", out var pathProperty) ? pathProperty.GetString() : null;
+            // TMDL table path: "definition/tables/{tableName}.tmdl"
+            // Check for both "tables/{name}" and "{name}.tmdl" patterns.
             if (string.IsNullOrWhiteSpace(path) ||
-                !path.Contains("/tables/", StringComparison.OrdinalIgnoreCase) ||
+                !path.Contains("tables/", StringComparison.OrdinalIgnoreCase) ||
                 !path.Contains(tableName, StringComparison.OrdinalIgnoreCase) ||
                 !part.TryGetProperty("payload", out var payloadProperty))
             {
                 continue;
             }
 
-            var payload = Encoding.UTF8.GetString(Convert.FromBase64String(payloadProperty.GetString() ?? string.Empty));
-            foreach (var line in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            // Payload may be base64 (InlineBase64) or raw text (PlainText).
+            var payloadType = part.TryGetProperty("payloadType", out var pt) ? pt.GetString() : null;
+            var rawPayload = payloadProperty.GetString() ?? string.Empty;
+            string tmdlText;
+            try
+            {
+                tmdlText = (payloadType?.Equals("InlineBase64", StringComparison.OrdinalIgnoreCase) == true)
+                    || (!rawPayload.Contains('\n') && rawPayload.Length % 4 == 0)
+                    ? Encoding.UTF8.GetString(Convert.FromBase64String(rawPayload))
+                    : rawPayload;
+            }
+            catch
+            {
+                tmdlText = rawPayload;
+            }
+
+            foreach (var line in tmdlText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!line.StartsWith("column ", StringComparison.OrdinalIgnoreCase))
                 {

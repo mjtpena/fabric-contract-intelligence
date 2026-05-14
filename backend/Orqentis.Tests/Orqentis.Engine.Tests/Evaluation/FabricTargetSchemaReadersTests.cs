@@ -171,6 +171,58 @@ public sealed class FabricTargetSchemaReadersTests
     }
 
     [Fact]
+    public async Task SemanticModelReadAsync_202AsyncPoll_ParsesTmdlFromOperationResult()
+    {
+        // Arrange: first request returns 202 with poll URL in Location header.
+        // Second request (poll) returns 200 with {"status":"Succeeded","result":{"definition":{"parts":[...]}}}.
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("""
+            table co2_emissions
+              column country string
+              column year int64
+              column co2 double
+            """));
+
+        var operationResult = $$"""
+            {
+              "status": "Succeeded",
+              "result": {
+                "definition": {
+                  "parts": [
+                    {
+                      "path": "definition/tables/co2_emissions.tmdl",
+                      "payloadType": "InlineBase64",
+                      "payload": "{{payload}}"
+                    }
+                  ]
+                }
+              }
+            }
+            """;
+
+        var callCount = 0;
+        var handler = new RecordingHandler(_ =>
+        {
+            callCount++;
+            if (callCount == 1)
+            {
+                var resp202 = new HttpResponseMessage(HttpStatusCode.Accepted);
+                resp202.Headers.Location = new Uri("https://wabi.example.com/v1/operations/op123");
+                resp202.Content = new StringContent(string.Empty);
+                return resp202;
+            }
+            return JsonResponse(HttpStatusCode.OK, operationResult);
+        });
+
+        var reader = new FabricSemanticModelSchemaReader(new HttpClient(handler));
+        var result = await reader.ReadAsync(CreateServer("co2_emissions"), CreateCredentials(), CreateTarget("semantic_model"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Schema.Columns.Should().HaveCount(3);
+        result.Value.Schema.Columns.Should().Contain(c => c.Name == "country" && c.Type == "string");
+        result.Value.Schema.Columns.Should().Contain(c => c.Name == "co2" && c.Type == "double");
+    }
+
+    [Fact]
     public async Task SemanticModelReadAsync_DefinitionFailure_ReturnsFailure()
     {
         var reader = new FabricSemanticModelSchemaReader(
