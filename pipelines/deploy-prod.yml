@@ -1,0 +1,239 @@
+# Azure Pipelines — Deploy to Production
+# Triggers on version tags (v*.*.*) or manual dispatch.
+#
+# ─── One-time setup required in Azure DevOps ───────────────────────────────
+#  1. Service connection  : Same "orqentis-azure-sc" as staging.
+#  2. Variable group      : Create "orqentis-prod-vars" with:
+#
+#     AZURE_SUBSCRIPTION_ID                   (subscription GUID)
+#     KV_ADMIN_GROUP_OBJECT_ID                (Key Vault admin group objectId)
+#     PG_ADMIN_PASSWORD_PROD                  (secret)
+#     ORQENTIS_APP_CLIENT_SECRET              (secret)
+#     AZURE_STATIC_WEB_APPS_API_TOKEN_PROD    (secret, optional)
+#
+#  3. Create an ADO Environment named "production" and add an approval gate
+#     (Pipelines > Environments > production > Approvals and checks).
+# ───────────────────────────────────────────────────────────────────────────
+
+trigger:
+  tags:
+    include: ['v*.*.*']
+
+pr: none
+
+variables:
+- group: orqentis-prod-vars
+- name: DOTNET_VERSION
+  value: '8.0.x'
+- name: NODE_VERSION
+  value: '20.x'
+- name: AZURE_LOCATION
+  value: australiaeast
+- name: RESOURCE_GROUP
+  value: rg-orqentis-production-aue
+- name: ORQENTIS_APP_CLIENT_ID
+  value: '7a234404-ea08-454c-b2b5-0acb523f0417'
+- name: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
+  value: 1
+- name: DOTNET_NOLOGO
+  value: 1
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Build
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Build
+  displayName: Build
+  jobs:
+
+  - job: build_backend
+    displayName: Build & publish API
+    steps:
+    - checkout: self
+
+    - task: UseDotNet@2
+      inputs:
+        version: $(DOTNET_VERSION)
+
+    - script: dotnet publish backend/Orqentis.Api/Orqentis.Api.csproj -c Release -o $(Build.ArtifactStagingDirectory)/api
+      displayName: dotnet publish API
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/api
+        artifactName: api-publish
+        publishLocation: pipeline
+
+  - job: build_frontend
+    displayName: Build frontend + workload package
+    steps:
+    - checkout: self
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(NODE_VERSION)
+
+    - script: npm ci
+      workingDirectory: frontend
+      displayName: npm ci
+
+    - script: npm run build
+      workingDirectory: frontend
+      displayName: Vite build
+
+    - task: PowerShell@2
+      displayName: Package workload manifest
+      env:
+        ORQENTIS_WORKLOAD_FRONTEND_URL: https://fabric.orqentis.com
+        ORQENTIS_WORKLOAD_FRONTEND_APP_ID: $(ORQENTIS_APP_CLIENT_ID)
+      inputs:
+        filePath: scripts/Publish-Workload.ps1
+        arguments: -SkipBuild
+        pwsh: true
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: frontend/dist
+        artifactName: frontend-dist
+        publishLocation: pipeline
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: frontend/dist/manifest
+        artifactName: production-workload-package
+        publishLocation: pipeline
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: WhatIf — preview infra changes before applying
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: WhatIf
+  displayName: Bicep what-if (production)
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+
+  - job: whatif
+    displayName: az deployment group what-if
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Bicep what-if
+      env:
+        AZURE_AD_TENANT_ID: $(AZURE_TENANT_ID)
+        ORQENTIS_APP_CLIENT_ID: $(ORQENTIS_APP_CLIENT_ID)
+        ORQENTIS_APP_CLIENT_SECRET: $(ORQENTIS_APP_CLIENT_SECRET)
+        PG_ADMIN_PASSWORD: $(PG_ADMIN_PASSWORD_PROD)
+      inputs:
+        azureSubscription: orqentis-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment group what-if \
+            --name whatif-$(Build.BuildId) \
+            --resource-group $(RESOURCE_GROUP) \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/production.bicepparam \
+            --parameters keyVaultAdminGroupObjectId=$(KV_ADMIN_GROUP_OBJECT_ID)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: DeployInfra — gated by ADO environment approval
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployInfra
+  displayName: Deploy infrastructure (production)
+  dependsOn: WhatIf
+  condition: succeeded()
+  jobs:
+
+  - deployment: infra
+    displayName: Bicep deploy (production)
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: Ensure resource group
+            inputs:
+              azureSubscription: orqentis-azure-sc
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az group create \
+                  --name $(RESOURCE_GROUP) \
+                  --location $(AZURE_LOCATION)
+
+          - task: AzureCLI@2
+            displayName: Deploy Bicep (production)
+            env:
+              AZURE_AD_TENANT_ID: $(AZURE_TENANT_ID)
+              ORQENTIS_APP_CLIENT_ID: $(ORQENTIS_APP_CLIENT_ID)
+              ORQENTIS_APP_CLIENT_SECRET: $(ORQENTIS_APP_CLIENT_SECRET)
+              PG_ADMIN_PASSWORD: $(PG_ADMIN_PASSWORD_PROD)
+            inputs:
+              azureSubscription: orqentis-azure-sc
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az deployment group create \
+                  --name prod-$(Build.BuildId) \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --template-file infra/main.bicep \
+                  --parameters infra/parameters/production.bicepparam \
+                  --parameters keyVaultAdminGroupObjectId=$(KV_ADMIN_GROUP_OBJECT_ID)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: DeployApp — API + frontend
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployApp
+  displayName: Deploy API + frontend (production)
+  dependsOn: DeployInfra
+  condition: succeeded()
+  jobs:
+
+  - deployment: deploy_api
+    displayName: Deploy API to App Service (production)
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: api-publish
+              targetPath: $(Pipeline.Workspace)/api-publish
+
+          - task: AzureWebApp@1
+            displayName: Deploy to orqentis-production-api
+            inputs:
+              azureSubscription: orqentis-azure-sc
+              appType: webApp
+              appName: orqentis-production-api
+              package: $(Pipeline.Workspace)/api-publish
+
+  - deployment: deploy_frontend
+    displayName: Deploy frontend to Static Web Apps (production)
+    environment: production
+    condition: ne(variables['AZURE_STATIC_WEB_APPS_API_TOKEN_PROD'], '')
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: frontend-dist
+              targetPath: $(Pipeline.Workspace)/frontend-dist
+
+          - task: AzureStaticWebApp@0
+            displayName: Deploy SWA (production)
+            inputs:
+              azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN_PROD)
+              app_location: $(Pipeline.Workspace)/frontend-dist
+              skip_app_build: true
+              output_location: ''

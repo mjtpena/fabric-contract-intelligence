@@ -1,0 +1,196 @@
+# Azure Pipelines — CI (build · test · lint · validate)
+# Runs on every push to main and on pull requests.
+#
+# Prerequisites (one-time setup in Azure DevOps):
+#   - No service connection required for CI; only build tooling is used.
+
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: 1
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Frontend
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Frontend
+  displayName: Frontend (lint + build + test)
+  jobs:
+  - job: frontend
+    displayName: npm ci · lint · typecheck · build · test
+    steps:
+    - checkout: self
+
+    - task: NodeTool@0
+      displayName: Use Node $(NODE_VERSION)
+      inputs:
+        versionSpec: $(NODE_VERSION)
+
+    - script: npm ci
+      displayName: npm ci
+      workingDirectory: frontend
+
+    - script: npm run lint
+      displayName: ESLint
+      workingDirectory: frontend
+
+    - script: npm run typecheck
+      displayName: TypeScript typecheck
+      workingDirectory: frontend
+
+    - script: npm run build
+      displayName: Vite build
+      workingDirectory: frontend
+
+    - script: npm test -- --reporter=dot
+      displayName: Vitest unit tests
+      workingDirectory: frontend
+
+    - script: npx playwright install --with-deps chromium
+      displayName: Install Playwright Chromium
+      workingDirectory: frontend
+
+    - script: npm run test:e2e -- --reporter=list
+      displayName: Playwright E2E tests
+      workingDirectory: frontend
+
+    - task: PublishPipelineArtifact@1
+      displayName: Publish frontend dist
+      condition: succeededOrFailed()
+      inputs:
+        targetPath: frontend/dist
+        artifactName: frontend-dist
+        publishLocation: pipeline
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Backend
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Backend
+  displayName: Backend (build + test + coverage)
+  jobs:
+  - job: backend
+    displayName: dotnet build · format · test · coverage gate
+    steps:
+    - checkout: self
+
+    - task: UseDotNet@2
+      displayName: Use .NET $(DOTNET_VERSION)
+      inputs:
+        version: $(DOTNET_VERSION)
+
+    - script: dotnet restore Orqentis.sln
+      displayName: dotnet restore
+      workingDirectory: backend
+
+    - script: dotnet format Orqentis.sln --verify-no-changes --no-restore
+      displayName: dotnet format (verify)
+      workingDirectory: backend
+
+    - script: dotnet build Orqentis.sln --no-restore --configuration Release
+      displayName: dotnet build
+      workingDirectory: backend
+
+    - script: |
+        dotnet test Orqentis.sln \
+          --no-build \
+          --configuration Release \
+          --collect:"XPlat Code Coverage" \
+          --logger "trx;LogFileName=test-results.trx" \
+          --results-directory $(Agent.TempDirectory)/TestResults
+      displayName: dotnet test
+      workingDirectory: backend
+
+    - task: PowerShell@2
+      displayName: Enforce Engine/AI coverage ≥ 85 %
+      inputs:
+        filePath: scripts/Test-CoverageGate.ps1
+        arguments: -CoverageRoot backend -MinimumLineCoverage 85
+        pwsh: true
+
+    - task: PublishTestResults@2
+      displayName: Publish test results
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: VSTest
+        testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+        failTaskOnFailedTests: true
+
+    - task: PublishCodeCoverageResults@2
+      displayName: Publish code coverage
+      condition: succeededOrFailed()
+      inputs:
+        summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Contracts
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Contracts
+  displayName: Validate ODCS sample contracts
+  jobs:
+  - job: contracts
+    displayName: datacontract lint
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      displayName: Use Python 3.12
+      inputs:
+        versionSpec: '3.12'
+
+    - script: pip install datacontract-cli
+      displayName: Install datacontract-cli
+
+    - script: |
+        set -e
+        for f in contracts/examples/*.yaml; do
+          echo "→ datacontract lint $f"
+          datacontract lint "$f"
+        done
+      displayName: Lint each ODCS example contract
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Bicep
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Bicep
+  displayName: Validate Bicep templates
+  jobs:
+  - job: bicep
+    displayName: az bicep build (lint)
+    steps:
+    - checkout: self
+
+    - script: az bicep install
+      displayName: Install Bicep CLI
+
+    - script: az bicep build --file infra/main.bicep --stdout > /dev/null
+      displayName: Lint main.bicep
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: PublicReadiness
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: PublicReadiness
+  displayName: Public ISV readiness artifacts
+  jobs:
+  - job: readiness
+    displayName: Test-PublicReadiness.ps1
+    steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: Validate public readiness package
+      inputs:
+        filePath: scripts/Test-PublicReadiness.ps1
+        pwsh: true

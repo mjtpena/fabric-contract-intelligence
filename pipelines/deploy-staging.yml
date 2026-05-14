@@ -1,0 +1,207 @@
+# Azure Pipelines — Deploy to Staging
+# Runs automatically on every push to main.
+# Manual trigger also available via "Run pipeline".
+#
+# ─── One-time setup required in Azure DevOps ───────────────────────────────
+#  1. Service connection  : Create an Azure Resource Manager service connection
+#                           named "orqentis-azure-sc" scoped to your subscription.
+#                           Use Workload Identity Federation (recommended) or
+#                           Service Principal (client secret).
+#  2. Variable group      : Create a variable group named "orqentis-staging-vars"
+#                           with the following variables (mark secrets as secret):
+#
+#     AZURE_SUBSCRIPTION_ID          (the target subscription GUID)
+#     KV_ADMIN_GROUP_OBJECT_ID       (Entra ID group objectId for Key Vault admin)
+#     PG_ADMIN_PASSWORD_STAGING      (secret) PostgreSQL admin password
+#     ORQENTIS_APP_CLIENT_SECRET     (secret) Entra ID app client secret
+#     AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING  (secret, optional) SWA deploy token
+#
+#  3. Link the variable group to this pipeline in Pipeline > Edit > Variables > Variable groups.
+# ───────────────────────────────────────────────────────────────────────────
+
+trigger:
+  branches:
+    include: [main]
+
+pr: none
+
+variables:
+- group: orqentis-staging-vars
+- name: DOTNET_VERSION
+  value: '8.0.x'
+- name: NODE_VERSION
+  value: '20.x'
+- name: AZURE_LOCATION
+  value: australiaeast
+- name: RESOURCE_GROUP
+  value: rg-orqentis-staging-aue
+- name: ORQENTIS_APP_CLIENT_ID
+  value: '7a234404-ea08-454c-b2b5-0acb523f0417'
+- name: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
+  value: 1
+- name: DOTNET_NOLOGO
+  value: 1
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: Build — produce artifacts for deployment
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Build
+  displayName: Build
+  jobs:
+
+  - job: build_backend
+    displayName: Build & publish API
+    steps:
+    - checkout: self
+
+    - task: UseDotNet@2
+      inputs:
+        version: $(DOTNET_VERSION)
+
+    - script: dotnet publish backend/Orqentis.Api/Orqentis.Api.csproj -c Release -o $(Build.ArtifactStagingDirectory)/api
+      displayName: dotnet publish API
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/api
+        artifactName: api-publish
+        publishLocation: pipeline
+
+  - job: build_frontend
+    displayName: Build frontend + workload package
+    steps:
+    - checkout: self
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(NODE_VERSION)
+
+    - script: npm ci
+      workingDirectory: frontend
+      displayName: npm ci
+
+    - script: npm run build
+      workingDirectory: frontend
+      displayName: Vite build
+
+    - task: PowerShell@2
+      displayName: Package workload manifest
+      env:
+        ORQENTIS_WORKLOAD_FRONTEND_URL: https://fabric.orqentis.com
+        ORQENTIS_WORKLOAD_FRONTEND_APP_ID: $(ORQENTIS_APP_CLIENT_ID)
+      inputs:
+        filePath: scripts/Publish-Workload.ps1
+        arguments: -SkipBuild
+        pwsh: true
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: frontend/dist
+        artifactName: frontend-dist
+        publishLocation: pipeline
+
+    - task: PublishPipelineArtifact@1
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'IndividualCI'))
+      inputs:
+        targetPath: frontend/dist/manifest
+        artifactName: staging-workload-package
+        publishLocation: pipeline
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: DeployInfra — provision / update Azure resources via Bicep
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployInfra
+  displayName: Deploy infrastructure (Bicep)
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+
+  - job: infra
+    displayName: az deployment group create (staging)
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Ensure resource group
+      inputs:
+        azureSubscription: orqentis-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az group create \
+            --name $(RESOURCE_GROUP) \
+            --location $(AZURE_LOCATION)
+
+    - task: AzureCLI@2
+      displayName: Deploy Bicep (staging)
+      env:
+        AZURE_AD_TENANT_ID: $(AZURE_TENANT_ID)
+        ORQENTIS_APP_CLIENT_ID: $(ORQENTIS_APP_CLIENT_ID)
+        ORQENTIS_APP_CLIENT_SECRET: $(ORQENTIS_APP_CLIENT_SECRET)
+        PG_ADMIN_PASSWORD: $(PG_ADMIN_PASSWORD_STAGING)
+      inputs:
+        azureSubscription: orqentis-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment group create \
+            --name staging-$(Build.BuildId) \
+            --resource-group $(RESOURCE_GROUP) \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/staging.bicepparam \
+            --parameters keyVaultAdminGroupObjectId=$(KV_ADMIN_GROUP_OBJECT_ID)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: DeployApp — push API + frontend to Azure
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployApp
+  displayName: Deploy API + frontend (staging)
+  dependsOn: DeployInfra
+  condition: succeeded()
+  jobs:
+
+  - deployment: deploy_api
+    displayName: Deploy API to App Service (staging)
+    environment: staging
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: api-publish
+              targetPath: $(Pipeline.Workspace)/api-publish
+
+          - task: AzureWebApp@1
+            displayName: Deploy to orqentis-staging-api
+            inputs:
+              azureSubscription: orqentis-azure-sc
+              appType: webApp
+              appName: orqentis-staging-api
+              package: $(Pipeline.Workspace)/api-publish
+
+  - deployment: deploy_frontend
+    displayName: Deploy frontend to Static Web Apps (staging)
+    environment: staging
+    condition: ne(variables['AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING'], '')
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: frontend-dist
+              targetPath: $(Pipeline.Workspace)/frontend-dist
+
+          - task: AzureStaticWebApp@0
+            displayName: Deploy SWA (staging)
+            inputs:
+              azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING)
+              app_location: $(Pipeline.Workspace)/frontend-dist
+              skip_app_build: true
+              output_location: ''
