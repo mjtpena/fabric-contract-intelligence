@@ -117,7 +117,7 @@ stages:
       displayName: Enforce Engine/AI coverage ≥ 85 %
       inputs:
         filePath: scripts/Test-CoverageGate.ps1
-        arguments: -CoverageRoot backend -MinimumLineCoverage 85
+        arguments: -CoverageRoot "$(Agent.TempDirectory)/TestResults" -MinimumLineCoverage 85
         pwsh: true
 
     - task: PublishTestResults@2
