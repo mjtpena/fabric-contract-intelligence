@@ -20,7 +20,11 @@ builder.Host.UseSerilog((ctx, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(ctx.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("service", "orqentis-api")
-    .WriteTo.Console());
+    .WriteTo.Console()
+    .WriteTo.ApplicationInsights(
+        ctx.Configuration["ApplicationInsights:ConnectionString"],
+        new Serilog.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter(),
+        Serilog.Events.LogEventLevel.Warning));
 
 builder.Services.Configure<AzureAdOptions>(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddProblemDetails(options =>
