@@ -120,7 +120,9 @@ public sealed class ContractsController : ControllerBase
                 odcsYaml,
                 out var normalizedYaml,
                 out var contractDefinition,
-                out ActionResult<ContractDto>? validationProblem))
+                out ActionResult<ContractDto>? validationProblem,
+                _tenantContext.WorkspaceId,
+                targetItemId))
         {
             return validationProblem!;
         }
@@ -202,7 +204,9 @@ public sealed class ContractsController : ControllerBase
                 request.OdcsYaml,
                 out var normalizedYaml,
                 out var contractDefinition,
-                out ActionResult<ContractDto>? validationProblem))
+                out ActionResult<ContractDto>? validationProblem,
+                _tenantContext.WorkspaceId,
+                targetItemId))
         {
             return validationProblem!;
         }
@@ -278,7 +282,9 @@ public sealed class ContractsController : ControllerBase
         string? odcsYaml,
         out string normalizedYaml,
         out ContractDefinition contractDefinition,
-        out ActionResult<ContractDto>? validationProblem)
+        out ActionResult<ContractDto>? validationProblem,
+        Guid? workspaceId = null,
+        Guid? targetItemId = null)
     {
         normalizedYaml = string.Empty;
         contractDefinition = default!;
@@ -329,7 +335,7 @@ public sealed class ContractsController : ControllerBase
 
         servers[0] = servers[0] with
         {
-            Path = targetTablePath,
+            Path = BuildStoragePath(targetType, targetTablePath, workspaceId, targetItemId),
             Format = ContractTargetTypes.ToServerFormat(targetType),
         };
         contractDefinition = parsed with
@@ -405,4 +411,30 @@ public sealed class ContractsController : ControllerBase
             : _tenantContext.UserObjectId;
 
     private static string ToIsoString(DateTimeOffset value) => value.UtcDateTime.ToString("O");
+
+    /// <summary>
+    /// Builds the canonical storage path for the ODCS server location.
+    /// For Lakehouse/Delta targets with a relative path, constructs the full
+    /// abfss:// URI using OneLake's workspace-scoped DFS endpoint format.
+    /// Non-Delta targets store a logical display path only.
+    /// </summary>
+    private static string BuildStoragePath(string targetType, string targetTablePath, Guid? workspaceId, Guid? targetItemId)
+    {
+        if (!string.Equals(targetType, ContractTargetTypes.Lakehouse, StringComparison.Ordinal))
+        {
+            return targetTablePath;
+        }
+
+        if (targetTablePath.StartsWith("abfss://", StringComparison.OrdinalIgnoreCase))
+        {
+            return targetTablePath;
+        }
+
+        if (workspaceId is null || targetItemId is null)
+        {
+            return targetTablePath;
+        }
+
+        return $"abfss://{workspaceId}@onelake.dfs.fabric.microsoft.com/{targetItemId}/{targetTablePath}";
+    }
 }
