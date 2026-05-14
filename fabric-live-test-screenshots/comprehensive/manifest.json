@@ -1,0 +1,128 @@
+[
+  {
+    "label": "1. Public Landing Page — Hero",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\01a-landing-hero.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\01b-landing-full.png"
+    ]
+  },
+  {
+    "label": "2. Backend API — Health Endpoints",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\02a-api-health-ready.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\02b-api-health-live.png"
+    ]
+  },
+  {
+    "label": "3. Contract List Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\03a-contract-list.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\03b-contract-list-scrolled.png"
+    ]
+  },
+  {
+    "label": "4. Contract Editor — New Contract",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\04a-contract-editor-new.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\04b-contract-editor-monaco.png"
+    ]
+  },
+  {
+    "label": "5. Contract Editor — Fabric Item (loaded)",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\05a-contract-editor-fabric-item.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\05b-contract-editor-monaco-yaml.png"
+    ]
+  },
+  {
+    "label": "6. Contract Detail Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\06a-contract-detail.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\06b-contract-detail-full.png"
+    ]
+  },
+  {
+    "label": "7. Enforcement Run Page — Run History",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\07a-enforcement-run-history.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\07b-enforcement-run-full.png"
+    ]
+  },
+  {
+    "label": "8. Enforcement Run Detail — Rule Results",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\08a-run-detail-passed.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\08b-run-detail-full.png"
+    ]
+  },
+  {
+    "label": "9. Policy Editor Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\09a-policy-editor.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\09b-policy-editor-full.png"
+    ]
+  },
+  {
+    "label": "10. AI Suggest Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\10a-ai-suggest-empty.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\10b-ai-suggest-filled.png"
+    ]
+  },
+  {
+    "label": "11. AI Suggest Page — Generated Contract",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\11a-ai-suggest-result.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\11b-ai-suggest-monaco.png"
+    ]
+  },
+  {
+    "label": "12. Natural Language Query Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\12a-nl-query-empty.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\12b-nl-query-filled.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\12c-nl-query-result.png"
+    ]
+  },
+  {
+    "label": "13. Alerts Dashboard Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\13a-alerts-dashboard.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\13b-alerts-dashboard-full.png"
+    ]
+  },
+  {
+    "label": "14. Workspace Settings Page",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\14a-workspace-settings.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\14b-workspace-settings-full.png"
+    ]
+  },
+  {
+    "label": "15. Fabric Portal — Workload Hub",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\15a-fabric-workload-hub.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\15b-fabric-workload-hub-full.png"
+    ]
+  },
+  {
+    "label": "16. Contract Validation — Valid YAML",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\16a-editor-validate-area.png"
+    ]
+  },
+  {
+    "label": "17. Backend API — Swagger Docs",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\17a-api-swagger.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\17b-api-swagger-full.png"
+    ]
+  },
+  {
+    "label": "18. Run Enforcement — Trigger from Contract List",
+    "files": [
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\18a-contract-list-before-run.png",
+      "C:\\Users\\mjtpena\\dev\\fabric-workloads\\fabric-contract-intelligence\\fabric-live-test-screenshots\\comprehensive\\18b-run-triggered-toast.png"
+    ]
+  }
+]

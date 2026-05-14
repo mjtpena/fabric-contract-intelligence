@@ -1,6 +1,11 @@
-import Editor, { type OnMount } from '@monaco-editor/react';
+import Editor, { loader, type OnMount } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
 import { makeStyles, tokens } from '@fluentui/react-components';
 import { ensureMonacoYamlSetup } from '@/monaco/setup';
+
+// Use the locally bundled Monaco instead of loading from CDN.
+// This is required for Fabric iframe CSP and offline/headless environments.
+loader.config({ monaco });
 
 interface MonacoYamlEditorProps {
   onChange: (value: string) => void;

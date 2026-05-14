@@ -95,7 +95,7 @@ export function AlertsDashboardPage() {
       createTableColumn<ReportAuditRow>({
         columnId: 'triggeredAt',
         renderHeaderCell: () => 'Triggered',
-        renderCell: (row) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(row.triggeredAt)),
+        renderCell: (row) => row.triggeredAt ? formatDate(row.triggeredAt) : '—',
       }),
     ],
     [],
@@ -148,4 +148,14 @@ export function AlertsDashboardPage() {
       )}
     </section>
   );
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(d);
 }
