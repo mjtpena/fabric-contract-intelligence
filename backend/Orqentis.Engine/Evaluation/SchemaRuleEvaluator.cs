@@ -148,8 +148,11 @@ public sealed class SchemaRuleEvaluator : ISchemaRuleEvaluator
     private static string NormalizeType(string type) =>
         type.Trim().ToUpperInvariant() switch
         {
-            "INT" => "INTEGER",
-            "BOOL" => "BOOLEAN",
+            // Integer family: ODCS "integer" maps to INT/INTEGER; Delta persists ints as LONG.
+            "INT" or "INTEGER" or "LONG" or "BIGINT" or "SMALLINT" or "TINYINT" or "SHORT" or "BYTE" => "INTEGER",
+            // Floating-point/decimal family: ODCS "number" maps to DOUBLE/FLOAT/DECIMAL.
+            "DOUBLE" or "FLOAT" or "REAL" or "DECIMAL" or "NUMERIC" => "NUMBER",
+            "BOOL" or "BOOLEAN" => "BOOLEAN",
             _ => type.Trim().ToUpperInvariant(),
         };
 }

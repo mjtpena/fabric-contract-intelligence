@@ -103,11 +103,18 @@ public sealed class FabricTargetSchemaReadersTests
                 """),
             JsonResponse(HttpStatusCode.OK, """
                 {
-                  "tables": [
-                    { "columns": [
-                      { "Name": "event_id", "CslType": "string" },
-                      { "Name": "amount", "CslType": "real" }
-                    ] }
+                  "Tables": [
+                    {
+                      "TableName": "Table_0",
+                      "Columns": [
+                        { "ColumnName": "TableName", "DataType": "String", "ColumnType": "string" },
+                        { "ColumnName": "Schema", "DataType": "String", "ColumnType": "string" },
+                        { "ColumnName": "DatabaseName", "DataType": "String", "ColumnType": "string" }
+                      ],
+                      "Rows": [
+                        ["SalesEvents", "{\"Name\":\"SalesEvents\",\"OrderedColumns\":[{\"Name\":\"event_id\",\"Type\":\"System.String\",\"CslType\":\"string\"},{\"Name\":\"amount\",\"Type\":\"System.Double\",\"CslType\":\"real\"}]}", "sales-db-id"]
+                      ]
+                    }
                   ]
                 }
                 """));
@@ -118,7 +125,7 @@ public sealed class FabricTargetSchemaReadersTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.Schema.Columns.Should().Contain(column => column.Name == "event_id" && column.Type == "string");
         handler.Requests.Should().HaveCount(2);
-        handler.Requests[1].RequestUri!.ToString().Should().Be("https://sales.kusto.fabric.microsoft.com/v2/rest/query");
+        handler.Requests[1].RequestUri!.ToString().Should().Be("https://sales.kusto.fabric.microsoft.com/v1/rest/mgmt");
         (await handler.Requests[1].Content!.ReadAsStringAsync()).Should().Contain("SalesEvents");
     }
 

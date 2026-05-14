@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -250,8 +251,9 @@ public sealed class FabricKqlSchemaReader : IFabricKqlSchemaReader
         }
 
         var tableName = FabricTargetPath.ParseSingleName(server.Path);
+        // Control commands (.show ...) require /v1/rest/mgmt; data queries use /v2/rest/query.
         var command = $".show table ['{tableName.Replace("'", "\\'", StringComparison.Ordinal)}'] schema as json";
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{metadata.Value.QueryServiceUri.TrimEnd('/')}/v2/rest/query");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{metadata.Value.QueryServiceUri.TrimEnd('/')}/v1/rest/mgmt");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.KustoToken);
         request.Content = new StringContent(
             JsonSerializer.Serialize(new { db = metadata.Value.DatabaseName, csl = command }),
@@ -328,7 +330,19 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
 
         using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
+
+        // getDefinition may return 202 Accepted with an async operation poll URL.
+        if (response.StatusCode == System.Net.HttpStatusCode.Accepted)
+        {
+            var pollUrl = response.Headers.Location?.ToString()
+                ?? (body.Length > 0 ? TryExtractPollUrl(body) : null);
+
+            if (!string.IsNullOrWhiteSpace(pollUrl))
+            {
+                body = await PollDefinitionAsync(pollUrl, credentials.FabricRestToken, ct).ConfigureAwait(false) ?? body;
+            }
+        }
+        else if (!response.IsSuccessStatusCode)
         {
             return Result<DeltaTableSnapshot>.Failure($"Semantic model definition request failed with status {(int)response.StatusCode}.", "SemanticModelDefinitionFailed");
         }
@@ -343,6 +357,41 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
                 PartitionColumns = [],
                 LastModifiedUtc = DateTimeOffset.UtcNow,
             });
+    }
+
+    private static string? TryExtractPollUrl(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.TryGetProperty("Location", out var loc) ? loc.GetString()
+                : doc.RootElement.TryGetProperty("location", out var loc2) ? loc2.GetString()
+                : null;
+        }
+        catch { return null; }
+    }
+
+    private async Task<string?> PollDefinitionAsync(string pollUrl, string token, CancellationToken ct)
+    {
+        // Poll up to 8 times with 2-second delays (16s total — within the 15s AI/30s run budget).
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            await Task.Delay(2000, ct).ConfigureAwait(false);
+            using var poll = new HttpRequestMessage(HttpMethod.Get, pollUrl);
+            poll.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var pollResp = await _httpClient.SendAsync(poll, ct).ConfigureAwait(false);
+            if (pollResp.IsSuccessStatusCode)
+            {
+                return await pollResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            }
+
+            if (pollResp.StatusCode != System.Net.HttpStatusCode.Accepted)
+            {
+                break;
+            }
+        }
+
+        return null;
     }
 }
 
@@ -390,38 +439,72 @@ internal static class KqlSchemaParser
 {
     public static IReadOnlyList<DeltaColumn> ParseColumns(string responseBody)
     {
+        // The Kusto .show table <T> schema as json response structure:
+        //   Tables[0].Rows[0][1] = JSON string with { OrderedColumns: [{Name, CslType}] }
         using var document = JsonDocument.Parse(responseBody);
+        var schemaJson = ExtractSchemaJson(document.RootElement);
+        if (schemaJson is null)
+        {
+            return [];
+        }
+
+        using var schemaDoc = JsonDocument.Parse(schemaJson);
+        if (!schemaDoc.RootElement.TryGetProperty("OrderedColumns", out var cols) ||
+            cols.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
         var columns = new List<DeltaColumn>();
-        FindColumns(document.RootElement, columns);
+        foreach (var col in cols.EnumerateArray())
+        {
+            var name = col.TryGetProperty("Name", out var n) ? n.GetString() : null;
+            var type = col.TryGetProperty("CslType", out var t) ? t.GetString() : "string";
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                columns.Add(new DeltaColumn { Name = name, Type = type ?? "string", Nullable = true });
+            }
+        }
+
         return columns;
     }
 
-    private static void FindColumns(JsonElement element, List<DeltaColumn> columns)
+    private static string? ExtractSchemaJson(JsonElement root)
     {
-        if (element.ValueKind == JsonValueKind.Object)
+        // Traverse Tables[].Rows[][1] to find the schema JSON string.
+        if (!root.TryGetProperty("Tables", out var tables) || tables.ValueKind != JsonValueKind.Array)
         {
-            if (element.TryGetProperty("Name", out var name) && element.TryGetProperty("CslType", out var type))
+            return null;
+        }
+
+        foreach (var table in tables.EnumerateArray())
+        {
+            if (!table.TryGetProperty("Rows", out var rows) || rows.ValueKind != JsonValueKind.Array)
             {
-                columns.Add(new DeltaColumn
-                {
-                    Name = name.GetString() ?? string.Empty,
-                    Type = type.GetString() ?? "string",
-                    Nullable = true,
-                });
+                continue;
             }
 
-            foreach (var property in element.EnumerateObject())
+            foreach (var row in rows.EnumerateArray())
             {
-                FindColumns(property.Value, columns);
+                if (row.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                // The schema JSON string is always the second element (index 1).
+                var items = row.EnumerateArray().ToList();
+                if (items.Count > 1 && items[1].ValueKind == JsonValueKind.String)
+                {
+                    var candidate = items[1].GetString();
+                    if (!string.IsNullOrWhiteSpace(candidate) && candidate.Contains("OrderedColumns", StringComparison.Ordinal))
+                    {
+                        return candidate;
+                    }
+                }
             }
         }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                FindColumns(item, columns);
-            }
-        }
+
+        return null;
     }
 }
 
