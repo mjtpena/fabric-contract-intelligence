@@ -339,7 +339,12 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
 
             if (!string.IsNullOrWhiteSpace(pollUrl))
             {
-                body = await PollDefinitionAsync(pollUrl, credentials.FabricRestToken, ct).ConfigureAwait(false) ?? body;
+                var polled = await PollDefinitionAsync(pollUrl, credentials.FabricRestToken, ct).ConfigureAwait(false);
+                if (polled != null && polled.StartsWith("__FAILED__", StringComparison.Ordinal))
+                {
+                    return Result<DeltaTableSnapshot>.Failure(polled["__FAILED__".Length..], "SemanticModelOperationFailed");
+                }
+                body = polled ?? body;
             }
         }
         else if (!response.IsSuccessStatusCode)
@@ -378,6 +383,10 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
         catch { return null; }
     }
 
+    /// <summary>
+    /// Returns the definition body on success, or a JSON-serialized error object prefixed with
+    /// "__FAILED__" so the caller can distinguish a real definition from a failure message.
+    /// </summary>
     private async Task<string?> PollDefinitionAsync(string pollUrl, string token, CancellationToken ct)
     {
         // Poll up to 12 times with 3-second delays (36s total).
@@ -399,6 +408,11 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
             {
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object)
+                {
+                    return body;
+                }
+
                 if (!root.TryGetProperty("status", out var statusProp))
                 {
                     // No status field — treat as the raw definition response.
@@ -419,7 +433,9 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
 
                 if (status == "Failed")
                 {
-                    return null;
+                    // Extract the Fabric error message for useful diagnostics.
+                    var msg = TryExtractErrorMessage(root);
+                    return $"__FAILED__{msg ?? "Fabric operation failed without an error message."}";
                 }
 
                 // status == "Running" / "NotStarted" — keep polling.
@@ -430,6 +446,27 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
             }
         }
 
+        return null;
+    }
+
+    private static string? TryExtractErrorMessage(JsonElement root)
+    {
+        // Fabric error response shapes:
+        // { "error": { "message": "..." } }
+        // { "message": "..." }
+        try
+        {
+            if (root.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object
+                && error.TryGetProperty("message", out var msg))
+            {
+                return msg.GetString();
+            }
+            if (root.TryGetProperty("message", out var topMsg))
+            {
+                return topMsg.GetString();
+            }
+        }
+        catch { /* ignore */ }
         return null;
     }
 }
