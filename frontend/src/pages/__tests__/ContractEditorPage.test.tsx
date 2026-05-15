@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, vi } from 'vitest';
@@ -61,6 +61,15 @@ vi.mock('@/components/ContractEditor/MonacoYamlEditor', () => ({
 
 vi.mock('@/components/ContractEditor/ValidationPanel', () => ({
   ValidationPanel: () => <div>Validation panel</div>,
+}));
+
+vi.mock('@/components/ContractEditor/NewContractTypeSelector', () => ({
+  NewContractTypeSelector: ({ onConfirm }: { onConfirm: (type: string) => void }) => (
+    <div>
+      <div>Choose contract target type</div>
+      <button onClick={() => onConfirm('lakehouse')}>Create contract</button>
+    </div>
+  ),
 }));
 
 vi.mock('@/components/FabricPickers', () => ({
@@ -146,6 +155,39 @@ describe('ContractEditorPage', () => {
         headers: expect.any(Headers),
       }),
     );
+  });
+
+  it('shows the type selector for a brand-new item with no existing contract', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.endsWith('/v1/contracts')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({ title: 'not found' }, 404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(editorTree());
+
+    expect(await screen.findByText('Choose contract target type')).toBeInTheDocument();
+  });
+
+  it('opens the editor after the user confirms a type in the type selector', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.endsWith('/v1/contracts')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({ title: 'not found' }, 404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(editorTree());
+    expect(await screen.findByText('Choose contract target type')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create contract' }));
+
+    expect(await screen.findByLabelText('ODCS YAML')).toBeInTheDocument();
   });
 });
 

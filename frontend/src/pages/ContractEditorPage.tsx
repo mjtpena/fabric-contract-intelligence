@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
-  Button,
-  Caption1,
   Checkbox,
   Field,
   Input,
@@ -21,6 +19,7 @@ import {
 } from '@/api/contractClient';
 import { createAiClient } from '@/api/aiClient';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
+import { NewContractTypeSelector } from '@/components/ContractEditor/NewContractTypeSelector';
 import { ValidationPanel } from '@/components/ContractEditor/ValidationPanel';
 import { ItemEditor, type RibbonToolbar } from '@/components/ItemEditor/ItemEditor';
 import {
@@ -30,6 +29,7 @@ import {
 import { createActivateAction } from '@/components/ItemEditor/actions/createActivateAction';
 import { createRunNowAction } from '@/components/ItemEditor/actions/createRunNowAction';
 import { createSaveAction } from '@/components/ItemEditor/actions/createSaveAction';
+import { createSettingsAction } from '@/components/ItemEditor/actions/createSettingsAction';
 import { createVersionHistoryAction } from '@/components/ItemEditor/actions/createVersionHistoryAction';
 import {
   FabricTargetItemPicker,
@@ -120,6 +120,12 @@ export function ContractEditorPage() {
   const actions = useContractActions(client);
   const [draft, setDraft] = useState<ContractDraft | null>(null);
   const [validationResult, setValidationResult] = useState<ContractValidationResult | null>(null);
+
+  const openWorkloadRoute = useCallback(async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+    if (!(await sdk.openWorkloadRoute(path, mode))) {
+      navigate(path);
+    }
+  }, [navigate, sdk]);
 
   useEffect(() => {
     let cancelled = false;
@@ -239,18 +245,25 @@ export function ContractEditorPage() {
         error={error}
         fabricItemId={itemObjectId ?? null}
         loading={loading}
-        navigateToContracts={() => navigate('/contracts')}
-        navigateToDetail={(selectedContractId) => navigate(`/contracts/${selectedContractId}`)}
+        navigateToContracts={() => {
+          void openWorkloadRoute('/contracts');
+        }}
+        navigateToDetail={(selectedContractId) => {
+          void openWorkloadRoute(`/contracts/${selectedContractId}/edit`);
+        }}
+        navigateToPolicy={(selectedContractId) => {
+          void openWorkloadRoute(`/contracts/policies?contractId=${encodeURIComponent(selectedContractId)}`, 'append');
+        }}
         navigateToRun={(selectedContractId, runId) =>
-          navigate(`/contracts/${selectedContractId}/runs/${runId}`)
+          void openWorkloadRoute(`/contracts/runs?contractId=${encodeURIComponent(selectedContractId)}&runId=${encodeURIComponent(runId)}`, 'append')
         }
         onChangeDraft={setDraft}
-        onCreateDraft={() =>
+        onCreateDraft={(selectedTargetType) =>
           setDraft(
             createNewDraft({
               targetItemId: searchParams.get('targetItemId') ?? searchParams.get('lakehouseId') ?? '',
               targetTablePath: searchParams.get('targetTablePath') ?? '',
-              targetType: parseTargetType(searchParams.get('targetType')),
+              targetType: selectedTargetType ?? parseTargetType(searchParams.get('targetType')),
             }),
           )
         }
@@ -273,9 +286,10 @@ interface EditorWorkspaceProps {
   loading: boolean;
   navigateToContracts: () => void;
   navigateToDetail: (contractId: string) => void;
+  navigateToPolicy: (contractId: string) => void;
   navigateToRun: (contractId: string, runId: string) => void;
   onChangeDraft: (draft: ContractDraft | null) => void;
-  onCreateDraft: () => void;
+  onCreateDraft: (targetType: ContractTargetType) => void;
   onValidationChange: (result: ContractValidationResult) => void;
   styles: ReturnType<typeof useStyles>;
   validationResult: ContractValidationResult | null;
@@ -292,6 +306,7 @@ function EditorWorkspace({
   loading,
   navigateToContracts,
   navigateToDetail,
+  navigateToPolicy,
   navigateToRun,
   onChangeDraft,
   onCreateDraft,
@@ -380,7 +395,9 @@ function EditorWorkspace({
         );
       }
 
-      navigateToDetail(savedContract.id);
+      if (!fabricItemId) {
+        navigateToDetail(savedContract.id);
+      }
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
       await sdk.notifyError('Save failed', message);
@@ -453,9 +470,17 @@ function EditorWorkspace({
         disabled: !draft,
         onClick: () => saveDraft('active'),
       }),
-      createRunNowAction({
+       createRunNowAction({
+         disabled: !draft?.id,
+         onClick: handleRunNow,
+       }),
+      createSettingsAction({
         disabled: !draft?.id,
-        onClick: handleRunNow,
+        onClick: () => {
+          if (draft?.id) {
+            navigateToPolicy(draft.id);
+          }
+        },
       }),
       createVersionHistoryAction({
         disabled: !draft?.id,
@@ -466,7 +491,7 @@ function EditorWorkspace({
         },
       }),
     ],
-    [draft, handleRunNow, navigateToDetail, saveDraft],
+    [draft, handleRunNow, navigateToDetail, navigateToPolicy, saveDraft],
   );
 
   return (
@@ -482,22 +507,13 @@ function EditorWorkspace({
 
       {view === 'empty' || !draft ? (
         <div className={styles.emptyState}>
-          <Caption1>Start from a valid ODCS template and refine the YAML in Monaco.</Caption1>
-          <Body1>The editor opens with a local item-editor ribbon, live validation panel and Fabric-safe SDK wrapper.</Body1>
-          <Button
-            appearance="primary"
-            onClick={() => {
-              onCreateDraft();
+          <NewContractTypeSelector
+            onConfirm={(selectedTargetType) => {
+              onCreateDraft(selectedTargetType);
               navigateTo('editor');
             }}
-          >
-            Start drafting
-          </Button>
-          {contractId ? (
-            <Button appearance="secondary" onClick={navigateToContracts}>
-              Back to contracts
-            </Button>
-          ) : null}
+            onCancel={contractId ? navigateToContracts : undefined}
+          />
         </div>
       ) : (
         <div className={styles.layout}>
