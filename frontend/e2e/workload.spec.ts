@@ -213,7 +213,7 @@ test.describe('3. Contract Editor', () => {
     await mockFabricPickerApi(page);
     await gotoStandalone(page, `contracts/new?workspaceId=${TEST_WORKSPACE_ID}`);
 
-    await page.getByRole('button', { name: /start drafting/i }).click();
+    await page.getByRole('button', { name: /create contract/i }).click();
 
     const lakehouseCombobox = page.getByRole('combobox', { name: /target lakehouse/i });
     await expect(lakehouseCombobox).toBeVisible({ timeout: 10_000 });
@@ -243,12 +243,11 @@ test.describe('3. Contract Editor', () => {
     await mockFabricPickerApi(page);
     await gotoStandalone(page, `contracts/new?workspaceId=${TEST_WORKSPACE_ID}`);
 
-    await page.getByRole('button', { name: /start drafting/i }).click();
+    // Select the Warehouse tile, then confirm
+    await page.getByRole('radio', { name: /warehouse/i }).click();
+    await page.getByRole('button', { name: /create contract/i }).click();
 
-    const targetTypeCombobox = page.getByRole('combobox', { name: /contract target type/i });
-    await targetTypeCombobox.click();
-    await page.getByRole('option', { name: 'Warehouse' }).click();
-
+    // Editor opens with Warehouse already selected; warehouse items should load
     const warehouseCombobox = page.getByRole('combobox', { name: /target warehouse/i });
     await expect(warehouseCombobox).toBeVisible({ timeout: 10_000 });
     await warehouseCombobox.click();
