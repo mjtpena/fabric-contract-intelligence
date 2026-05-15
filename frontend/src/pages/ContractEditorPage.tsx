@@ -3,6 +3,7 @@ import {
   Body1,
   Button,
   Caption1,
+  Checkbox,
   Field,
   Input,
   Spinner,
@@ -15,6 +16,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   createDefaultContractYaml,
   createContractClient,
+  extractServerWorkspaceId,
   synchronizeDraftYaml,
 } from '@/api/contractClient';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
@@ -496,13 +498,48 @@ function EditorWorkspace({
                 })
               }
             />
+            <Field label="Cross-workspace data store" style={{ alignSelf: 'center' }}>
+              <Checkbox
+                checked={draft.targetWorkspaceId !== ''}
+                label="Data store is in another workspace"
+                onChange={(_, data) =>
+                  onChangeDraft({ ...draft, targetWorkspaceId: data.checked ? ' ' : '' })
+                }
+              />
+            </Field>
+            {draft.targetWorkspaceId !== '' && (
+              <Field
+                hint="Enter the GUID of the workspace that contains the data store."
+                label="Target workspace ID"
+                validationMessage={
+                  draft.targetWorkspaceId.trim() !== '' && !isGuid(draft.targetWorkspaceId.trim())
+                    ? 'Must be a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).'
+                    : undefined
+                }
+                validationState={
+                  draft.targetWorkspaceId.trim() !== '' && !isGuid(draft.targetWorkspaceId.trim())
+                    ? 'error'
+                    : 'none'
+                }
+              >
+                <Input
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  value={draft.targetWorkspaceId}
+                  onChange={(_, data) => onChangeDraft({ ...draft, targetWorkspaceId: data.value })}
+                />
+              </Field>
+            )}
             <FabricTargetItemPicker
               apiBaseUrl={sdk.apiBaseUrl}
               getToken={sdk.getAccessToken}
               isReady={sdk.isReady}
               targetType={draft.targetType}
               value={draft.targetItemId}
-              workspaceId={sdk.workspaceId}
+              workspaceId={
+                draft.targetWorkspaceId && isGuid(draft.targetWorkspaceId.trim())
+                  ? draft.targetWorkspaceId.trim()
+                  : sdk.workspaceId
+              }
               onChange={(id) => onChangeDraft({
                 ...draft,
                 targetItemId: id,
@@ -517,7 +554,11 @@ function EditorWorkspace({
                 isReady={sdk.isReady}
                 lakehouseId={draft.targetItemId}
                 value={draft.targetTablePath}
-                workspaceId={sdk.workspaceId}
+                workspaceId={
+                  draft.targetWorkspaceId && isGuid(draft.targetWorkspaceId.trim())
+                    ? draft.targetWorkspaceId.trim()
+                    : sdk.workspaceId
+                }
                 onChange={(path) => onChangeDraft({ ...draft, targetTablePath: path })}
               />
             ) : (
@@ -601,6 +642,7 @@ function createNewDraft(seed: {
       status: 'draft',
       targetTablePath: targetPath,
       targetType: seed.targetType,
+      targetWorkspaceId: '',
       version: '1.0.0',
     }),
     ownerEmail: '',
@@ -609,6 +651,7 @@ function createNewDraft(seed: {
     targetLakehouseId: seed.targetType === 'lakehouse' ? seed.targetItemId : '',
     targetTablePath: targetPath,
     targetType: seed.targetType,
+    targetWorkspaceId: '',
     version: '1.0.0',
   };
 }
@@ -621,6 +664,7 @@ function prepareDraftForSave(draft: ContractDraft): ContractDraft {
       status: draft.status,
       targetTablePath: draft.targetTablePath,
       targetType: draft.targetType,
+      targetWorkspaceId: draft.targetWorkspaceId,
       version: draft.version,
     }),
   };
@@ -639,6 +683,7 @@ function toDraft(contract: ContractDetail): ContractDraft {
     targetLakehouseId: contract.targetLakehouseId ?? '',
     targetTablePath: contract.targetTablePath,
     targetType: contract.targetType ?? 'lakehouse',
+    targetWorkspaceId: extractServerWorkspaceId(contract.odcsYaml) ?? '',
     version: contract.version,
   };
 }
@@ -792,6 +837,7 @@ function normalizePersistedDraft(value: unknown): ContractDraft | null {
     targetLakehouseId: targetType === 'lakehouse' ? targetItemId ?? '' : '',
     targetTablePath,
     targetType,
+    targetWorkspaceId: typeof draft.targetWorkspaceId === 'string' ? draft.targetWorkspaceId : (extractServerWorkspaceId(odcsYaml) ?? ''),
     version,
   };
 }

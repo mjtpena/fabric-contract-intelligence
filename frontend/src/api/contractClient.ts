@@ -154,6 +154,7 @@ export function synchronizeDraftYaml(
     status: string;
     targetType?: ContractTargetType;
     targetTablePath: string;
+    targetWorkspaceId?: string;
     version: string;
   },
 ): string {
@@ -180,10 +181,38 @@ export function synchronizeDraftYaml(
   firstServer.type = typeof firstServer.type === 'string' && firstServer.type.length > 0 ? firstServer.type : 'azure';
   firstServer.location = metadata.targetTablePath;
   firstServer.format = getServerFormat(metadata.targetType ?? 'lakehouse');
+
+  // Cross-workspace: write workspaceId when provided, delete it when cleared.
+  if (metadata.targetWorkspaceId && isGuidString(metadata.targetWorkspaceId)) {
+    firstServer.workspaceId = metadata.targetWorkspaceId;
+  } else {
+    delete firstServer.workspaceId;
+  }
+
   servers[0] = firstServer;
   nextValue.servers = servers;
 
   return stringify(nextValue);
+}
+
+/** Extracts the workspaceId from the first server entry in an ODCS YAML string, or null if absent. */
+export function extractServerWorkspaceId(yaml: string): string | null {
+  try {
+    const document = parseDocument(yaml);
+    if (document.errors.length > 0) return null;
+    const value = document.toJSON() as unknown;
+    if (!isRecord(value)) return null;
+    const servers = Array.isArray(value.servers) ? value.servers : [];
+    if (servers.length === 0 || !isRecord(servers[0])) return null;
+    const wsId = servers[0].workspaceId;
+    return typeof wsId === 'string' && wsId.length > 0 ? wsId : null;
+  } catch {
+    return null;
+  }
+}
+
+function isGuidString(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function toContractClientError(response: Response): Promise<ContractClientError> {

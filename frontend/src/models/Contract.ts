@@ -162,6 +162,13 @@ export interface ContractDraft {
   targetLakehouseId: string;
   /** Optional version change note. */
   commitMessage: string;
+  /**
+   * Optional workspace GUID when the data store lives in a different workspace
+   * than the one owning this Orqentis contract item. When non-empty, enforcement
+   * calls Fabric REST APIs in this workspace instead of sdk.workspaceId.
+   * Maps to the YAML `servers[0].workspaceId` field.
+   */
+  targetWorkspaceId: string;
 }
 
 /**
