@@ -66,3 +66,24 @@ frontend/*.tsbuildinfo
 frontend/dist-types/
 frontend/vite.config.d.ts
 frontend/vite.config.js
+
+# Fabric DevGateway dev artifacts (generated, not committed)
+frontend/tools/dist/
+workload-dev-mode.json
+
+# Local dev / debug scripts (throwaway Playwright/CDP scripts)
+frontend/fabric-*.mjs
+frontend/fabric-screenshots/
+frontend/fabric-token-config.json
+frontend/.auth/
+frontend/.env.dev
+
+# Build / publish output (CI artefacts, never commit)
+**/publish_output/
+**/_publish/
+backend/*.zip
+orqentis-api.zip
+publish/
+
+# Test run artefacts
+test-results/

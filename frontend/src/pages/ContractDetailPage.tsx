@@ -49,6 +49,9 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground1,
     padding: tokens.spacingHorizontalL,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
   },
   yaml: {
     height: '32rem',
@@ -131,7 +134,7 @@ export function ContractDetailPage() {
               <Body1>{contract.ownerEmail}</Body1>
             </div>
             <div className={styles.card}>
-              <Caption1>Target table</Caption1>
+              <Caption1>Target</Caption1>
               <Body1>{contract.targetTablePath}</Body1>
             </div>
             <div className={styles.card}>
