@@ -1,12 +1,8 @@
 import { makeStyles, tokens } from '@fluentui/react-components';
 import {
   Button,
-  Body1,
   Body1Strong,
   Caption1,
-  Display,
-  LargeTitle,
-  Title2,
 } from '@fluentui/react-components';
 import {
   DocumentCheckmarkRegular,
@@ -19,105 +15,104 @@ import {
   DatabaseLinkRegular,
   ClipboardTaskRegular,
   SparkleRegular,
+  LockClosedRegular,
+  AlertRegular,
+  BrainCircuitRegular,
+  CodeRegular,
+  LayerRegular,
 } from '@fluentui/react-icons';
 
 const FABRIC_URL = 'https://app.fabric.microsoft.com/workloadhub/Org.Orqentis';
 const GETTING_STARTED_URL = '/docs/getting-started.html';
 const SUPPORT_URL = '/support.html';
+const GITHUB_URL = 'https://github.com/mjtpena/fabric-contract-intelligence';
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Styles
+───────────────────────────────────────────────────────────────────────────── */
 const useStyles = makeStyles({
   root: {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#0a0e1a',
+    backgroundColor: '#060912',
     color: '#ffffff',
     fontFamily: tokens.fontFamilyBase,
     overflowX: 'hidden',
   },
 
-  /* ---- Nav ---- */
+  /* NAV */
   nav: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 48px',
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
-    backdropFilter: 'blur(12px)',
+    padding: '18px 56px',
+    borderBottom: '1px solid rgba(255,255,255,0.07)',
+    backdropFilter: 'blur(16px)',
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    backgroundColor: 'rgba(10,14,26,0.85)',
+    backgroundColor: 'rgba(6,9,18,0.9)',
   },
   navLogo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
+    textDecoration: 'none',
   },
   navLogoMark: {
-    width: '36px',
-    height: '36px',
+    width: '34px',
+    height: '34px',
     borderRadius: '8px',
-    background: 'linear-gradient(135deg, #0F6CBD 0%, #115ea3 100%)',
+    background: 'linear-gradient(135deg, #0F6CBD 0%, #3a96dd 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  navLinks: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  navLinkText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: '14px',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    ':hover': { color: '#fff', backgroundColor: 'rgba(255,255,255,0.06)' },
   },
 
-  /* ---- Hero ---- */
+  /* HERO */
   hero: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    padding: '100px 48px 80px',
+    padding: '88px 48px 0',
     position: 'relative',
-  },
-  heroBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 16px',
-    borderRadius: '999px',
-    border: '1px solid rgba(15,108,189,0.5)',
-    backgroundColor: 'rgba(15,108,189,0.12)',
-    marginBottom: '28px',
-    fontSize: '13px',
-    color: '#6cb4f5',
-    fontWeight: 600,
-  },
-  heroTitle: {
-    maxWidth: '760px',
-    lineHeight: '1.1',
-    marginBottom: '24px',
-    background: 'linear-gradient(135deg, #ffffff 0%, #a8c8f0 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  },
-  heroSub: {
-    maxWidth: '600px',
-    marginBottom: '44px',
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: '18px',
-    lineHeight: '1.6',
-  },
-  heroActions: {
-    display: 'flex',
-    gap: '16px',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
   heroGlow: {
     position: 'absolute',
-    top: '60px',
+    top: 0,
     left: '50%',
     transform: 'translateX(-50%)',
-    width: '800px',
-    height: '400px',
-    background: 'radial-gradient(ellipse at center, rgba(15,108,189,0.18) 0%, transparent 70%)',
+    width: '900px',
+    height: '500px',
+    background: 'radial-gradient(ellipse at 50% 0%, rgba(15,108,189,0.22) 0%, transparent 68%)',
     pointerEvents: 'none',
-    zIndex: 0,
+  },
+  heroGlow2: {
+    position: 'absolute',
+    top: '120px',
+    left: '20%',
+    width: '400px',
+    height: '300px',
+    background: 'radial-gradient(ellipse, rgba(100,60,200,0.08) 0%, transparent 70%)',
+    pointerEvents: 'none',
   },
   heroContent: {
     position: 'relative',
@@ -125,700 +120,1052 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    maxWidth: '820px',
+  },
+  heroBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '5px 14px',
+    borderRadius: '999px',
+    border: '1px solid rgba(15,108,189,0.45)',
+    backgroundColor: 'rgba(15,108,189,0.1)',
+    marginBottom: '28px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#6cb4f5',
+    letterSpacing: '0.03em',
+  },
+  heroHeadline: {
+    fontSize: 'clamp(38px, 5.5vw, 68px)',
+    fontWeight: 800,
+    lineHeight: 1.08,
+    letterSpacing: '-0.025em',
+    marginBottom: '24px',
+    background: 'linear-gradient(160deg, #ffffff 30%, #7ab8e8 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  heroSub: {
+    fontSize: '19px',
+    lineHeight: '1.65',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: '44px',
+    maxWidth: '620px',
+  },
+  heroActions: {
+    display: 'flex',
+    gap: '14px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: '64px',
   },
 
-  /* ---- Stats Bar ---- */
-  statsBar: {
+  /* BROWSER CHROME MOCKUP */
+  browserWrap: {
+    position: 'relative',
+    zIndex: 1,
+    width: '100%',
+    maxWidth: '1100px',
+    margin: '0 auto',
+    borderRadius: '14px 14px 0 0',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderBottom: 'none',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+    overflow: 'hidden',
+    boxShadow: '0 -20px 80px rgba(15,108,189,0.15), 0 0 0 1px rgba(255,255,255,0.05)',
+  },
+  browserBar: {
     display: 'flex',
-    justifyContent: 'center',
-    gap: '64px',
-    padding: '40px 48px',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 18px',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  browserDot: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
+  browserUrl: {
+    flex: 1,
+    height: '22px',
+    borderRadius: '6px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 10px',
+    fontSize: '11px',
+    color: 'rgba(255,255,255,0.35)',
+    marginLeft: '8px',
+    fontFamily: tokens.fontFamilyMonospace,
+  },
+  browserScreenshot: {
+    width: '100%',
+    display: 'block',
+    objectFit: 'cover',
+  },
+
+  /* TRUST BAR */
+  trustBar: {
     borderTop: '1px solid rgba(255,255,255,0.06)',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'rgba(255,255,255,0.015)',
+    padding: '24px 48px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '0px',
     flexWrap: 'wrap',
   },
-  stat: {
+  trustItem: {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: '4px',
-  },
-  statValue: {
-    fontSize: '32px',
-    fontWeight: 700,
-    color: '#0F6CBD',
-  },
-  statLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    gap: '8px',
+    padding: '8px 28px',
+    color: 'rgba(255,255,255,0.45)',
     fontSize: '13px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
+    fontWeight: 500,
+    borderRight: '1px solid rgba(255,255,255,0.08)',
+    ':last-child': { borderRight: 'none' },
+  },
+  trustItemIcon: {
+    color: '#0F6CBD',
+    fontSize: '16px',
+    flexShrink: 0,
   },
 
-  /* ---- Items Section ---- */
+  /* SECTION BASE */
+  sectionWrapper: {
+    display: 'flex',
+    justifyContent: 'center',
+    width: '100%',
+  },
   section: {
-    padding: '96px 48px',
-    maxWidth: '1200px',
-    margin: '0 auto',
+    padding: '96px 56px',
+    maxWidth: '1160px',
     width: '100%',
     boxSizing: 'border-box',
   },
-  sectionLabel: {
-    color: '#0F6CBD',
+  sectionNarrow: {
+    padding: '96px 56px',
+    maxWidth: '860px',
+    width: '100%',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+    margin: '0 auto',
+  },
+  eyebrow: {
+    fontSize: '12px',
     fontWeight: 700,
-    fontSize: '13px',
-    textTransform: 'uppercase',
     letterSpacing: '0.1em',
+    textTransform: 'uppercase' as const,
+    color: '#0F6CBD',
     marginBottom: '16px',
   },
-  sectionTitle: {
-    marginBottom: '16px',
-    color: '#ffffff',
+  heading2: {
+    fontSize: 'clamp(28px, 3.5vw, 42px)',
+    fontWeight: 800,
+    lineHeight: 1.15,
+    letterSpacing: '-0.02em',
+    color: '#fff',
+    marginBottom: '20px',
   },
-  sectionSub: {
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: '56px',
+  headingSub: {
     fontSize: '17px',
-    maxWidth: '600px',
+    lineHeight: '1.65',
+    color: 'rgba(255,255,255,0.55)',
+    maxWidth: '540px',
+    marginBottom: '56px',
+  },
+
+  /* PROBLEM CARDS */
+  problemGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '20px',
+  },
+  problemCard: {
+    borderRadius: '16px',
+    border: '1px solid rgba(255,80,80,0.15)',
+    backgroundColor: 'rgba(255,40,40,0.04)',
+    padding: '28px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  problemIcon: {
+    fontSize: '22px',
+    color: '#ff6b6b',
+    marginBottom: '4px',
+  },
+  problemTitle: {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#fff',
+  },
+  problemText: {
+    fontSize: '14px',
     lineHeight: '1.6',
+    color: 'rgba(255,255,255,0.55)',
   },
-  cards: {
+
+  /* ALTERNATING FEATURE ROWS */
+  featureRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '24px',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '64px',
+    alignItems: 'center',
+    marginBottom: '96px',
+    ':last-child': { marginBottom: 0 },
   },
-  quickCards: {
+  featureRowReverse: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '16px',
-    marginTop: '24px',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '64px',
+    alignItems: 'center',
+    marginBottom: '96px',
+    direction: 'rtl' as const,
   },
-  quickCard: {
-    borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: '20px',
+  featureRowText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    direction: 'ltr' as const,
+  },
+  featureTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 12px',
+    borderRadius: '999px',
+    border: '1px solid rgba(15,108,189,0.4)',
+    backgroundColor: 'rgba(15,108,189,0.1)',
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#6cb4f5',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase' as const,
+    width: 'fit-content',
+  },
+  featureHeading: {
+    fontSize: '28px',
+    fontWeight: 800,
+    lineHeight: 1.2,
+    color: '#fff',
+    letterSpacing: '-0.015em',
+  },
+  featureBody: {
+    fontSize: '16px',
+    lineHeight: '1.7',
+    color: 'rgba(255,255,255,0.58)',
+  },
+  featureList: {
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
+    marginTop: '4px',
   },
-  quickCardTitle: {
-    color: '#ffffff',
-    fontWeight: 600,
-    fontSize: '15px',
-  },
-  quickCardText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: '13px',
+  featureListItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.65)',
     lineHeight: '1.5',
   },
-  quickCardActions: {
-    display: 'flex',
-    justifyContent: 'flex-start',
-    marginTop: '6px',
+  featureListCheck: {
+    color: '#0F6CBD',
+    fontSize: '16px',
+    flexShrink: 0,
+    marginTop: '1px',
   },
-  card: {
+  featureImageWrap: {
+    borderRadius: '14px',
+    border: '1px solid rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+    direction: 'ltr' as const,
+    boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+  },
+  featureImage: {
+    width: '100%',
+    display: 'block',
+  },
+
+  /* ITEMS CARDS */
+  itemsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '24px',
+  },
+  itemCard: {
     borderRadius: '16px',
     border: '1px solid rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     padding: '32px',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    backdropFilter: 'blur(8px)',
     transition: 'border-color 0.2s, background-color 0.2s',
     ':hover': {
-      backgroundColor: 'rgba(15,108,189,0.08)',
+      backgroundColor: 'rgba(15,108,189,0.06)',
     },
   },
-  cardIcon: {
+  itemCardIcon: {
     width: '48px',
     height: '48px',
     borderRadius: '12px',
-    backgroundColor: 'rgba(15,108,189,0.2)',
+    backgroundColor: 'rgba(15,108,189,0.18)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#0F6CBD',
+    color: '#3a96dd',
     fontSize: '24px',
   },
-  cardTitle: {
-    color: '#ffffff',
-    fontWeight: 700,
-    fontSize: '18px',
-    marginBottom: '4px',
-  },
-  cardBadge: {
+  itemCardBadge: {
     display: 'inline-block',
     padding: '2px 8px',
     borderRadius: '4px',
-    backgroundColor: 'rgba(15,108,189,0.25)',
+    backgroundColor: 'rgba(15,108,189,0.2)',
     color: '#6cb4f5',
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: 700,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: '0.06em',
-    marginBottom: '8px',
+    marginBottom: '6px',
+    width: 'fit-content',
   },
-  cardDesc: {
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: '1.6',
+  itemCardTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#fff',
+  },
+  itemCardDesc: {
     fontSize: '14px',
+    lineHeight: '1.65',
+    color: 'rgba(255,255,255,0.55)',
   },
 
-  /* ---- Features ---- */
-  featuresBg: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+  /* PLATFORM FEATURES GRID */
+  platformBg: {
+    backgroundColor: 'rgba(255,255,255,0.018)',
     borderTop: '1px solid rgba(255,255,255,0.06)',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
     width: '100%',
   },
-  featuresGrid: {
+  platformGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '32px',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '2px',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginTop: '0px',
   },
-  feature: {
+  platformCell: {
+    backgroundColor: '#0a0f1e',
+    padding: '32px 28px',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
   },
-  featureIcon: {
+  platformIcon: {
     color: '#0F6CBD',
-    fontSize: '28px',
+    fontSize: '26px',
+    marginBottom: '4px',
   },
-  featureTitle: {
-    color: '#ffffff',
-    fontWeight: 600,
-    fontSize: '16px',
+  platformTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#fff',
   },
-  featureDesc: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: '14px',
+  platformDesc: {
+    fontSize: '13px',
     lineHeight: '1.6',
+    color: 'rgba(255,255,255,0.5)',
   },
 
-  /* ---- CTA ---- */
-  ctaBg: {
-    width: '100%',
+  /* STATS STRIP */
+  statsStrip: {
     display: 'flex',
     justifyContent: 'center',
-    padding: '96px 48px',
+    gap: '0',
+    padding: '0',
+    backgroundColor: 'rgba(15,108,189,0.08)',
+    borderTop: '1px solid rgba(15,108,189,0.2)',
+    borderBottom: '1px solid rgba(15,108,189,0.2)',
+    flexWrap: 'wrap',
+  },
+  statItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '36px 56px',
+    borderRight: '1px solid rgba(15,108,189,0.15)',
+    ':last-child': { borderRight: 'none' },
+  },
+  statNum: {
+    fontSize: '38px',
+    fontWeight: 800,
+    color: '#3a96dd',
+    lineHeight: 1,
+    marginBottom: '6px',
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.45)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.07em',
+    fontWeight: 600,
+    textAlign: 'center' as const,
+  },
+
+  /* HOW IT WORKS */
+  stepsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '2px',
+    position: 'relative',
+  },
+  step: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+    padding: '36px',
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    position: 'relative',
+  },
+  stepNum: {
+    fontSize: '11px',
+    fontWeight: 800,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase' as const,
+    color: '#0F6CBD',
+    marginBottom: '4px',
+  },
+  stepTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#fff',
+  },
+  stepText: {
+    fontSize: '14px',
+    lineHeight: '1.65',
+    color: 'rgba(255,255,255,0.55)',
+  },
+  stepConnector: {
+    position: 'absolute',
+    top: '50px',
+    right: '-18px',
+    color: 'rgba(255,255,255,0.15)',
+    zIndex: 2,
+    fontSize: '20px',
+  },
+
+  /* CTA */
+  ctaWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '0 48px 96px',
   },
   ctaBox: {
-    maxWidth: '720px',
+    maxWidth: '780px',
     width: '100%',
     textAlign: 'center',
     borderRadius: '24px',
-    border: '1px solid rgba(15,108,189,0.35)',
-    background: 'linear-gradient(135deg, rgba(15,108,189,0.15) 0%, rgba(17,94,163,0.08) 100%)',
-    padding: '64px 48px',
-    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(15,108,189,0.3)',
+    background:
+      'linear-gradient(135deg, rgba(15,108,189,0.14) 0%, rgba(17,50,100,0.1) 100%)',
+    padding: '72px 56px',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  ctaTitle: {
-    color: '#ffffff',
+  ctaGlow: {
+    position: 'absolute',
+    top: '-60px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '500px',
+    height: '300px',
+    background:
+      'radial-gradient(ellipse, rgba(15,108,189,0.2) 0%, transparent 70%)',
+    pointerEvents: 'none',
+  },
+  ctaHeading: {
+    fontSize: '36px',
+    fontWeight: 800,
+    color: '#fff',
+    lineHeight: 1.15,
     marginBottom: '16px',
+    position: 'relative',
   },
   ctaSub: {
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: '40px',
-    fontSize: '16px',
-    lineHeight: '1.6',
-  },
-  stepGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '18px',
-    marginTop: '28px',
-  },
-  stepCard: {
-    borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: '18px',
-  },
-  stepNumber: {
-    color: '#6cb4f5',
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    marginBottom: '8px',
-  },
-  stepTitle: {
-    color: '#ffffff',
-    fontWeight: 600,
-    marginBottom: '6px',
-  },
-  stepText: {
+    fontSize: '17px',
     color: 'rgba(255,255,255,0.58)',
-    fontSize: '13px',
-    lineHeight: '1.5',
+    lineHeight: '1.65',
+    marginBottom: '40px',
+    position: 'relative',
   },
-  screenshotGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '20px',
-  },
-  screenshotCard: {
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    overflow: 'hidden',
+  ctaButtons: {
     display: 'flex',
-    flexDirection: 'column',
-  },
-  screenshotImage: {
-    width: '100%',
-    height: 'auto',
-    display: 'block',
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  screenshotBody: {
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  screenshotTitle: {
-    color: '#ffffff',
-    fontWeight: 600,
-    fontSize: '15px',
-  },
-  screenshotText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: '13px',
-    lineHeight: '1.5',
+    gap: '14px',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    position: 'relative',
   },
 
-  /* ---- Footer ---- */
+  /* FOOTER */
   footer: {
-    borderTop: '1px solid rgba(255,255,255,0.06)',
-    padding: '32px 48px',
+    borderTop: '1px solid rgba(255,255,255,0.07)',
+    padding: '32px 56px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.35)',
     fontSize: '13px',
     flexWrap: 'wrap',
     gap: '12px',
   },
+  footerLinks: {
+    display: 'flex',
+    gap: '24px',
+  },
+  footerLink: {
+    color: 'rgba(255,255,255,0.35)',
+    textDecoration: 'none',
+    ':hover': { color: 'rgba(255,255,255,0.7)' },
+  },
 });
 
-interface ItemCardProps {
-  icon: React.ReactElement;
-  title: string;
-  description: string;
-  badge?: string;
-}
+/* ─────────────────────────────────────────────────────────────────────────────
+   Small reusable components
+───────────────────────────────────────────────────────────────────────────── */
 
-function ItemCard({ icon, title, description, badge }: ItemCardProps) {
+function BrowserMockup({ src, alt }: { src: string; alt: string }) {
   const styles = useStyles();
   return (
-    <div className={styles.card}>
-      <div className={styles.cardIcon}>{icon}</div>
-      <div>
-        {badge ? <span className={styles.cardBadge}>{badge}</span> : null}
-        <div className={styles.cardTitle}>{title}</div>
+    <div className={styles.browserWrap}>
+      <div className={styles.browserBar}>
+        <div className={styles.browserDot} style={{ backgroundColor: '#ff5f57' }} />
+        <div className={styles.browserDot} style={{ backgroundColor: '#ffbd2e' }} />
+        <div className={styles.browserDot} style={{ backgroundColor: '#28c840' }} />
+        <div className={styles.browserUrl}>
+          app.fabric.microsoft.com · Orqentis Showcase
+        </div>
       </div>
-      <Body1 className={styles.cardDesc}>{description}</Body1>
+      <img src={src} alt={alt} className={styles.browserScreenshot} loading="eager" />
     </div>
   );
 }
 
-interface FeatureProps {
-  icon: React.ReactElement;
-  title: string;
-  description: string;
+interface FeatureRowProps {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  bullets: string[];
+  imgSrc: string;
+  imgAlt: string;
+  reverse?: boolean;
+  tag?: React.ReactElement;
 }
 
-function Feature({ icon, title, description }: FeatureProps) {
+function FeatureRow({ eyebrow, heading, body, bullets, imgSrc, imgAlt, reverse }: FeatureRowProps) {
   const styles = useStyles();
+  const text = (
+    <div className={styles.featureRowText}>
+      <span className={styles.eyebrow}>{eyebrow}</span>
+      <div className={styles.featureHeading}>{heading}</div>
+      <div className={styles.featureBody}>{body}</div>
+      <div className={styles.featureList}>
+        {bullets.map((b) => (
+          <div key={b} className={styles.featureListItem}>
+            <CheckmarkCircleRegular className={styles.featureListCheck} />
+            <span>{b}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  const image = (
+    <div className={styles.featureImageWrap}>
+      <img src={imgSrc} alt={imgAlt} className={styles.featureImage} loading="lazy" />
+    </div>
+  );
   return (
-    <div className={styles.feature}>
-      <div className={styles.featureIcon}>{icon}</div>
-      <div className={styles.featureTitle}>{title}</div>
-      <div className={styles.featureDesc}>{description}</div>
+    <div className={reverse ? styles.featureRowReverse : styles.featureRow}>
+      {text}
+      {image}
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Main Page
+───────────────────────────────────────────────────────────────────────────── */
 export function LandingPage() {
   const styles = useStyles();
-  const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
-  const productShots = [
-    {
-      src: '/images/screenshots/fabric-contract-editor.png',
-      alt: 'Orqentis Showcase Contract editor running inside Microsoft Fabric',
-      title: 'Active contract editor in Fabric',
-      text: 'The production Fabric item restores the active Orqentis Showcase Contract, including Lakehouse/table selectors, validation, and schema preview.',
-    },
-    {
-      src: '/images/screenshots/fabric-contract-report.png',
-      alt: 'Orqentis Contract Report item running inside Microsoft Fabric',
-      title: 'Persisted enforcement report',
-      text: 'The report item shows the real persisted OWID CO2 enforcement run with passed status, breach score, and run timestamp.',
-    },
-    {
-      src: '/images/screenshots/fabric-lakehouse-table.png',
-      alt: 'Orqentis showcase Lakehouse table open in Microsoft Fabric',
-      title: 'Real Lakehouse table evidence',
-      text: 'The showcase Lakehouse contains the owid_co2_demo Delta table with 25 public OWID rows used by the live contract.',
-    },
-  ];
+  const open = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
 
   return (
     <div className={styles.root}>
-      {/* Nav */}
+
+      {/* ── NAV ──────────────────────────────────────────────────────────── */}
       <nav className={styles.nav}>
         <div className={styles.navLogo}>
           <div className={styles.navLogoMark}>
-            <DocumentCheckmarkRegular style={{ fontSize: 20, color: '#fff' }} />
+            <DocumentCheckmarkRegular style={{ fontSize: 18, color: '#fff' }} />
           </div>
-          <Body1Strong style={{ color: '#fff', fontSize: 18 }}>Orqentis</Body1Strong>
+          <Body1Strong style={{ color: '#fff', fontSize: 17 }}>Orqentis</Body1Strong>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Button appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
-            Getting started
-          </Button>
+        <div className={styles.navLinks}>
+          <a className={styles.navLinkText} href={GETTING_STARTED_URL} target="_blank" rel="noopener noreferrer">Docs</a>
+          <a className={styles.navLinkText} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a className={styles.navLinkText} href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">Support</a>
           <Button
             appearance="primary"
             icon={<OpenRegular />}
             iconPosition="after"
-            onClick={() => openExternal(FABRIC_URL)}
+            size="small"
+            style={{ marginLeft: 8 }}
+            onClick={() => open(FABRIC_URL)}
           >
             Open in Fabric
           </Button>
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className={styles.hero}>
         <div className={styles.heroGlow} />
+        <div className={styles.heroGlow2} />
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
-            <SparkleRegular style={{ fontSize: 14 }} />
-            AI-native contract intelligence for Microsoft Fabric
+            <SparkleRegular style={{ fontSize: 13 }} />
+            Native Microsoft Fabric Workload · ODCS v3.1.0
           </div>
-          <Display className={styles.heroTitle}>
-            The AI control plane for trusted Fabric data products
-          </Display>
-          <div className={styles.heroSub}>
-            Orqentis binds contracts across Lakehouses, Warehouses, Eventhouse/KQL databases,
-            Semantic Models, and Fabric SQL using delegated Fabric adapters, while AI drafts
-            contracts, explains risk, and recommends remediation.
-          </div>
+          <h1 className={styles.heroHeadline}>
+            Data contracts that<br />live inside Fabric
+          </h1>
+          <p className={styles.heroSub}>
+            Orqentis enforces Open Data Contract Standard contracts at the Delta table layer —
+            authored by AI, validated in real-time, and visible across every Fabric workspace.
+            No external pipelines. No YAML spelunking.
+          </p>
           <div className={styles.heroActions}>
             <Button
               appearance="primary"
               size="large"
               icon={<ArrowRightRegular />}
               iconPosition="after"
-              onClick={() => openExternal(FABRIC_URL)}
+              onClick={() => open(FABRIC_URL)}
             >
-              Open in Fabric
+              Get started free
             </Button>
             <Button
               appearance="secondary"
               size="large"
               icon={<ClipboardTaskRegular />}
-              onClick={() => openExternal(GETTING_STARTED_URL)}
+              onClick={() => open(GETTING_STARTED_URL)}
             >
-              Getting started
-            </Button>
-            <Button
-              appearance="outline"
-              size="large"
-              style={{ borderColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
-              onClick={() => openExternal(SUPPORT_URL)}
-            >
-              Support
+              View documentation
             </Button>
           </div>
         </div>
+        <BrowserMockup
+          src="/images/screenshots/fabric-contract-editor.png"
+          alt="Orqentis contract editor open inside Microsoft Fabric showing a YAML data contract with live validation"
+        />
       </section>
 
-      {/* Stats */}
-      <div className={styles.statsBar}>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>5</span>
-          <span className={styles.statLabel}>Fabric target types</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>25</span>
-          <span className={styles.statLabel}>OWID Delta rows</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>AI</span>
-          <span className={styles.statLabel}>Author / score / remediate</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>ODCS v3.1.0</span>
-          <span className={styles.statLabel}>Schema standard</span>
-        </div>
+      {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
+      <div className={styles.trustBar}>
+        {[
+          { icon: <TableLightningRegular />, text: 'Lakehouse · Warehouse · Eventhouse · SQL DB' },
+          { icon: <LockClosedRegular />, text: 'OBO token — no app identity on data plane' },
+          { icon: <CodeRegular />, text: 'ODCS v3.1.0 JSON Schema enforced' },
+          { icon: <BrainCircuitRegular />, text: 'GPT-4o authoring, scoring & remediation' },
+          { icon: <LayerRegular />, text: 'Fabric-native Fluent UI theming' },
+        ].map(({ icon, text }) => (
+          <div key={text} className={styles.trustItem}>
+            <span className={styles.trustItemIcon}>{icon}</span>
+            <span>{text}</span>
+          </div>
+        ))}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>AI value proposition</div>
-          <Title2 className={styles.sectionTitle}>From static contracts to AI-assisted governance</Title2>
-          <div className={styles.sectionSub}>
-            The investable wedge is not "AI writes YAML". It is a governed feedback loop that helps
-            Fabric teams create contracts faster, understand blast radius, and move from breach
-            detection to recommended action.
+      {/* ── PROBLEM ──────────────────────────────────────────────────────── */}
+      <div className={styles.sectionWrapper}>
+        <div className={styles.section}>
+          <div className={styles.eyebrow}>The problem</div>
+          <h2 className={styles.heading2}>Data quality issues cost millions — and stay invisible</h2>
+          <div className={styles.headingSub}>
+            Most data teams detect contract breaches in dashboards, not at the source.
+            By then, downstream consumers are already wrong.
           </div>
-          <div className={styles.cards}>
-            <ItemCard
-              badge="Author"
-              icon={<SparkleRegular />}
-              title="Contract co-author"
-              description="Generate ODCS drafts from Fabric target metadata and let teams refine the contract instead of starting from a blank YAML file."
-            />
-            <ItemCard
-              badge="Prioritize"
-              icon={<ChartMultipleRegular />}
-              title="Breach impact scoring"
-              description="Convert validation failures into explainable risk scores so data teams know which issues threaten downstream analytics, SLAs, and executive reports first."
-            />
-            <ItemCard
-              badge="Resolve"
-              icon={<ClipboardTaskRegular />}
-              title="Remediation advisor"
-              description="Translate schema, freshness, and quality failures into concrete producer actions, reducing mean time to restore trusted data products."
-            />
-            <ItemCard
-              badge="Ask"
-              icon={<DatabaseLinkRegular />}
-              title="Natural-language governance"
-              description="Let platform owners query contracts, owners, runs, and policies in plain English across Fabric workspaces instead of spelunking YAML and logs."
-            />
-          </div>
-        </section>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>Quick start</div>
-          <Title2 className={styles.sectionTitle}>Launch in three steps</Title2>
-          <div className={styles.sectionSub}>
-            This is the verified path in the production showcase workspace.
-          </div>
-          <div className={styles.stepGrid}>
-            <div className={styles.stepCard}>
-              <div className={styles.stepNumber}>Step 1</div>
-                <div className={styles.stepTitle}>Create or import a contract</div>
-                <div className={styles.stepText}>
-                  Open the Orqentis Showcase Contract and bind it to the OWID CO2 Delta table.
+          <div className={styles.problemGrid}>
+            {[
+              {
+                icon: <AlertRegular />,
+                title: 'Breaches discovered downstream',
+                text: 'Schema changes, null fields, and stale data surface in executive reports — hours or days after the damage is done.',
+              },
+              {
+                icon: <DatabaseLinkRegular />,
+                title: 'Contracts live outside your data platform',
+                text: 'Spreadsheets, Confluence pages, and standalone YAML repos have no runtime connection to your actual Delta tables.',
+              },
+              {
+                icon: <ClipboardTaskRegular />,
+                title: 'Governance is manual and tribal',
+                text: 'Data producers and consumers rely on Slack threads and emails to agree on data shape. No audit trail. No enforcement.',
+              },
+            ].map(({ icon, title, text }) => (
+              <div key={title} className={styles.problemCard}>
+                <div className={styles.problemIcon}>{icon}</div>
+                <div className={styles.problemTitle}>{title}</div>
+                <div className={styles.problemText}>{text}</div>
               </div>
-            </div>
-            <div className={styles.stepCard}>
-              <div className={styles.stepNumber}>Step 2</div>
-                <div className={styles.stepTitle}>Define enforcement policy</div>
-                <div className={styles.stepText}>
-                  Attach policy configuration for enforcement thresholds and alert routing.
-              </div>
-            </div>
-            <div className={styles.stepCard}>
-              <div className={styles.stepNumber}>Step 3</div>
-                <div className={styles.stepTitle}>Run and triage</div>
-                <div className={styles.stepText}>
-                  Review the persisted Contract Report and Lakehouse data used by the run.
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Browser captures */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>Production evidence</div>
-          <Title2 className={styles.sectionTitle}>Screenshots from the live Fabric tenant</Title2>
-          <div className={styles.sectionSub}>
-            Captured from Microsoft Fabric after the latest production deployment, not mock standalone routes.
-          </div>
-          <div className={styles.screenshotGrid}>
-            {productShots.map((shot) => (
-              <article className={styles.screenshotCard} key={shot.src}>
-                <img className={styles.screenshotImage} src={shot.src} alt={shot.alt} loading="lazy" />
-                <div className={styles.screenshotBody}>
-                  <div className={styles.screenshotTitle}>{shot.title}</div>
-                  <div className={styles.screenshotText}>{shot.text}</div>
-                </div>
-              </article>
             ))}
           </div>
-        </section>
-      </div>
-
-      {/* Workload Items */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>Fabric workload items</div>
-          <Title2 className={styles.sectionTitle}>Three items, one workflow</Title2>
-          <div className={styles.sectionSub}>
-            Create, enforce, and audit data contracts end-to-end without leaving Microsoft Fabric.
-          </div>
-          <div className={styles.cards}>
-            <ItemCard
-              badge="Fabric item"
-              icon={<DocumentCheckmarkRegular />}
-              title="Data Contract"
-              description="Author and restore ODCS v3.1.0 contracts with Lakehouse/table dropdowns, Monaco YAML, and inline JSON Schema validation."
-            />
-            <ItemCard
-              badge="Fabric item"
-              icon={<ShieldCheckmarkRegular />}
-              title="Contract Policy"
-              description="Configure enforcement thresholds and policy routing for contract breach handling."
-            />
-            <ItemCard
-              badge="Fabric item"
-              icon={<ChartMultipleRegular />}
-              title="Contract Report"
-              description="Open persisted run history with status, breach score, trigger timestamp, and audit drill-through."
-            />
-          </div>
-        </section>
-      </div>
-
-      {/* Features */}
-      <div className={styles.featuresBg}>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <section className={styles.section}>
-            <div className={styles.sectionLabel}>Platform capabilities</div>
-            <Title2 className={styles.sectionTitle}>Built for the Fabric ecosystem</Title2>
-            <div className={styles.sectionSub}>
-              Orqentis uses Fabric's extensibility APIs, OneLake OBO tokens, and native Fluent UI theming.
-            </div>
-            <div className={styles.featuresGrid}>
-              <Feature
-                icon={<ShieldCheckmarkRegular style={{ fontSize: 28 }} />}
-                title="OBO token security"
-                description="Every Delta read uses the calling user's delegated On-Behalf-Of token. Application identity never touches data-plane operations."
-              />
-              <Feature
-                icon={<TableLightningRegular style={{ fontSize: 28 }} />}
-                title="AI governance loop"
-                description="AI-assisted authoring, breach scoring, remediation, and natural-language query are implemented with timeout, retry, and fallback behavior."
-              />
-              <Feature
-                icon={<DatabaseLinkRegular style={{ fontSize: 28 }} />}
-                title="Delta table enforcement"
-                description="Enforcement runs read live Delta log snapshots from OneLake and evaluate schema, freshness, nullability, and custom rule sets."
-              />
-              <Feature
-                icon={<CheckmarkCircleRegular style={{ fontSize: 28 }} />}
-                title="ODCS v3.1.0 standard"
-                description="Contracts are validated against the Open Data Contract Standard v3.1.0 JSON Schema. Non-conformant YAML is never persisted as active."
-              />
-              <Feature
-                icon={<ArrowRightRegular style={{ fontSize: 28 }} />}
-                title="Activator integration"
-                description="Policy-based breach dispatch supports Activator/webhook-style routing with correlation-aware logging."
-              />
-              <Feature
-                icon={<ChartMultipleRegular style={{ fontSize: 28 }} />}
-                title="Correlation tracing"
-                description="Every API response carries X-Correlation-Id, propagated to all downstream calls — OpenAI, OneLake, Activator — for end-to-end observability."
-              />
-            </div>
-
-            <div className={styles.quickCards}>
-              <div className={styles.quickCard}>
-                <div className={styles.quickCardTitle}>Contracts</div>
-                <div className={styles.quickCardText}>Author, validate, activate, and run ODCS contracts.</div>
-                <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => openExternal(FABRIC_URL)}>
-                    Open in Fabric
-                  </Button>
-                </div>
-              </div>
-              <div className={styles.quickCard}>
-                <div className={styles.quickCardTitle}>Policies</div>
-                <div className={styles.quickCardText}>Configure thresholds and dispatch channels per workspace.</div>
-                <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
-                    Learn more
-                  </Button>
-                </div>
-              </div>
-              <div className={styles.quickCard}>
-                <div className={styles.quickCardTitle}>Alerts</div>
-                <div className={styles.quickCardText}>Review recent breaches and operational routing outcomes.</div>
-                <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => openExternal(SUPPORT_URL)}>
-                    Support
-                  </Button>
-                </div>
-              </div>
-              <div className={styles.quickCard}>
-                <div className={styles.quickCardTitle}>AI query</div>
-                <div className={styles.quickCardText}>Ask natural-language questions across contract metadata.</div>
-                <div className={styles.quickCardActions}>
-                  <Button size="small" appearance="secondary" onClick={() => openExternal(GETTING_STARTED_URL)}>
-                    Learn more
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       </div>
 
-      {/* CTA */}
-      <div className={styles.ctaBg}>
-        <div className={styles.ctaBox}>
-          <LargeTitle className={styles.ctaTitle}>Ready to enforce your first contract?</LargeTitle>
-          <div className={styles.ctaSub}>
-            Orqentis is live in your Microsoft Fabric tenant. Open your workspace, click{' '}
-            <strong style={{ color: '#fff' }}>+ New item</strong>, and select{' '}
-            <strong style={{ color: '#fff' }}>Data Contract</strong>.
+      {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
+      <div className={styles.statsStrip}>
+        {[
+          { num: '5', label: 'Fabric target types' },
+          { num: 'ODCS v3.1', label: 'Contract standard' },
+          { num: '< 15s', label: 'AI response SLA' },
+          { num: '3', label: 'Native Fabric items' },
+          { num: 'OBO', label: 'Zero app-identity on data plane' },
+        ].map(({ num, label }) => (
+          <div key={label} className={styles.statItem}>
+            <div className={styles.statNum}>{num}</div>
+            <div className={styles.statLabel}>{label}</div>
           </div>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        ))}
+      </div>
+
+      {/* ── FEATURE ROWS ─────────────────────────────────────────────────── */}
+      <div className={styles.sectionWrapper}>
+        <div className={styles.section} style={{ paddingBottom: 0 }}>
+          <div style={{ textAlign: 'center', marginBottom: 72 }}>
+            <div className={styles.eyebrow}>How it works</div>
+            <h2 className={styles.heading2}>
+              Author, enforce, and audit — without leaving Fabric
+            </h2>
+          </div>
+
+          <FeatureRow
+            eyebrow="Contract editor"
+            heading="Monaco YAML editor with live ODCS validation"
+            body="Write or paste your ODCS v3.1.0 contract directly inside the Fabric portal. Every keystroke is validated against the full JSON Schema, with inline markers, hover tooltips, and field autocomplete."
+            bullets={[
+              'Schema preview pulls real column names from your Delta table',
+              'Validation panel shows errors with line pointers before you save',
+              'AI Improve rewrites failing sections with one click',
+              'Version history tracks every change with timestamp and author',
+            ]}
+            imgSrc="/images/screenshots/fabric-contract-editor.png"
+            imgAlt="Monaco YAML editor inside Fabric showing ODCS contract validation"
+          />
+
+          <FeatureRow
+            eyebrow="Enforcement reports"
+            heading="Every run persisted as a native Fabric report item"
+            body="When a contract runs — on schedule, on demand, or triggered by a pipeline — the result is stored as a Contract Report item in your workspace. Breach score, rule-by-rule results, and remediation hints in one place."
+            bullets={[
+              'Breach score 0–100 with rule-level drill-through',
+              'Run history with timestamp, trigger source, and duration',
+              'Download full JSON audit log for compliance workflows',
+              'Webhook dispatch via policy routing on breach threshold',
+            ]}
+            imgSrc="/images/screenshots/fabric-contract-report.png"
+            imgAlt="Contract enforcement report showing breach score and run history"
+            reverse
+          />
+
+          <FeatureRow
+            eyebrow="Fabric workspace"
+            heading="Three native item types — one coherent workflow"
+            body="Orqentis registers Data Contract, Contract Policy, and Contract Report as first-class Fabric item types. They appear in your workspace alongside Lakehouses, Notebooks, and Pipelines — no external portals."
+            bullets={[
+              'Fabric item permissions inherit workspace RBAC automatically',
+              'Items are searchable in Fabric universal search',
+              'Lineage graph connects contracts to their target Delta tables',
+              'Open via Fabric workload hub — one-click install for every tenant',
+            ]}
+            imgSrc="/images/screenshots/fabric-workspace.png"
+            imgAlt="Microsoft Fabric workspace showing Orqentis contract and report items"
+          />
+
+          <FeatureRow
+            eyebrow="AI authoring"
+            heading="GPT-4o drafts contracts from your table metadata"
+            body="Point AI Suggest at any Lakehouse table and it reads the Delta log schema, row counts, null rates, and sample values — then generates a complete ODCS draft. You review and activate; AI does the boilerplate."
+            bullets={[
+              'Reads live Delta metadata from OneLake via OBO token',
+              'Generates schema, freshness, and quality rule sections',
+              'Fallback to Claude 3.7 Sonnet on OpenAI timeout',
+              '15-second SLA with retry/backoff — never blocks the UI',
+            ]}
+            imgSrc="/images/screenshots/ai-suggest-workflow.png"
+            imgAlt="AI Suggest workflow generating ODCS contract from Delta table schema"
+            reverse
+          />
+        </div>
+      </div>
+
+      {/* ── FABRIC ITEMS ─────────────────────────────────────────────────── */}
+      <div className={styles.sectionWrapper}>
+        <div className={styles.section}>
+          <div className={styles.eyebrow}>Fabric workload items</div>
+          <h2 className={styles.heading2}>Three items. One workflow.</h2>
+          <div className={styles.headingSub}>
+            Install once from the Fabric workload hub. All three items appear natively in every workspace.
+          </div>
+          <div className={styles.itemsGrid}>
+            {[
+              {
+                icon: <DocumentCheckmarkRegular />,
+                badge: 'Fabric item',
+                title: 'Data Contract',
+                desc: 'Author ODCS v3.1.0 contracts with Monaco YAML, inline JSON Schema validation, AI authoring, Lakehouse/Warehouse table pickers, and one-click activation.',
+              },
+              {
+                icon: <ShieldCheckmarkRegular />,
+                badge: 'Fabric item',
+                title: 'Contract Policy',
+                desc: 'Configure enforcement schedules, breach thresholds, alert routing channels, and policy behavior per workspace. Supports Activator webhooks.',
+              },
+              {
+                icon: <ChartMultipleRegular />,
+                badge: 'Fabric item',
+                title: 'Contract Report',
+                desc: 'Persisted run history with breach score 0–100, rule-by-rule drill-through, trigger source, duration, and downloadable JSON audit log.',
+              },
+            ].map(({ icon, badge, title, desc }) => (
+              <div key={title} className={styles.itemCard}>
+                <div className={styles.itemCardIcon}>{icon}</div>
+                <div>
+                  <div className={styles.itemCardBadge}>{badge}</div>
+                  <div className={styles.itemCardTitle}>{title}</div>
+                </div>
+                <div className={styles.itemCardDesc}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── PLATFORM FEATURES ────────────────────────────────────────────── */}
+      <div className={styles.platformBg}>
+        <div className={styles.sectionWrapper}>
+          <div className={styles.section}>
+            <div className={styles.eyebrow}>Platform engineering</div>
+            <h2 className={styles.heading2}>Built for enterprise Fabric deployments</h2>
+            <div className={styles.platformGrid}>
+              {[
+                {
+                  icon: <LockClosedRegular />,
+                  title: 'OBO-only data plane',
+                  desc: 'Every Delta read and OneLake write uses the calling user\'s delegated On-Behalf-Of token. Application identity never touches data. Entra ID end-to-end.',
+                },
+                {
+                  icon: <TableLightningRegular />,
+                  title: 'Delta enforcement engine',
+                  desc: 'Reads live Delta log snapshots from OneLake. Evaluates schema types, nullability, row freshness, and custom rule sets against the ODCS contract.',
+                },
+                {
+                  icon: <SparkleRegular />,
+                  title: 'AI with guaranteed fallback',
+                  desc: 'All LLM calls carry a 15-second CancellationToken. 3-attempt Polly retry with exponential backoff. Primary: GPT-4o. Fallback: Claude 3.7 Sonnet.',
+                },
+                {
+                  icon: <DatabaseLinkRegular />,
+                  title: 'X-Correlation-Id tracing',
+                  desc: 'Generated in middleware, propagated to OpenAI, OneLake, and Activator calls. Echoed in every API response header and logged on every Serilog entry.',
+                },
+                {
+                  icon: <AlertRegular />,
+                  title: 'Activator integration',
+                  desc: 'Policy-based breach dispatch routes alerts to Teams, email, or any webhook endpoint via Fabric Activator. Configurable per contract, per workspace.',
+                },
+                {
+                  icon: <CheckmarkCircleRegular />,
+                  title: 'Soft-delete + audit trail',
+                  desc: 'No destructive deletes. Every mutation records deleted_at timestamp with actor. Default EF Core query filters hide deleted rows automatically.',
+                },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className={styles.platformCell}>
+                  <div className={styles.platformIcon}>{icon}</div>
+                  <div className={styles.platformTitle}>{title}</div>
+                  <div className={styles.platformDesc}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <div className={styles.sectionWrapper}>
+        <div className={styles.section}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div className={styles.eyebrow}>Quick start</div>
+            <h2 className={styles.heading2}>Live in your Fabric tenant in three steps</h2>
+          </div>
+          <div className={styles.stepsGrid}>
+            {[
+              {
+                num: 'Step 01',
+                title: 'Install from workload hub',
+                text: 'Open the Fabric workload hub and install Orqentis with one click. All three item types appear in your workspace immediately — no infrastructure setup.',
+              },
+              {
+                num: 'Step 02',
+                title: 'Create your first contract',
+                text: 'Click "+ New item → Data Contract", select your Lakehouse table, and let AI Suggest generate an ODCS draft from your live schema. Review and activate.',
+              },
+              {
+                num: 'Step 03',
+                title: 'Run and triage',
+                text: 'Trigger enforcement manually or set a Hangfire schedule. The Contract Report item shows breach score, rule failures, and AI-generated remediation steps.',
+              },
+            ].map(({ num, title, text }, i) => (
+              <div key={num} className={styles.step} style={{ position: 'relative' }}>
+                {i < 2 && (
+                  <ArrowRightRegular className={styles.stepConnector} />
+                )}
+                <div className={styles.stepNum}>{num}</div>
+                <div className={styles.stepTitle}>{title}</div>
+                <div className={styles.stepText}>{text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── EVIDENCE SCREENSHOTS ─────────────────────────────────────────── */}
+      <div className={styles.sectionWrapper}>
+        <div className={styles.section} style={{ paddingTop: 0 }}>
+          <div className={styles.eyebrow}>Live evidence</div>
+          <h2 className={styles.heading2} style={{ marginBottom: 12 }}>Captured from the production Fabric tenant</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 40, fontSize: 15 }}>
+            Not mock routes. Real screenshots from app.fabric.microsoft.com after the latest deployment.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{
+              borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.09)',
+              overflow: 'hidden',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+            }}>
+              <div style={{
+                padding: '10px 16px',
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderBottom: '1px solid rgba(255,255,255,0.07)',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.5)',
+                fontWeight: 600,
+              }}>
+                Lakehouse table · owid_co2_demo Delta table
+              </div>
+              <img
+                src="/images/screenshots/fabric-lakehouse-table.png"
+                alt="owid_co2_demo Delta table in Microsoft Fabric Lakehouse"
+                style={{ width: '100%', display: 'block' }}
+                loading="lazy"
+              />
+            </div>
+            <div style={{
+              borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.09)',
+              overflow: 'hidden',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+            }}>
+              <div style={{
+                padding: '10px 16px',
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderBottom: '1px solid rgba(255,255,255,0.07)',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.5)',
+                fontWeight: 600,
+              }}>
+                Contract Report · OWID CO2 enforcement run
+              </div>
+              <img
+                src="/images/screenshots/fabric-contract-report.png"
+                alt="Contract enforcement report showing breach score and run history"
+                style={{ width: '100%', display: 'block' }}
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <div className={styles.ctaWrap}>
+        <div className={styles.ctaBox}>
+          <div className={styles.ctaGlow} />
+          <h2 className={styles.ctaHeading}>
+            Stop finding breaches in dashboards.<br />Catch them at the source.
+          </h2>
+          <p className={styles.ctaSub}>
+            Orqentis is live in your Microsoft Fabric tenant right now. Open your workspace,
+            click <strong style={{ color: '#fff' }}>+ New item</strong>, and create your first
+            data contract in under five minutes.
+          </p>
+          <div className={styles.ctaButtons}>
             <Button
               appearance="primary"
               size="large"
               icon={<ArrowRightRegular />}
               iconPosition="after"
-              onClick={() => openExternal(FABRIC_URL)}
+              onClick={() => open(FABRIC_URL)}
             >
               Open in Fabric
             </Button>
             <Button
               appearance="outline"
               size="large"
-              icon={<ClipboardTaskRegular />}
-              style={{ borderColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
-              onClick={() => openExternal(GETTING_STARTED_URL)}
+              icon={<CodeRegular />}
+              style={{ borderColor: 'rgba(255,255,255,0.22)', color: '#fff' }}
+              onClick={() => open(GITHUB_URL)}
             >
-              View guide
+              View on GitHub
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
       <footer className={styles.footer}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              background: 'linear-gradient(135deg, #0F6CBD, #115ea3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: 6,
+            background: 'linear-gradient(135deg, #0F6CBD, #3a96dd)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
             <DocumentCheckmarkRegular style={{ fontSize: 12, color: '#fff' }} />
           </div>
-          <span>Orqentis · Microsoft Fabric ISV Workload</span>
+          <span>Orqentis · Native Microsoft Fabric ISV Workload</span>
         </div>
-        <Caption1 style={{ color: 'rgba(255,255,255,0.35)' }}>
+        <div className={styles.footerLinks}>
+          <a className={styles.footerLink} href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+          <a className={styles.footerLink} href="/legal/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
+          <a className={styles.footerLink} href="/legal/security.html" target="_blank" rel="noopener noreferrer">Security</a>
+          <a className={styles.footerLink} href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">Support</a>
+          <a className={styles.footerLink} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+        <Caption1 style={{ color: 'rgba(255,255,255,0.25)' }}>
           © {new Date().getFullYear()} Orqentis. ODCS v3.1.0 enforced.
         </Caption1>
       </footer>
