@@ -108,7 +108,7 @@ describe('App', () => {
       </FluentProvider>,
     );
 
-    // ContractEditorPage empty state is shown when no contract is loaded yet.
-    expect(screen.getByText('Start drafting')).toBeInTheDocument();
+    // ContractEditorPage shows the type selector when no contract is loaded yet.
+    expect(screen.getByText('Choose contract target type')).toBeInTheDocument();
   });
 });
