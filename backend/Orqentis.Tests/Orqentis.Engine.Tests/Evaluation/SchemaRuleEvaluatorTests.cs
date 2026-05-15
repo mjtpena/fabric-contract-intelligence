@@ -200,23 +200,23 @@ public sealed class SchemaRuleEvaluatorTests
     // Delta persists int64 as "long"; ODCS uses "integer"/"bigint". These must match.
 
     [Theory]
-    [InlineData("long",     "integer", true)]   // Delta long  ↔ ODCS integer  → match
-    [InlineData("bigint",   "integer", true)]   // SQL BIGINT  ↔ ODCS integer  → match
-    [InlineData("smallint", "integer", true)]   // SQL SMALLINT ↔ ODCS integer → match
-    [InlineData("tinyint",  "integer", true)]   // SQL TINYINT  ↔ ODCS integer → match
-    [InlineData("short",    "integer", true)]   // Spark short  ↔ ODCS integer → match
-    [InlineData("byte",     "integer", true)]   // Spark byte   ↔ ODCS integer → match
-    [InlineData("double",   "number",  true)]   // Delta double ↔ ODCS number  → match
-    [InlineData("float",    "number",  true)]   // SQL FLOAT    ↔ ODCS number  → match
-    [InlineData("real",     "number",  true)]   // SQL REAL     ↔ ODCS number  → match
-    [InlineData("decimal",  "number",  true)]   // SQL DECIMAL  ↔ ODCS number  → match
-    [InlineData("numeric",  "number",  true)]   // SQL NUMERIC  ↔ ODCS number  → match
-    [InlineData("bool",     "boolean", true)]   // Spark bool   ↔ ODCS boolean → match
-    [InlineData("boolean",  "boolean", true)]   // Explicit     ↔ ODCS boolean → match
-    [InlineData("date",     "date",    true)]   // DATE passthrough               → match
-    [InlineData("timestamp","timestamp",true)]  // TIMESTAMP passthrough          → match
-    [InlineData("long",     "string",  false)]  // long vs string                 → no match
-    [InlineData("double",   "integer", false)]  // NUMBER vs INTEGER              → no match
+    [InlineData("long", "integer", true)]
+    [InlineData("bigint", "integer", true)]
+    [InlineData("smallint", "integer", true)]
+    [InlineData("tinyint", "integer", true)]
+    [InlineData("short", "integer", true)]
+    [InlineData("byte", "integer", true)]
+    [InlineData("double", "number", true)]
+    [InlineData("float", "number", true)]
+    [InlineData("real", "number", true)]
+    [InlineData("decimal", "number", true)]
+    [InlineData("numeric", "number", true)]
+    [InlineData("bool", "boolean", true)]
+    [InlineData("boolean", "boolean", true)]
+    [InlineData("date", "date", true)]
+    [InlineData("timestamp", "timestamp", true)]
+    [InlineData("long", "string", false)]
+    [InlineData("double", "integer", false)]
     public void Evaluate_NormalizeType_CrossFamilyMatching(string liveType, string contractType, bool shouldMatch)
     {
         var evaluator = CreateEvaluator();
