@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { extractServerWorkspaceId, synchronizeDraftYaml } from '../contractClient';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  createContractClient,
+  extractServerWorkspaceId,
+  synchronizeDraftYaml,
+} from '../contractClient';
 
 const BASE_YAML = `
 apiVersion: v3.1.0
@@ -13,6 +17,10 @@ servers:
     format: delta
     location: abfss://ws@onelake.dfs.fabric.microsoft.com/Lh.Lakehouse/Tables/t
 `.trimStart();
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('synchronizeDraftYaml', () => {
   it('writes workspaceId to the first server block when a valid GUID is provided', () => {
@@ -69,5 +77,36 @@ describe('extractServerWorkspaceId', () => {
 
   it('returns null when servers array is empty', () => {
     expect(extractServerWorkspaceId('apiVersion: v3.1.0\nservers: []\n')).toBeNull();
+  });
+});
+
+describe('createContractClient', () => {
+  it('maps unauthorized problem responses to an actionable message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: 'The supplied bearer token is invalid or expired.',
+            title: 'Unauthorized.',
+          }),
+          {
+            headers: { 'Content-Type': 'application/problem+json' },
+            status: 401,
+          },
+        ),
+      ),
+    );
+
+    const client = createContractClient({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: vi.fn().mockResolvedValue('expired-token'),
+    });
+
+    await expect(client.getContract('contract-1')).rejects.toMatchObject({
+      details: ['The supplied bearer token is invalid or expired.'],
+      message: 'Authorization required. Open Orqentis from Microsoft Fabric or sign in again, then refresh.',
+      status: 401,
+    });
   });
 });

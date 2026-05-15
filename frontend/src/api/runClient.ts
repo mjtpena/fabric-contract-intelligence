@@ -78,10 +78,18 @@ async function toRunClientError(response: Response): Promise<ContractClientError
     : [];
 
   return new ContractClientError(
-    payload?.title ?? `Request failed with status ${response.status}.`,
+    getClientErrorMessage(response, payload),
     response.status,
     payload?.detail ? [payload.detail, ...validationDetails] : validationDetails,
   );
+}
+
+function getClientErrorMessage(response: Response, payload: ProblemDetails | null): string {
+  if (response.status === 401) {
+    return 'Authorization required. Open Orqentis from Microsoft Fabric or sign in again, then refresh.';
+  }
+
+  return payload?.title ?? `Request failed with status ${response.status}.`;
 }
 
 function normalizeBaseUrl(baseUrl: string): string {

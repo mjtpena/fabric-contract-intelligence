@@ -138,8 +138,10 @@ export async function initialize(_params: InitParams): Promise<void> {
               });
               await workloadClient.page.open({
                 workloadName: WORKLOAD_NAME,
-                route: { path: `/contracts/${run.contractId ?? contractId}/runs` },
-                mode: OpenMode.ReplaceAll,
+                route: {
+                  path: `/contracts/runs?contractId=${encodeURIComponent(run.contractId ?? contractId)}&runId=${encodeURIComponent(run.runId)}`,
+                },
+                mode: OpenMode.Append,
               });
               return { result: 'success' };
             }

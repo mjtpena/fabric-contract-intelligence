@@ -14,7 +14,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { RulePicker } from '@/components/Activator/RulePicker';
@@ -23,6 +23,10 @@ import type { ContractSummary } from '@/models/Contract';
 import type { ActivatorRule } from '@/models/ops';
 
 type Step = 'schedule' | 'behaviour' | 'routing' | 'review';
+
+interface PersistedPolicyState {
+  contractId: string | null;
+}
 
 const useStyles = makeStyles({
   root: {
@@ -40,11 +44,13 @@ const useStyles = makeStyles({
 export function PolicyEditorPage() {
   const styles = useStyles();
   const navigate = useNavigate();
+  const { itemObjectId } = useParams();
+  const [searchParams] = useSearchParams();
   const sdk = useFabricSdk();
   const [step, setStep] = useState<Step>('schedule');
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [rules, setRules] = useState<ActivatorRule[]>([]);
-  const [contractId, setContractId] = useState('');
+  const [contractId, setContractId] = useState(searchParams.get('contractId') ?? '');
   const [cronExpression, setCronExpression] = useState('0 */4 * * *');
   const [alertOnWarn, setAlertOnWarn] = useState(false);
   const [actionType, setActionType] = useState<'notify' | 'webhook'>('notify');
@@ -81,6 +87,27 @@ export function PolicyEditorPage() {
     void opsClient.listActivatorRules().then(setRules).catch(() => setRules([]));
   }, [contractClient, opsClient]);
 
+  useEffect(() => {
+    if (!itemObjectId || !sdk.isReady) {
+      return;
+    }
+
+    void sdk.loadItemDefinition(itemObjectId)
+      .then((persisted) => {
+        const state = persisted ? parsePersistedPolicyState(persisted) : null;
+        if (state?.contractId) {
+          setContractId(state.contractId);
+        }
+      })
+      .catch(() => undefined);
+  }, [itemObjectId, sdk]);
+
+  const openWorkloadRoute = async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+    if (!(await sdk.openWorkloadRoute(path, mode))) {
+      navigate(path);
+    }
+  };
+
   const savePolicy = async () => {
     if (!contractId) {
       await sdk.notifyError('Missing contract', 'Select a contract before saving policy.');
@@ -103,8 +130,11 @@ export function PolicyEditorPage() {
         actionConfigJson: JSON.stringify(actionConfig),
         enabled: true,
       });
+      if (itemObjectId) {
+        await sdk.saveItemDefinition(itemObjectId, JSON.stringify({ contractId }));
+      }
       await sdk.notifySuccess('Policy saved', 'Policy, schedule, and routing were saved in one request.');
-      navigate('/contracts');
+      await openWorkloadRoute(contractId ? `/contracts/${contractId}/edit` : '/contracts');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save policy.';
       await sdk.notifyError('Save failed', message);
@@ -198,10 +228,26 @@ export function PolicyEditorPage() {
         <Button appearance="primary" onClick={() => { void savePolicy(); }}>
           Save policy
         </Button>
-        <Button appearance="secondary" onClick={() => navigate('/contracts')}>
+        <Button
+          appearance="secondary"
+          onClick={() => {
+            void openWorkloadRoute(contractId ? `/contracts/${contractId}/edit` : '/contracts');
+          }}
+        >
           Cancel
         </Button>
       </div>
     </section>
   );
+}
+
+function parsePersistedPolicyState(raw: string): PersistedPolicyState | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<PersistedPolicyState>;
+    return {
+      contractId: typeof parsed.contractId === 'string' ? parsed.contractId : null,
+    };
+  } catch {
+    return null;
+  }
 }

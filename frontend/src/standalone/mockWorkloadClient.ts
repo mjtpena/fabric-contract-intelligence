@@ -39,6 +39,16 @@ export function createMockWorkloadClient(): WorkloadClientAPI {
       navigate: asyncNoop,
       onNavigate: noop,
     },
+    page: {
+      open: async ({ route }: { route?: { path?: string } }) => {
+        if (route?.path) {
+          window.history.pushState(null, '', route.path);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
+        return {};
+      },
+      close: asyncNoop,
+    },
     action: {
       onAction: (_handler: unknown) => {
         // no-op: no Fabric action events outside iframe

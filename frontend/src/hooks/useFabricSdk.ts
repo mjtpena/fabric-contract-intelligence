@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   NotificationToastDuration,
   NotificationType,
+  OpenMode,
   PayloadType,
 } from '@ms-fabric/workload-client';
 import type { ItemDefinition } from '@ms-fabric/workload-client';
@@ -9,6 +10,9 @@ import { useAppStore } from '@/store/appStore';
 import { getWorkloadClient } from '@/lib/fabricRuntime';
 
 type ThemeMode = 'dark' | 'light';
+type WorkloadOpenMode = 'append' | 'replaceAll';
+
+const WorkloadName = 'Org.Orqentis';
 
 interface FabricSdkRuntime {
   isHosted: boolean;
@@ -127,6 +131,9 @@ export function useFabricSdk() {
         openNotification(title, message, NotificationType.Info),
       notifySuccess: (title: string, message?: string) =>
         openNotification(title, message, NotificationType.Success),
+      /** Open a workload route through Fabric page navigation; returns false outside the Fabric host. */
+      openWorkloadRoute: (path: string, mode: WorkloadOpenMode = 'replaceAll') =>
+        openWorkloadRoute(path, mode, state.isHosted),
       /** Load item definition using the Fabric objectId from the route param. */
       loadItemDefinition: async (fabricItemId: string) => {
         if (!state.isHosted || !fabricItemId) {
@@ -212,6 +219,24 @@ async function openNotification(
   } catch {
     return;
   }
+}
+
+async function openWorkloadRoute(
+  path: string,
+  mode: WorkloadOpenMode,
+  isHosted: boolean,
+): Promise<boolean> {
+  const client = getWorkloadClient();
+  if (!client || !isHosted || !('page' in client) || !client.page) {
+    return false;
+  }
+
+  await client.page.open({
+    workloadName: WorkloadName,
+    route: { path },
+    mode: mode === 'append' ? OpenMode.Append : OpenMode.ReplaceAll,
+  });
+  return true;
 }
 
 function createCorrelationId(): string {

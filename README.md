@@ -1,29 +1,41 @@
 # Orqentis
 
-> Data contracts for Fabric data products. Native to Microsoft Fabric.
+> **Contract-bound data for every AI agent on Microsoft Fabric.**
 
 [![CI](https://github.com/mjtpena/fabric-contract-intelligence/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
-Orqentis is a native Microsoft Fabric ISV workload that brings **ODCS v3.1.0**-compliant data
-contract definition, version control, enforcement, and AI-powered suggestions to the Fabric
-platform. Contracts can bind to and execute against Lakehouses, Warehouses, Eventhouse/KQL
-databases, Semantic Models, and Fabric SQL databases using delegated Fabric access.
+Orqentis is the **AI Readiness and Data Security layer for AI agents on Microsoft Fabric**.
+It is a native Fabric ISV workload that enforces **ODCS v3.1.0** data contracts at the
+OneLake Delta layer — the one place every Fabric Copilot, Fabric Data Agent, Copilot Studio
+skill, and Microsoft 365 Copilot grounding query reads from. Every enforcement run executes
+under the calling user's OBO-delegated identity, producing the per-inference data trust
+evidence that EU AI Act Article 10, NIST AI RMF, and ISO/IEC 42001 auditors demand.
 
-## AI value proposition
+📄 **Positioning, demo script, and investor materials:** [`docs/positioning/`](./docs/positioning/README.md)
 
-Orqentis uses AI to make Fabric governance operational, not just conversational. The angle for
-customers and investors is a governed feedback loop:
+## The problem
 
-| AI capability | Customer outcome |
-|---|---|
-| Contract co-author | Data teams start from generated ODCS drafts instead of blank YAML, reducing time-to-first-contract. |
-| Breach impact scorer | Failures become explainable risk signals ranked by downstream business impact. |
-| Remediation advisor | Producers receive concrete next actions for schema, freshness, and quality breaches. |
-| Natural-language governance | Platform owners can ask who owns a data product, what changed, and which contracts are failing without reading YAML or logs. |
+Microsoft Copilot in Fabric is answering board-level questions today. The answer is confident.
+The data is often 72 hours stale, schema-drifted, unlabelled for sensitivity, or being read by
+an agent running with broader permissions than the user who asked the question. These are not
+AI model failures — they are data infrastructure failures, and no Fabric-native tool enforces
+contractual schema, freshness, quality, and identity guarantees on the Delta tables that AI
+agents ground on. See [`docs/positioning/ai-readiness.md`](./docs/positioning/ai-readiness.md)
+for the full narrative and the *six broken promises* every Fabric AI deployment is quietly making.
 
-This positions Orqentis as the **AI control plane for trusted Fabric data products**: contract
-authoring, enforcement evidence, risk explanation, and remediation recommendations in one native
-Fabric experience.
+## The five capabilities
+
+| Capability | What it does | Primary buyer |
+|---|---|---|
+| **Agent-Ready Contract Co-Author** | AI generates an ODCS v3.1.0 draft from the actual Delta log profile — schema, 30-day freshness pattern, PII column detection — edited in Monaco with full IntelliSense inside the Fabric portal. | Head of Data Governance |
+| **AI Blast-Radius Scorer** | At breach time, traverses the Fabric lineage graph and severity-ranks every Copilot session, semantic model, Fabric Data Agent, and Copilot Studio skill grounded on the broken contract. | Fabric Platform Owner |
+| **Pre-Copilot Contract Gate** | Low-latency Contract Status REST endpoint; tags semantic models `contract-status: BREACH`; suppresses or warns Copilot grounding before stale data reaches agents. | Chief AI Officer |
+| **AI Act Evidence Pack** | One-click PDF/JSON bundle: run history, OBO identity log, MIP labels, Delta log versions, mapped to EU AI Act Art. 10/13, NIST AI RMF MEASURE, ISO/IEC 42001. | Chief Data Officer |
+| **AI Governance Assistant** | Natural-language queries across the contract estate — *"Which contracts feed our M365 Copilot?"* — returns a ranked, actionable list. | All five personas |
+
+Full demo (12 minutes, 7 scenes): [`docs/positioning/mvp-demo-script.md`](./docs/positioning/mvp-demo-script.md).
+Competitive matrix vs Purview, Informatica, Collibra, Atlan, Monte Carlo, Securiti, Immuta,
+Lakera/Protect AI: [`docs/positioning/competitive-matrix.md`](./docs/positioning/competitive-matrix.md).
 
 ## Tiers
 

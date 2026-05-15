@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Body1,
   Breadcrumb,
@@ -82,6 +82,12 @@ export function ContractDetailPage() {
 
   const { contract, error, loading, versions } = useContract(client, id);
 
+  const openWorkloadRoute = useCallback(async (path: string) => {
+    if (!(await sdk.openWorkloadRoute(path))) {
+      navigate(path);
+    }
+  }, [navigate, sdk]);
+
   const columns = useMemo(
     () =>
       [
@@ -109,7 +115,7 @@ export function ContractDetailPage() {
     <section className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => navigate('/contracts')}>Contracts</BreadcrumbButton>
+          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
@@ -126,7 +132,9 @@ export function ContractDetailPage() {
           <Button
             appearance="primary"
             icon={<EditRegular />}
-            onClick={() => navigate(`/contracts/${contract.id}/edit`)}
+            onClick={() => {
+              void openWorkloadRoute(`/contracts/${contract.id}/edit`);
+            }}
           >
             Edit contract
           </Button>

@@ -187,6 +187,109 @@ describe('EnforcementRunPage', () => {
     await waitFor(() => expect(screen.getByText('OWID CO2 Contract')).toBeInTheDocument());
     expect(screen.queryByText(/provide `contractId` and `runId`/i)).not.toBeInTheDocument();
   });
+
+  it('shows schema rule drift when the structured schema diff is absent', () => {
+    const state = createRunPageState();
+    useEnforcementRunMock.mockReturnValue({
+      ...state,
+      run: {
+        ...state.run,
+        resultJson: {
+          ...state.run.resultJson,
+          schemaDiff: undefined,
+        },
+      },
+    });
+
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <MemoryRouter
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+          initialEntries={['/contracts/contract-1/runs/run-1']}
+        >
+          <Routes>
+            <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
+          </Routes>
+        </MemoryRouter>
+      </FluentProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Schema Diff' }));
+
+    expect(screen.getByText('Schema drift from rule results')).toBeInTheDocument();
+    expect(screen.getByText(/customer_id: Column customer_id is nullable/)).toBeInTheDocument();
+    expect(screen.queryByText('No structured schema diff was stored for this run.')).not.toBeInTheDocument();
+  });
+
+  it('shows rule-based remediation when AI suggestions are absent', () => {
+    const state = createRunPageState();
+    useEnforcementRunMock.mockReturnValue({
+      ...state,
+      run: {
+        ...state.run,
+        resultJson: {
+          ...state.run.resultJson,
+          remediationSuggestions: [],
+        },
+      },
+    });
+
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <MemoryRouter
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+          initialEntries={['/contracts/contract-1/runs/run-1']}
+        >
+          <Routes>
+            <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
+          </Routes>
+        </MemoryRouter>
+      </FluentProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Remediation' }));
+
+    expect(screen.getByText(/Enforce the required nullability for column customer_id upstream/)).toBeInTheDocument();
+    expect(screen.queryByText('No remediation suggestions were returned for this run.')).not.toBeInTheDocument();
+  });
+
+  it('renders a zero breach score for passed runs without persisted AI scoring', () => {
+    const state = createRunPageState();
+    useEnforcementRunMock.mockReturnValue({
+      ...state,
+      run: {
+        ...state.run,
+        breachScore: null,
+        resultJson: {
+          ...state.run.resultJson,
+          breachScore: undefined,
+          freshnessRule: undefined,
+          overallStatus: 'passed',
+          qualityRules: [],
+          remediationSuggestions: [],
+          schemaDiff: undefined,
+          schemaRules: [],
+        },
+        status: 'passed',
+      },
+    });
+
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <MemoryRouter
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+          initialEntries={['/contracts/contract-1/runs/run-1']}
+        >
+          <Routes>
+            <Route path="/contracts/:id/runs/:runId" element={<EnforcementRunPage />} />
+          </Routes>
+        </MemoryRouter>
+      </FluentProvider>,
+    );
+
+    expect(screen.getByText('Low severity — contract is healthy.')).toBeInTheDocument();
+    expect(screen.queryByText('No run data yet.')).not.toBeInTheDocument();
+  });
 });
 
 function createRunPageState() {

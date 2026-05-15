@@ -124,6 +124,12 @@ export function ContractListPage() {
       .finally(() => setFederatedLoading(false));
   }, [opsClient, tier, workspaceScope]);
 
+  const openWorkloadRoute = useCallback(async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+    if (!(await sdk.openWorkloadRoute(path, mode))) {
+      navigate(path);
+    }
+  }, [navigate, sdk]);
+
   const displayedContracts = tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked'
     ? federatedContracts
     : contracts;
@@ -138,12 +144,12 @@ export function ContractListPage() {
       } else {
         await refresh();
       }
-      navigate(`/contracts/${contractId}/runs/${run.runId}`);
+      await openWorkloadRoute(`/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(run.runId)}`, 'append');
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
       await sdk.notifyError('Run failed', message);
     }
-  }, [navigate, opsClient, refresh, runNow, sdk, tier, workspaceScope]);
+  }, [openWorkloadRoute, opsClient, refresh, runNow, sdk, tier, workspaceScope]);
 
   const columns = useMemo(
     () =>
@@ -178,7 +184,12 @@ export function ContractListPage() {
           columnId: 'actions',
           renderCell: (item) => (
             <div className={styles.rowActions}>
-              <Button appearance="subtle" onClick={() => navigate(`/contracts/${item.id}`)}>
+              <Button
+                appearance="subtle"
+                onClick={() => {
+                  void openWorkloadRoute(`/contracts/${item.id}/edit`);
+                }}
+              >
                 Open
               </Button>
               <Button
@@ -195,7 +206,7 @@ export function ContractListPage() {
           renderHeaderCell: () => 'Actions',
         }),
       ],
-    [handleRunNow, navigate, styles.rowActions],
+    [handleRunNow, openWorkloadRoute, styles.rowActions],
   );
 
   return (
@@ -231,7 +242,13 @@ export function ContractListPage() {
           >
             Refresh
           </Button>
-          <Button appearance="primary" icon={<AddRegular />} onClick={() => navigate('/contracts/new')}>
+          <Button
+            appearance="primary"
+            icon={<AddRegular />}
+            onClick={() => {
+              void openWorkloadRoute('/contracts/editor');
+            }}
+          >
             Create contract
           </Button>
         </div>
@@ -245,7 +262,13 @@ export function ContractListPage() {
             <DocumentBulletListRegular className={styles.emptyIcon} />
             <Subtitle1>No contracts yet</Subtitle1>
             <Body1>Define an ODCS contract to start enforcing data quality at the Delta table layer.</Body1>
-            <Button appearance="primary" icon={<AddRegular />} onClick={() => navigate('/contracts/new')}>
+            <Button
+              appearance="primary"
+              icon={<AddRegular />}
+              onClick={() => {
+                void openWorkloadRoute('/contracts/editor');
+              }}
+            >
               Create contract
             </Button>
           </div>

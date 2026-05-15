@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
   Breadcrumb,
@@ -37,7 +37,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { useContract } from '@/hooks/useContract';
 import { useEnforcementRun } from '@/hooks/useEnforcementRun';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
-import type { RunSummary, SchemaDiff } from '@/models/enforcement';
+import type { RuleResult, RunDetail, RunSummary, SchemaDiff } from '@/models/enforcement';
 import type { ReportAuditRow } from '@/models/ops';
 
 type RunTab = 'schema-rules' | 'quality-rules' | 'freshness' | 'schema-diff' | 'remediation';
@@ -180,6 +180,12 @@ export function EnforcementRunPage() {
   const resolvedContractId = requestedContractId ?? run?.contractId ?? null;
   const { contract, versions } = useContract(contractClient, resolvedContractId);
 
+  const openWorkloadRoute = useCallback(async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+    if (!(await sdk.openWorkloadRoute(path, mode))) {
+      navigate(path);
+    }
+  }, [navigate, sdk]);
+
   const sortedVersions = useMemo(
     () =>
       [...versions].sort(
@@ -298,7 +304,7 @@ export function EnforcementRunPage() {
       }
     }
 
-    navigate(buildRunLink(row.contractId, row.runId));
+    await openWorkloadRoute(buildRunLink(row.contractId, row.runId), 'append');
   };
 
   const historyColumns = useMemo(
@@ -324,7 +330,9 @@ export function EnforcementRunPage() {
           <div className={styles.historyActions}>
             <Button
               appearance="subtle"
-              onClick={() => navigate(buildRunLink(item.contractId, item.id))}
+              onClick={() => {
+                void openWorkloadRoute(buildRunLink(item.contractId, item.id), 'append');
+              }}
             >
               Open
             </Button>
@@ -333,7 +341,7 @@ export function EnforcementRunPage() {
         renderHeaderCell: () => 'Actions',
       }),
     ],
-    [navigate, styles.historyActions, versionLookup],
+    [openWorkloadRoute, styles.historyActions, versionLookup],
   );
 
   if ((itemObjectId && !itemDefinitionLoaded) || (loading && !run)) {
@@ -360,17 +368,19 @@ export function EnforcementRunPage() {
     );
   }
 
+  const remediationSuggestions = resolveRemediationSuggestions(run);
+
   return (
     <section className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => navigate('/contracts')}>Contracts</BreadcrumbButton>
+          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         {resolvedContractId && contract ? (
           <>
             <BreadcrumbItem>
-              <BreadcrumbButton onClick={() => navigate(`/contracts/${resolvedContractId}`)}>
+              <BreadcrumbButton onClick={() => { void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`); }}>
                 {contract.name}
               </BreadcrumbButton>
             </BreadcrumbItem>
@@ -395,7 +405,9 @@ export function EnforcementRunPage() {
             <Button
               appearance="secondary"
               icon={<ArrowLeftRegular />}
-              onClick={() => navigate(`/contracts/${resolvedContractId}`)}
+              onClick={() => {
+                void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`);
+              }}
             >
               Back to contract
             </Button>
@@ -440,7 +452,7 @@ export function EnforcementRunPage() {
         </div>
 
         <div className={styles.card}>
-          <BreachScoreGauge score={run.resultJson.breachScore ?? run.breachScore} />
+          <BreachScoreGauge score={resolveDisplayBreachScore(run)} />
         </div>
       </div>
 
@@ -536,7 +548,7 @@ export function EnforcementRunPage() {
               </Field>
             </div>
 
-            <SchemaDiffSummary schemaDiff={run.resultJson.schemaDiff} />
+            <SchemaDiffSummary schemaDiff={run.resultJson.schemaDiff} schemaRules={run.resultJson.schemaRules} />
 
             {selectedLeftVersion && selectedRightVersion ? (
               <SchemaDiffViewer
@@ -552,16 +564,16 @@ export function EnforcementRunPage() {
 
         {selectedTab === 'remediation' ? (
           <>
-            {run.resultJson.remediationSuggestions.length > 0 ? (
+            {remediationSuggestions.length > 0 ? (
               <ul className={styles.checklist}>
-                {run.resultJson.remediationSuggestions.map((suggestion) => (
-                  <li key={suggestion}>
+                {remediationSuggestions.map((suggestion, index) => (
+                  <li key={`${suggestion}-${index}`}>
                     <Body1>{suggestion}</Body1>
                   </li>
                 ))}
               </ul>
             ) : (
-              <Body1>No remediation suggestions were returned for this run.</Body1>
+              <Body1>No remediation is needed for this run.</Body1>
             )}
             {run.resultJson.errorMessage ? (
               <div className={styles.card}>
@@ -665,13 +677,35 @@ function ReportItemDashboard({
 
 interface SchemaDiffSummaryProps {
   schemaDiff: SchemaDiff | undefined;
+  schemaRules: RuleResult[];
 }
 
-function SchemaDiffSummary({ schemaDiff }: SchemaDiffSummaryProps) {
+function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) {
   const styles = useStyles();
 
   if (!schemaDiff) {
-    return <Body1>No structured schema diff was stored for this run.</Body1>;
+    const driftRules = schemaRules.filter((rule) => rule.status === 'failed' || rule.status === 'warned');
+
+    if (driftRules.length === 0) {
+      return <Body1>No schema drift was detected for this run.</Body1>;
+    }
+
+    return (
+      <div className={styles.card}>
+        <Caption1>Schema drift from rule results</Caption1>
+        <ul className={styles.diffSummaryList}>
+          {driftRules.map((rule) => (
+            <li key={`${rule.ruleId}-${rule.column ?? 'table'}-${rule.message}`}>
+              <Body1>
+                {rule.column ? `${rule.column}: ` : ''}
+                {rule.message}
+                {formatExpectedActual(rule)}
+              </Body1>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   }
 
   return (
@@ -727,10 +761,114 @@ function SchemaDiffSummary({ schemaDiff }: SchemaDiffSummaryProps) {
   );
 }
 
+function formatExpectedActual(rule: RuleResult) {
+  const expected = formatDriftValue(rule.expected);
+  const actual = formatDriftValue(rule.actual);
+
+  if (expected === null && actual === null) {
+    return '';
+  }
+
+  return ` Expected: ${expected ?? '—'}; actual: ${actual ?? '—'}.`;
+}
+
+function formatDriftValue(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(', ') : 'None';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
+
+function resolveRemediationSuggestions(run: RunDetail) {
+  const aiSuggestions = run.resultJson.remediationSuggestions.filter(
+    (suggestion) => suggestion.trim().length > 0,
+  );
+
+  if (aiSuggestions.length > 0) {
+    return aiSuggestions;
+  }
+
+  return getActionableRules(run).map(buildFallbackRemediation);
+}
+
+function getActionableRules(run: RunDetail) {
+  return [
+    ...run.resultJson.schemaRules,
+    ...run.resultJson.qualityRules,
+    ...(run.resultJson.freshnessRule ? [run.resultJson.freshnessRule] : []),
+  ].filter((rule) => rule.status === 'failed' || rule.status === 'warned');
+}
+
+function buildFallbackRemediation(rule: RuleResult) {
+  const subject = rule.column ? `column ${rule.column}` : 'the table';
+  const details = formatExpectedActual(rule).trim();
+  const suffix = details ? ` ${details}` : '';
+
+  if (rule.ruleId === 'schema.column.present') {
+    return `Restore ${subject} in the source table or publish a new contract version if the removal was intentional.${suffix}`;
+  }
+
+  if (rule.ruleId === 'schema.column.type') {
+    return `Align the data type for ${subject} with the contract expectation, or version the contract for the new type.${suffix}`;
+  }
+
+  if (rule.ruleId === 'schema.column.nullable') {
+    return `Enforce the required nullability for ${subject} upstream, or relax the contract if nulls are allowed.${suffix}`;
+  }
+
+  if (rule.ruleId === 'schema.column.extra') {
+    return `Add ${subject} to the contract if it is intentional, or remove it from the source table.${suffix}`;
+  }
+
+  if (rule.ruleId === 'schema.partition.match') {
+    return `Align table partitioning with the contract definition before the next run.${suffix}`;
+  }
+
+  if (rule.ruleId.startsWith('quality.')) {
+    return `Investigate the quality rule ${rule.ruleId} for ${subject}; ${rule.message}${suffix}`;
+  }
+
+  if (rule.ruleId.startsWith('freshness.')) {
+    return `Refresh the table or repair the upstream pipeline so freshness satisfies the contract; ${rule.message}${suffix}`;
+  }
+
+  return `Review ${rule.ruleId} for ${subject}; ${rule.message}${suffix}`;
+}
+
 function buildRunLink(contractId: string | null | undefined, runId: string) {
   return contractId
     ? `/contracts/${contractId}/runs/${runId}`
     : `/contracts/runs?runId=${encodeURIComponent(runId)}`;
+}
+
+function resolveDisplayBreachScore(run: RunDetail) {
+  const persistedScore = run.resultJson.breachScore ?? run.breachScore;
+  if (persistedScore !== null && persistedScore !== undefined) {
+    return persistedScore;
+  }
+
+  return hasBreach(run) ? null : 0;
+}
+
+function hasBreach(run: RunDetail) {
+  if (run.resultJson.overallStatus !== 'passed') {
+    return true;
+  }
+
+  return getActionableRules(run).length > 0;
 }
 
 function parsePersistedReportState(raw: string): PersistedReportState | null {

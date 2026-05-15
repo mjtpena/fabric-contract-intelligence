@@ -30,12 +30,15 @@ export default function App() {
 
       {/* ── Fabric item editor routes (opened by Fabric's navigation) ────── */}
       {/* Contract item: manifest editor path = /contracts/editor */}
+      <Route path="/contracts/editor" element={<ContractEditorPage />} />
       <Route path="/contracts/editor/:itemObjectId" element={<ContractEditorPage />} />
 
       {/* ContractPolicy item: manifest editor path = /contracts/policies */}
+      <Route path="/contracts/policies" element={<PolicyEditorPage />} />
       <Route path="/contracts/policies/:itemObjectId" element={<PolicyEditorPage />} />
 
       {/* ContractReport item: manifest editor path = /contracts/runs */}
+      <Route path="/contracts/runs" element={<EnforcementRunPage />} />
       <Route path="/contracts/runs/:itemObjectId" element={<EnforcementRunPage />} />
 
       {/* ── Supplementary workload routes (in-workload navigation) ────────── */}
