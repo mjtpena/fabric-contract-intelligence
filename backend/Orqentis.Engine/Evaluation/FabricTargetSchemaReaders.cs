@@ -166,9 +166,11 @@ public sealed class FabricSqlSchemaReader : IFabricSqlSchemaReader
             return Result<SqlEndpoint>.Failure("A delegated Fabric REST token is required to resolve SQL target connection metadata.", "FabricRestTokenMissing");
         }
 
+        // Cross-workspace: server.WorkspaceId overrides the contract's workspace.
+        var effectiveWorkspaceId = server.WorkspaceId ?? target.WorkspaceId;
         var path = string.Equals(target.TargetType, "fabric_sql", StringComparison.OrdinalIgnoreCase)
-            ? $"workspaces/{target.WorkspaceId}/sqlDatabases/{target.TargetItemId}"
-            : $"workspaces/{target.WorkspaceId}/warehouses/{target.TargetItemId}";
+            ? $"workspaces/{effectiveWorkspaceId}/sqlDatabases/{target.TargetItemId}"
+            : $"workspaces/{effectiveWorkspaceId}/warehouses/{target.TargetItemId}";
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{_fabricApiBase}/{path}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.FabricRestToken);
 
@@ -239,24 +241,45 @@ public sealed class FabricKqlSchemaReader : IFabricKqlSchemaReader
         EnforcementTargetContext target,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(credentials.FabricRestToken) || string.IsNullOrWhiteSpace(credentials.KustoToken))
+        if (string.IsNullOrWhiteSpace(credentials.KustoToken))
         {
             return Result<DeltaTableSnapshot>.Failure("Delegated Fabric REST and Kusto tokens are required for Eventhouse enforcement.", "KqlTokenMissing");
         }
 
-        var metadata = await GetKqlDatabaseAsync(credentials.FabricRestToken, target, ct).ConfigureAwait(false);
-        if (!metadata.IsSuccess || metadata.Value is null)
+        // Cross-workspace shortcut: if server.Host is a direct Kusto cluster URI, skip the
+        // Fabric REST metadata lookup entirely. This is the recommended pattern for
+        // Eventhouses in a different workspace — set host to the queryServiceUri shown in
+        // the Eventhouse settings page (e.g. https://abc123.z6.kusto.windows.net).
+        KqlDatabaseMetadata metadata;
+        if (!string.IsNullOrWhiteSpace(server.Host) && IsKustoUri(server.Host))
         {
-            return Result<DeltaTableSnapshot>.Failure(metadata.Error ?? "Unable to resolve KQL database metadata.", metadata.ErrorCode);
+            // Path encodes "<database>/<table>" or just "<table>" when database == displayName.
+            var parts = server.Path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+            var databaseName = parts.Length == 2 ? parts[0] : FabricTargetPath.ParseSingleName(server.Path);
+            metadata = new KqlDatabaseMetadata(databaseName, server.Host.TrimEnd('/'));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(credentials.FabricRestToken))
+            {
+                return Result<DeltaTableSnapshot>.Failure("Delegated Fabric REST and Kusto tokens are required for Eventhouse enforcement.", "KqlTokenMissing");
+            }
+
+            var metadataResult = await GetKqlDatabaseAsync(credentials.FabricRestToken, server, target, ct).ConfigureAwait(false);
+            if (!metadataResult.IsSuccess || metadataResult.Value is null)
+            {
+                return Result<DeltaTableSnapshot>.Failure(metadataResult.Error ?? "Unable to resolve KQL database metadata.", metadataResult.ErrorCode);
+            }
+            metadata = metadataResult.Value;
         }
 
         var tableName = FabricTargetPath.ParseSingleName(server.Path);
         // Control commands (.show ...) require /v1/rest/mgmt; data queries use /v2/rest/query.
         var command = $".show table ['{tableName.Replace("'", "\\'", StringComparison.Ordinal)}'] schema as json";
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{metadata.Value.QueryServiceUri.TrimEnd('/')}/v1/rest/mgmt");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{metadata.QueryServiceUri}/v1/rest/mgmt");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.KustoToken);
         request.Content = new StringContent(
-            JsonSerializer.Serialize(new { db = metadata.Value.DatabaseName, csl = command }),
+            JsonSerializer.Serialize(new { db = metadata.DatabaseName, csl = command }),
             Encoding.UTF8,
             "application/json");
 
@@ -279,11 +302,24 @@ public sealed class FabricKqlSchemaReader : IFabricKqlSchemaReader
             });
     }
 
-    private async Task<Result<KqlDatabaseMetadata>> GetKqlDatabaseAsync(string fabricRestToken, EnforcementTargetContext target, CancellationToken ct)
+    private static bool IsKustoUri(string host) =>
+        Uri.TryCreate(host, UriKind.Absolute, out var uri)
+        && uri.Scheme is "https" or "http"
+        && (uri.Host.Contains(".kusto.", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Contains(".kusto.windows.net", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Contains(".kusto.azuresynapse.net", StringComparison.OrdinalIgnoreCase));
+
+    private async Task<Result<KqlDatabaseMetadata>> GetKqlDatabaseAsync(
+        string fabricRestToken,
+        ContractServer server,
+        EnforcementTargetContext target,
+        CancellationToken ct)
     {
+        // Cross-workspace: server.WorkspaceId overrides the contract's workspace.
+        var effectiveWorkspaceId = server.WorkspaceId ?? target.WorkspaceId;
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"{_fabricApiBase}/workspaces/{target.WorkspaceId}/kqlDatabases/{target.TargetItemId}");
+            $"{_fabricApiBase}/workspaces/{effectiveWorkspaceId}/kqlDatabases/{target.TargetItemId}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", fabricRestToken);
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
@@ -323,9 +359,11 @@ public sealed class FabricSemanticModelSchemaReader : IFabricSemanticModelSchema
             return Result<DeltaTableSnapshot>.Failure("A delegated Fabric REST token is required for Semantic Model enforcement.", "FabricRestTokenMissing");
         }
 
+        // Cross-workspace: server.WorkspaceId overrides the contract's workspace.
+        var effectiveWorkspaceId = server.WorkspaceId ?? target.WorkspaceId;
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
-            $"{_fabricApiBase}/workspaces/{target.WorkspaceId}/semanticModels/{target.TargetItemId}/getDefinition?format=TMDL");
+            $"{_fabricApiBase}/workspaces/{effectiveWorkspaceId}/semanticModels/{target.TargetItemId}/getDefinition?format=TMDL");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.FabricRestToken);
 
         using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);

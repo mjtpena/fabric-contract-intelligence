@@ -1,0 +1,125 @@
+apiVersion: v3.1.0
+kind: DataContract
+id: urn:orqentis:platform:telemetry:iot_events:v1
+name: IoT Telemetry Events Contract
+version: 1.0.0
+status: active
+description:
+  purpose: >
+    Governs the iot_events table in the Platform Eventhouse which lives in a
+    separate workspace (PlatformOps) from the data-governance contracts workspace.
+  usage: >
+    Used by downstream Retail and Finance workspaces for anomaly detection and
+    cost attribution. Orqentis enforces this contract from any workspace — the
+    workspaceId field on the server entry points enforcement at the correct
+    Fabric workspace without requiring the data to be copied.
+
+servers:
+  - server: platform-eventhouse
+    type: azure
+    # The table path — "DatabaseName/TableName" when using host shortcut,
+    # or just "TableName" when workspaceId + Fabric REST discovery is used.
+    location: IotDatabase/iot_events
+    format: kql
+    # --- Cross-workspace support ---
+    # Option A (recommended for Eventhouses in known workspaces):
+    #   Set workspaceId to the GUID of the workspace that owns the Eventhouse.
+    #   Orqentis will call the Fabric REST API in that workspace to discover the
+    #   Kusto query URI, then run .show table schema as json.
+    workspaceId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    #
+    # Option B (for cross-tenant or pre-known cluster URIs):
+    #   Set host to the Kusto cluster URI shown in Eventhouse settings.
+    #   Orqentis skips the Fabric REST lookup and connects directly.
+    #   Uncomment to use:
+    # host: https://your-cluster.z6.kusto.windows.net
+
+schema:
+  - name: iot_events
+    physicalType: table
+    description: Real-time IoT device telemetry ingested via Eventstream.
+    properties:
+      - name: event_id
+        logicalType: string
+        physicalType: STRING
+        required: true
+        unique: true
+        description: Unique event identifier (GUID).
+      - name: device_id
+        logicalType: string
+        physicalType: STRING
+        required: true
+        description: Device serial number.
+      - name: ingestion_time
+        logicalType: timestamp
+        physicalType: TIMESTAMP
+        required: true
+        description: UTC timestamp when the event arrived in the Eventhouse.
+      - name: temperature_c
+        logicalType: number
+        physicalType: REAL
+        required: false
+        description: Device temperature reading in Celsius.
+      - name: battery_pct
+        logicalType: number
+        physicalType: REAL
+        required: false
+        description: Battery level as a percentage (0–100).
+      - name: location_lat
+        logicalType: number
+        physicalType: REAL
+        required: false
+        description: GPS latitude.
+        customProperties:
+          - property: pii
+            value: false
+      - name: location_lon
+        logicalType: number
+        physicalType: REAL
+        required: false
+        description: GPS longitude.
+        customProperties:
+          - property: pii
+            value: false
+
+customProperties:
+  - property: orqentisInfo
+    value:
+      title: IoT Telemetry Events
+      description: >
+        Cross-workspace contract example. The Eventhouse is in the PlatformOps
+        workspace; this contract lives in the DataGovernance workspace.
+      owner: platform-team@example.com
+      contact:
+        - name: Platform Engineering
+          email: platform-eng@example.com
+          role: producer
+        - name: Retail Analytics
+          email: retail-analytics@example.com
+          role: consumer
+  - property: orqentisQuality
+    value:
+      - type: nullRate
+        column: event_id
+        threshold: 0.0
+        severity: error
+      - type: uniqueness
+        column: event_id
+        threshold: 1.0
+        severity: error
+      - type: nullRate
+        column: ingestion_time
+        threshold: 0.0
+        severity: error
+  - property: orqentisFreshness
+    value:
+      maxAgeHours: 1
+      severity: error
+
+slaProperties:
+  - property: availability
+    value: 99.9
+    unit: percent
+  - property: latency
+    value: 60
+    unit: seconds

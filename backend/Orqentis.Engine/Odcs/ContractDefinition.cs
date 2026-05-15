@@ -37,6 +37,14 @@ public sealed record ContractServer
     public string? Host { get; init; }
     public required string Path { get; init; }
     public string? Format { get; init; }
+    /// <summary>
+    /// Optional Fabric workspace GUID that hosts this data store.
+    /// When set, enforcement reads schema and runs quality checks in this workspace
+    /// instead of the workspace that owns the Orqentis contract item. Use this when
+    /// an Eventhouse, Warehouse, or Semantic Model lives in a different workspace.
+    /// YAML key: <c>workspaceId</c>.
+    /// </summary>
+    public Guid? WorkspaceId { get; init; }
 }
 
 public sealed record ContractColumn

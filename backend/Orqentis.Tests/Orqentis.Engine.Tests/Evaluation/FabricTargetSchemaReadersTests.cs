@@ -246,6 +246,137 @@ public sealed class FabricTargetSchemaReadersTests
         source.Table.Should().Be(expectedTable);
     }
 
+    [Fact]
+    public async Task ResolveConnectionStringAsync_CrossWorkspace_UsesServerWorkspaceId()
+    {
+        var crossWorkspaceId = Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+        var handler = new RecordingHandler(_ => JsonResponse(HttpStatusCode.OK, """
+            {
+              "displayName": "CrossWorkspaceWarehouse",
+              "properties": {
+                "connectionString": "Server=cross.datawarehouse.fabric.microsoft.com;Initial Catalog=CrossDB;"
+              }
+            }
+            """));
+        var reader = new FabricSqlSchemaReader(new HttpClient(handler), NullLogger<FabricSqlSchemaReader>.Instance);
+        var server = CreateServer("dbo.sales") with { WorkspaceId = crossWorkspaceId };
+
+        var result = await reader.ResolveConnectionStringAsync(server, CreateCredentials(), CreateTarget("warehouse"));
+
+        result.IsSuccess.Should().BeTrue();
+        // The request must use the server's workspace, not the contract's workspace (11111...1).
+        handler.Requests[0].RequestUri!.ToString().Should().Contain(crossWorkspaceId.ToString());
+        handler.Requests[0].RequestUri!.ToString().Should().NotContain("11111111");
+    }
+
+    [Fact]
+    public async Task KqlReadAsync_CrossWorkspace_UsesServerWorkspaceId()
+    {
+        var crossWorkspaceId = Guid.Parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+        var handler = new QueueHandler(
+            JsonResponse(HttpStatusCode.OK, """
+                {
+                  "displayName": "CrossEventhouse",
+                  "properties": { "queryServiceUri": "https://cross.kusto.fabric.microsoft.com" }
+                }
+                """),
+            JsonResponse(HttpStatusCode.OK, """
+                {
+                  "Tables": [
+                    {
+                      "TableName": "Table_0",
+                      "Columns": [
+                        { "ColumnName": "TableName", "DataType": "String", "ColumnType": "string" },
+                        { "ColumnName": "Schema", "DataType": "String", "ColumnType": "string" },
+                        { "ColumnName": "DatabaseName", "DataType": "String", "ColumnType": "string" }
+                      ],
+                      "Rows": [
+                        ["Events", "{\"Name\":\"Events\",\"OrderedColumns\":[{\"Name\":\"event_id\",\"Type\":\"System.String\",\"CslType\":\"string\"}]}", "db"]
+                      ]
+                    }
+                  ]
+                }
+                """));
+        var reader = new FabricKqlSchemaReader(new HttpClient(handler));
+        var server = CreateServer("Events") with { WorkspaceId = crossWorkspaceId };
+
+        var result = await reader.ReadAsync(server, CreateCredentials(), CreateTarget("eventhouse"));
+
+        result.IsSuccess.Should().BeTrue();
+        // Metadata request should target the cross-workspace, not the contract's workspace.
+        handler.Requests[0].RequestUri!.ToString().Should().Contain(crossWorkspaceId.ToString());
+        handler.Requests[0].RequestUri!.ToString().Should().NotContain("11111111");
+    }
+
+    [Fact]
+    public async Task KqlReadAsync_HostIsKustoUri_SkipsFabricRestLookup()
+    {
+        // Only one HTTP call — direct to the Kusto mgmt endpoint — no Fabric REST metadata call.
+        var handler = new RecordingHandler(_ => JsonResponse(HttpStatusCode.OK, """
+            {
+              "Tables": [
+                {
+                  "TableName": "Table_0",
+                  "Columns": [
+                    { "ColumnName": "TableName", "DataType": "String", "ColumnType": "string" },
+                    { "ColumnName": "Schema", "DataType": "String", "ColumnType": "string" },
+                    { "ColumnName": "DatabaseName", "DataType": "String", "ColumnType": "string" }
+                  ],
+                  "Rows": [
+                    ["Logs", "{\"Name\":\"Logs\",\"OrderedColumns\":[{\"Name\":\"ts\",\"Type\":\"System.DateTime\",\"CslType\":\"datetime\"},{\"Name\":\"msg\",\"Type\":\"System.String\",\"CslType\":\"string\"}]}", "db"]
+                  ]
+                }
+              ]
+            }
+            """));
+        var reader = new FabricKqlSchemaReader(new HttpClient(handler));
+        // host = direct Kusto cluster URI; path = "MyDatabase/Logs"
+        var server = new ContractServer
+        {
+            Name = "remote-eventhouse",
+            Type = "azure",
+            Path = "MyDatabase/Logs",
+            Format = "kql",
+            Host = "https://mydb.z6.kusto.windows.net",
+        };
+
+        var result = await reader.ReadAsync(server, CreateCredentials(), CreateTarget("eventhouse"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Schema.Columns.Should().Contain(c => c.Name == "ts");
+        // Only one request — straight to Kusto mgmt, no Fabric REST call.
+        handler.Requests.Should().ContainSingle();
+        handler.Requests[0].RequestUri!.ToString().Should().Contain("kusto.windows.net");
+    }
+
+    [Fact]
+    public async Task SemanticModelReadAsync_CrossWorkspace_UsesServerWorkspaceId()
+    {
+        var crossWorkspaceId = Guid.Parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("""
+            table Sales
+              column OrderId string
+            """));
+        var handler = new RecordingHandler(_ => JsonResponse(HttpStatusCode.OK, $$"""
+            {
+              "definition": {
+                "parts": [
+                  { "path": "definition/tables/Sales.tmdl", "payload": "{{payload}}" }
+                ]
+              }
+            }
+            """));
+        var reader = new FabricSemanticModelSchemaReader(new HttpClient(handler));
+        var server = CreateServer("Sales") with { WorkspaceId = crossWorkspaceId };
+
+        var result = await reader.ReadAsync(server, CreateCredentials(), CreateTarget("semantic_model"));
+
+        result.IsSuccess.Should().BeTrue();
+        // The request must target the cross-workspace, not the contract's workspace.
+        handler.Requests[0].RequestUri!.ToString().Should().Contain(crossWorkspaceId.ToString());
+        handler.Requests[0].RequestUri!.ToString().Should().NotContain("11111111");
+    }
+
     private static ContractServer CreateServer(string path) => new()
     {
         Name = "fabric-target",

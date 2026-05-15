@@ -102,6 +102,9 @@ internal static class OdcsDocumentMapper
             ?? GetString(serverElement, "path")
             ?? string.Empty;
 
+        var workspaceIdStr = GetString(serverElement, "workspaceId");
+        Guid? workspaceId = Guid.TryParse(workspaceIdStr, out var parsedGuid) ? parsedGuid : null;
+
         return new ContractServer
         {
             Name = GetString(serverElement, "server") ?? GetString(serverElement, "name") ?? string.Empty,
@@ -109,6 +112,7 @@ internal static class OdcsDocumentMapper
             Host = GetHost(serverElement, path),
             Path = path,
             Format = GetString(serverElement, "format"),
+            WorkspaceId = workspaceId,
         };
     }
 
@@ -197,14 +201,21 @@ internal static class OdcsDocumentMapper
         }).ToArray();
     }
 
-    private static object MapServer(ContractServer server) =>
-        new Dictionary<string, object?>
+    private static object MapServer(ContractServer server)
+    {
+        var dict = new Dictionary<string, object?>
         {
             ["server"] = server.Name,
             ["type"] = server.Type,
             ["location"] = server.Path,
             ["format"] = server.Format ?? "delta",
         };
+        if (server.WorkspaceId.HasValue)
+        {
+            dict["workspaceId"] = server.WorkspaceId.Value.ToString("D");
+        }
+        return dict;
+    }
 
     private static object MapColumn(ContractColumn column)
     {
