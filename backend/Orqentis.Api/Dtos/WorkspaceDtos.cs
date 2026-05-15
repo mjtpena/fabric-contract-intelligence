@@ -16,7 +16,32 @@ public sealed record WorkspaceTableDto
     public required string Format { get; init; }
 }
 
-/// <summary>Lakehouse item proxied from the Fabric REST API.</summary>
+/// <summary>API key descriptor returned by the list endpoint (never includes the raw key).</summary>
+public sealed record WorkspaceApiKeyDto
+{
+    public required Guid Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string KeyHint { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
+    public required DateTimeOffset? LastUsedAt { get; init; }
+}
+
+/// <summary>Returned once after key creation — <see cref="RawKey"/> is never stored.</summary>
+public sealed record CreateApiKeyResponse
+{
+    public required Guid Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string KeyHint { get; init; }
+    public required string RawKey { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
+}
+
+/// <summary>Request body for key creation.</summary>
+public sealed record CreateApiKeyRequest
+{
+    public required string DisplayName { get; init; }
+}
+
 public sealed record FabricLakehouseDto
 {
     public required Guid Id { get; init; }

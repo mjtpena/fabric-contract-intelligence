@@ -78,6 +78,21 @@ public sealed class ContractPolicy
     [Column("updated_at")] public DateTimeOffset UpdatedAt { get; set; }
 }
 
+[Table("workspace_api_keys")]
+public sealed class WorkspaceApiKey
+{
+    [Column("key_id")] public Guid KeyId { get; set; }
+    [Column("tenant_id")] public Guid TenantId { get; set; }
+    [Column("workspace_id")] public Guid WorkspaceId { get; set; }
+    [Column("display_name")] public string DisplayName { get; set; } = string.Empty;
+    [Column("key_prefix")] public string KeyPrefix { get; set; } = string.Empty;
+    [Column("key_hash")] public string KeyHash { get; set; } = string.Empty;
+    [Column("created_by")] public string CreatedBy { get; set; } = string.Empty;
+    [Column("created_at")] public DateTimeOffset CreatedAt { get; set; }
+    [Column("last_used_at")] public DateTimeOffset? LastUsedAt { get; set; }
+    [Column("deleted_at")] public DateTimeOffset? DeletedAt { get; set; }
+}
+
 [Table("workspace_links")]
 public sealed class WorkspaceLink
 {

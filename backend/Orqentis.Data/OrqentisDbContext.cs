@@ -23,6 +23,7 @@ public sealed class OrqentisDbContext : DbContext
     public DbSet<EnforcementRun> EnforcementRuns => Set<EnforcementRun>();
     public DbSet<ContractPolicy> ContractPolicies => Set<ContractPolicy>();
     public DbSet<WorkspaceLink> WorkspaceLinks => Set<WorkspaceLink>();
+    public DbSet<WorkspaceApiKey> WorkspaceApiKeys => Set<WorkspaceApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +87,15 @@ public sealed class OrqentisDbContext : DbContext
         {
             b.HasKey(link => link.LinkId);
             b.HasIndex(link => new { link.TenantId, link.WorkspaceId, link.LinkedWorkspaceId }).IsUnique();
+        });
+
+        modelBuilder.Entity<WorkspaceApiKey>(b =>
+        {
+            b.HasKey(k => k.KeyId);
+            b.HasQueryFilter(k => k.DeletedAt == null &&
+                (!_tenantContext.HasTenant || k.TenantId == _tenantContext.TenantId));
+            b.HasIndex(k => k.KeyHash).IsUnique().HasFilter("deleted_at IS NULL");
+            b.HasIndex(k => new { k.TenantId, k.WorkspaceId }).HasDatabaseName("ix_workspace_api_keys_workspace");
         });
     }
 }

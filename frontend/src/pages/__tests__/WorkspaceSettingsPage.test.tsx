@@ -27,8 +27,8 @@ describe('WorkspaceSettingsPage', () => {
     expect(screen.getByText('Workspace settings')).toBeInTheDocument();
     expect(screen.getByText('Current tier')).toBeInTheDocument();
     expect(screen.getByText('Community')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Request API key' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Activator setup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage API keys' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open contracts & policies' })).toBeInTheDocument();
     expect(screen.getByText('Not connected')).toBeInTheDocument();
   });
 });
