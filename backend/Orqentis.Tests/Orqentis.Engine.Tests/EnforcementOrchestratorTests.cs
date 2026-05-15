@@ -541,6 +541,205 @@ public sealed class EnforcementOrchestratorTests
         TargetType = "warehouse",
     };
 
+    [Fact]
+    public async Task RunAsync_DeltaFormat_MissingOneLakeToken_ReturnsOneLakeTokenMissingError()
+    {
+        var orchestrator = CreateOrchestrator();
+
+        var result = await orchestrator.RunAsync(
+            CreateContract(),
+            new EnforcementCredentials { OneLakeToken = "" },
+            target: null);
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Error);
+        result.ErrorMessage.Should().Contain("delegated OneLake token");
+    }
+
+    [Theory]
+    [InlineData("sql")]
+    [InlineData("kql")]
+    [InlineData("semantic_model")]
+    public async Task RunAsync_NonDeltaFormat_MissingTargetContext_ReturnsTargetContextMissingError(string format)
+    {
+        var orchestrator = CreateOrchestrator();
+        var contract = CreateContract() with
+        {
+            Servers =
+            [
+                new ContractServer { Name = "s", Type = "azure", Path = "p", Format = format },
+            ],
+        };
+
+        var result = await orchestrator.RunAsync(contract, new EnforcementCredentials { FabricRestToken = "t", FabricSqlToken = "t", KustoToken = "t" }, target: null);
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Error);
+        result.ErrorMessage.Should().Contain("Target context is required");
+    }
+
+    [Fact]
+    public async Task RunAsync_UnsupportedFormat_ReturnsTargetFormatUnsupportedError()
+    {
+        var orchestrator = CreateOrchestrator();
+        var contract = CreateContract() with
+        {
+            Servers =
+            [
+                new ContractServer { Name = "s", Type = "azure", Path = "p", Format = "parquet" },
+            ],
+        };
+
+        var result = await orchestrator.RunAsync(contract, new EnforcementCredentials { FabricSqlToken = "t" }, CreateTarget());
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Error);
+        result.ErrorMessage.Should().Contain("parquet");
+    }
+
+    [Fact]
+    public async Task RunAsync_ContractHasNoServers_ReturnsErrorResult()
+    {
+        var orchestrator = CreateOrchestrator();
+        var contract = CreateContract() with { Servers = [] };
+
+        var result = await orchestrator.RunAsync(contract, "obo-token");
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Error);
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_SemanticModelHyphenFormat_RoutesToSemanticReader()
+    {
+        // "semantic-model" (with hyphen) must normalize to "semantic_model"
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 1,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = DateTimeOffset.UtcNow.AddHours(-1),
+        };
+        var semanticReader = new Mock<IFabricSemanticModelSchemaReader>();
+        semanticReader
+            .Setup(r => r.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+
+        var orchestrator = CreateOrchestrator(semanticReader: semanticReader.Object);
+        var contract = CreateContract() with
+        {
+            Servers =
+            [
+                new ContractServer { Name = "s", Type = "azure", Path = "Sales", Format = "semantic-model" },
+            ],
+        };
+
+        var result = await orchestrator.RunAsync(
+            contract,
+            new EnforcementCredentials { FabricRestToken = "token" },
+            CreateTarget());
+
+        result.OverallStatus.Should().Be(EnforcementStatus.Passed);
+        semanticReader.Verify(r => r.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_DeltaFormatWithQuality_PassesTokenToQualityEvaluator()
+    {
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 3,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = DateTimeOffset.UtcNow.AddHours(-1),
+        };
+        var deltaReader = new Mock<IDeltaLogReader>();
+        deltaReader
+            .Setup(r => r.ReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+
+        string? capturedToken = null;
+        var qualityEvaluator = new Mock<IQualityRuleEvaluator>();
+        qualityEvaluator
+            .Setup(q => q.EvaluateAsync(It.IsAny<IReadOnlyList<QualityRule>>(), It.IsAny<ContractServer>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<QualityRule>, ContractServer, string, CancellationToken>((_, _, token, _) => capturedToken = token)
+            .ReturnsAsync([new RuleResult { RuleId = "quality.null_rate", Status = RuleStatus.Passed, Message = "ok" }]);
+
+        var orchestrator = CreateOrchestrator(deltaReader: deltaReader.Object, qualityEvaluator: qualityEvaluator.Object);
+        var contract = CreateSqlContractWithQuality() with
+        {
+            Servers =
+            [
+                new ContractServer
+                {
+                    Name = "delta",
+                    Type = "azure",
+                    Path = "abfss://ws@onelake.dfs.fabric.microsoft.com/Lh.Lakehouse/Tables/orders",
+                    Format = "delta",
+                },
+            ],
+        };
+
+        await orchestrator.RunAsync(contract, "my-obo-token");
+
+        capturedToken.Should().Be("my-obo-token");
+    }
+
+    [Fact]
+    public async Task RunAsync_SqlConnectionResolveFails_QualityRulesReturnFailed()
+    {
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 0,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = DateTimeOffset.UtcNow.AddHours(-1),
+        };
+        var sqlReader = new Mock<IFabricSqlSchemaReader>();
+        sqlReader
+            .Setup(r => r.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        sqlReader
+            .Setup(r => r.ResolveConnectionStringAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string>.Failure("Cannot resolve warehouse metadata.", "FabricSqlConnectionMissing"));
+
+        var orchestrator = CreateOrchestrator(sqlReader: sqlReader.Object);
+
+        var result = await orchestrator.RunAsync(
+            CreateSqlContractWithQuality(),
+            new EnforcementCredentials { FabricRestToken = "token", FabricSqlToken = "sql-token" },
+            CreateTarget());
+
+        result.QualityRules.Should().ContainSingle(r => r.Status == RuleStatus.Failed);
+        result.QualityRules[0].Message.Should().Contain("Cannot resolve warehouse metadata.");
+    }
+
+    [Fact]
+    public async Task RunAsync_SqlTargetMissingSqlToken_QualityRulesReturnFailed()
+    {
+        var snapshot = new DeltaTableSnapshot
+        {
+            Version = 0,
+            Schema = new DeltaSchema { Columns = [] },
+            PartitionColumns = [],
+            LastModifiedUtc = DateTimeOffset.UtcNow.AddHours(-1),
+        };
+        var sqlReader = new Mock<IFabricSqlSchemaReader>();
+        sqlReader
+            .Setup(r => r.ReadAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<DeltaTableSnapshot>.Success(snapshot));
+        sqlReader
+            .Setup(r => r.ResolveConnectionStringAsync(It.IsAny<ContractServer>(), It.IsAny<EnforcementCredentials>(), It.IsAny<EnforcementTargetContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string>.Success("Server=x.datawarehouse.fabric.microsoft.com;Initial Catalog=X;"));
+
+        var orchestrator = CreateOrchestrator(sqlReader: sqlReader.Object);
+
+        var result = await orchestrator.RunAsync(
+            CreateSqlContractWithQuality(),
+            new EnforcementCredentials { FabricRestToken = "token", FabricSqlToken = "" },
+            CreateTarget());
+
+        result.QualityRules.Should().ContainSingle(r => r.Status == RuleStatus.Failed);
+        result.QualityRules[0].Message.Should().Contain("delegated SQL token");
+    }
+
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;

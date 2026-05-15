@@ -196,6 +196,61 @@ public sealed class SchemaRuleEvaluatorTests
         rule.Actual.Should().BeEquivalentTo(new[] { "facility_id" });
     }
 
+    // ─── NormalizeType matrix ───────────────────────────────────────────────────
+    // Delta persists int64 as "long"; ODCS uses "integer"/"bigint". These must match.
+
+    [Theory]
+    [InlineData("long",     "integer", true)]   // Delta long  ↔ ODCS integer  → match
+    [InlineData("bigint",   "integer", true)]   // SQL BIGINT  ↔ ODCS integer  → match
+    [InlineData("smallint", "integer", true)]   // SQL SMALLINT ↔ ODCS integer → match
+    [InlineData("tinyint",  "integer", true)]   // SQL TINYINT  ↔ ODCS integer → match
+    [InlineData("short",    "integer", true)]   // Spark short  ↔ ODCS integer → match
+    [InlineData("byte",     "integer", true)]   // Spark byte   ↔ ODCS integer → match
+    [InlineData("double",   "number",  true)]   // Delta double ↔ ODCS number  → match
+    [InlineData("float",    "number",  true)]   // SQL FLOAT    ↔ ODCS number  → match
+    [InlineData("real",     "number",  true)]   // SQL REAL     ↔ ODCS number  → match
+    [InlineData("decimal",  "number",  true)]   // SQL DECIMAL  ↔ ODCS number  → match
+    [InlineData("numeric",  "number",  true)]   // SQL NUMERIC  ↔ ODCS number  → match
+    [InlineData("bool",     "boolean", true)]   // Spark bool   ↔ ODCS boolean → match
+    [InlineData("boolean",  "boolean", true)]   // Explicit     ↔ ODCS boolean → match
+    [InlineData("date",     "date",    true)]   // DATE passthrough               → match
+    [InlineData("timestamp","timestamp",true)]  // TIMESTAMP passthrough          → match
+    [InlineData("long",     "string",  false)]  // long vs string                 → no match
+    [InlineData("double",   "integer", false)]  // NUMBER vs INTEGER              → no match
+    public void Evaluate_NormalizeType_CrossFamilyMatching(string liveType, string contractType, bool shouldMatch)
+    {
+        var evaluator = CreateEvaluator();
+
+        var result = evaluator.Evaluate(
+            CreateLiveSchema(CreateLiveColumn("col", liveType, false)),
+            [CreateContractColumn("col", contractType, true)],
+            []);
+
+        var typeRule = result.Single(item => item.RuleId == "schema.column.type");
+        if (shouldMatch)
+            typeRule.Status.Should().Be(RuleStatus.Passed, because: $"'{liveType}' and '{contractType}' should normalize to the same canonical type");
+        else
+            typeRule.Status.Should().Be(RuleStatus.Failed, because: $"'{liveType}' and '{contractType}' belong to different type families");
+    }
+
+    [Theory]
+    [InlineData("array<string>", "ARRAY<STRING>")]   // complex type passes through uppercased
+    [InlineData("map<string,long>", "MAP<STRING,LONG>")]
+    [InlineData("struct<id:string,amount:double>", "STRUCT<ID:STRING,AMOUNT:DOUBLE>")]
+    public void Evaluate_ComplexTypes_PassThroughUppercased(string liveType, string expectedNormalized)
+    {
+        var evaluator = CreateEvaluator();
+
+        var result = evaluator.Evaluate(
+            CreateLiveSchema(CreateLiveColumn("col", liveType, false)),
+            [CreateContractColumn("col", liveType, true)],
+            []);
+
+        var typeRule = result.Single(item => item.RuleId == "schema.column.type");
+        typeRule.Status.Should().Be(RuleStatus.Passed);
+        typeRule.Actual.Should().Be(expectedNormalized);
+    }
+
     private static SchemaRuleEvaluator CreateEvaluator() =>
         new(NullLogger<SchemaRuleEvaluator>.Instance);
 
