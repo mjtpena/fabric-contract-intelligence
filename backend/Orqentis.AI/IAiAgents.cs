@@ -68,6 +68,16 @@ public interface IRemediationAdvisor
         CancellationToken ct = default);
 }
 
+/// <summary>Sprint 10 deliverable. Enriches an existing ODCS contract with better governance rules.</summary>
+public interface IContractImprovementAgent
+{
+    /// <summary>
+    /// Returns an improved version of <paramref name="odcsYaml"/> with richer quality rules,
+    /// PII annotations, and better descriptions. Returns the original YAML on LLM failure.
+    /// </summary>
+    Task<ContractSuggestion> ImproveAsync(string odcsYaml, CancellationToken ct = default);
+}
+
 /// <summary>Enterprise-only natural language search over the contract registry.</summary>
 public interface INaturalLanguageQueryHandler
 {

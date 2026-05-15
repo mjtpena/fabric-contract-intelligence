@@ -200,6 +200,16 @@ export interface SchemaPreviewField {
 }
 
 /**
+ * Request body for `POST /v1/contracts/schema-preview`.
+ */
+export interface LivePreviewRequest {
+  odcsYaml: string;
+  targetItemId?: string;
+  targetWorkspaceId?: string;
+  targetType?: string;
+}
+
+/**
  * Debounced validation result emitted by the validation panel.
  */
 export interface ContractValidationResult {

@@ -235,6 +235,71 @@ public sealed class BreachImpactScorer : IBreachImpactScorer
     }
 }
 
+/// <summary>Improves an existing ODCS contract with better governance rules and PII annotations.</summary>
+public sealed class ContractImprovementAgent : IContractImprovementAgent
+{
+    private const string _promptFile = "ContractImprove.txt";
+
+    private readonly ILlmRouter _llmRouter;
+    private readonly IPromptLoader _promptLoader;
+    private readonly IOdcsContractValidator _validator;
+    private readonly ILogger<ContractImprovementAgent> _logger;
+
+    public ContractImprovementAgent(
+        ILlmRouter llmRouter,
+        IPromptLoader promptLoader,
+        IOdcsContractValidator validator,
+        ILogger<ContractImprovementAgent> logger)
+    {
+        _llmRouter = llmRouter;
+        _promptLoader = promptLoader;
+        _validator = validator;
+        _logger = logger;
+    }
+
+    public async Task<ContractSuggestion> ImproveAsync(string odcsYaml, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(odcsYaml);
+        var started = DateTimeOffset.UtcNow;
+        var prompt = _promptLoader.Load(_promptFile);
+
+        _logger.LogInformation("AI-ContractImprove-Start YamlLength={Length}", odcsYaml.Length);
+        var llmResult = await _llmRouter.CompleteAsync("ContractImprove", prompt, odcsYaml, ct).ConfigureAwait(false);
+
+        var candidateYaml = llmResult?.Content?.Trim();
+        if (!string.IsNullOrWhiteSpace(candidateYaml))
+        {
+            var errors = _validator.Validate(candidateYaml);
+            if (errors.Count == 0)
+            {
+                _logger.LogInformation("AI-ContractImprove-Success Model={Model}", llmResult!.ModelUsed);
+                return new ContractSuggestion
+                {
+                    OdcsYaml = candidateYaml,
+                    Rationale = ["Contract improved with richer quality rules, PII annotations, and better descriptions."],
+                    ModelUsed = llmResult.ModelUsed,
+                    Latency = DateTimeOffset.UtcNow - started,
+                };
+            }
+
+            _logger.LogWarning("AI-ContractImprove-ValidationFailed ErrorCount={Count}", errors.Count);
+        }
+        else
+        {
+            _logger.LogWarning("AI-ContractImprove-EmptyResponse");
+        }
+
+        // Fallback: return original YAML unchanged so the caller is never left with nothing.
+        return new ContractSuggestion
+        {
+            OdcsYaml = odcsYaml,
+            Rationale = ["AI improvement was unavailable; original contract returned unchanged."],
+            ModelUsed = "fallback-passthrough",
+            Latency = DateTimeOffset.UtcNow - started,
+        };
+    }
+}
+
 /// <summary>Generates remediation suggestions with safe empty fallback.</summary>
 public sealed class RemediationAdvisor : IRemediationAdvisor
 {

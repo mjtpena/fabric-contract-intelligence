@@ -35,6 +35,12 @@ public sealed record SuggestContractResponse
     public required long LatencyMs { get; init; }
 }
 
+public sealed record ImproveContractRequest
+{
+    [Required]
+    public required string OdcsYaml { get; init; }
+}
+
 public sealed record NaturalLanguageQueryRequest
 {
     [Required]

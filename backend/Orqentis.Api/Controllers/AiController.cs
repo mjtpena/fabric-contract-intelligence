@@ -13,15 +13,18 @@ namespace Orqentis.Api.Controllers;
 public sealed class AiController : ControllerBase
 {
     private readonly IContractSuggestionAgent _suggestionAgent;
+    private readonly IContractImprovementAgent _improvementAgent;
     private readonly INaturalLanguageQueryHandler _queryHandler;
     private readonly IContractStore _contractStore;
 
     public AiController(
         IContractSuggestionAgent suggestionAgent,
+        IContractImprovementAgent improvementAgent,
         INaturalLanguageQueryHandler queryHandler,
         IContractStore contractStore)
     {
         _suggestionAgent = suggestionAgent;
+        _improvementAgent = improvementAgent;
         _queryHandler = queryHandler;
         _contractStore = contractStore;
     }
@@ -51,6 +54,24 @@ public sealed class AiController : ControllerBase
         };
 
         var suggestion = await _suggestionAgent.SuggestAsync(profile, ct).ConfigureAwait(false);
+        return Ok(new SuggestContractResponse
+        {
+            OdcsYaml = suggestion.OdcsYaml,
+            Rationale = suggestion.Rationale,
+            ModelUsed = suggestion.ModelUsed,
+            LatencyMs = (long)suggestion.Latency.TotalMilliseconds,
+        });
+    }
+
+    /// <summary>Improves an existing ODCS contract with richer governance rules and PII annotations.</summary>
+    [HttpPost("improve-contract")]
+    [ProducesResponseType(typeof(SuggestContractResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SuggestContractResponse>> ImproveContractAsync(
+        [FromBody] ImproveContractRequest request,
+        CancellationToken ct)
+    {
+        var suggestion = await _improvementAgent.ImproveAsync(request.OdcsYaml, ct).ConfigureAwait(false);
         return Ok(new SuggestContractResponse
         {
             OdcsYaml = suggestion.OdcsYaml,

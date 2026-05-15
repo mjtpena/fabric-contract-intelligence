@@ -89,6 +89,37 @@ public sealed record UpdateContractRequest
     public string? CommitMessage { get; init; }
 }
 
+/// <summary>Request body for live schema preview against a live Fabric target.</summary>
+public sealed record LivePreviewRequest
+{
+    [Required]
+    public required string OdcsYaml { get; init; }
+
+    /// <summary>Fabric item ID for non-Delta targets (warehouse, eventhouse, semantic model).</summary>
+    public Guid? TargetItemId { get; init; }
+
+    /// <summary>Target workspace ID. If omitted, the current request workspace is used.</summary>
+    public Guid? TargetWorkspaceId { get; init; }
+
+    /// <summary>Target type hint (lakehouse, warehouse, eventhouse, semantic_model, fabric_sql).</summary>
+    public string? TargetType { get; init; }
+}
+
+/// <summary>A single field from the live schema of the target table.</summary>
+public sealed record SchemaPreviewFieldDto
+{
+    public required string Name { get; init; }
+    public required string PhysicalType { get; init; }
+    public required bool Nullable { get; init; }
+}
+
+/// <summary>Response from live schema preview.</summary>
+public sealed record LivePreviewResponse
+{
+    public required IReadOnlyList<SchemaPreviewFieldDto> Fields { get; init; }
+    public required long DeltaVersion { get; init; }
+}
+
 /// <summary>Immutable contract version snapshot.</summary>
 public sealed record ContractVersionDto
 {

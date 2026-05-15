@@ -22,7 +22,8 @@ import type {
 import { createContractClient } from '@/api/contractClient';
 
 interface ValidationPanelProps {
-  onPreviewAgainstLiveTable?: () => void;
+  /** Async callback that fetches live schema fields from the target Fabric table. */
+  getLivePreview?: () => Promise<SchemaPreviewField[]>;
   onValidationChange?: (result: ContractValidationResult) => void;
   validateYaml?: (yaml: string) => Promise<ContractValidationResult>;
   yaml: string;
@@ -57,9 +58,13 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
   },
+  liveTag: {
+    color: tokens.colorBrandForeground1,
+    fontWeight: tokens.fontWeightSemibold,
+  },
 });
 
-const columns = [
+const schemaColumns = [
   createTableColumn<SchemaPreviewField>({
     columnId: 'name',
     compare: (left, right) => left.name.localeCompare(right.name),
@@ -89,7 +94,7 @@ const fallbackValidator = createContractClient({
 }).validate;
 
 export function ValidationPanel({
-  onPreviewAgainstLiveTable,
+  getLivePreview,
   onValidationChange,
   validateYaml = fallbackValidator,
   yaml,
@@ -97,6 +102,9 @@ export function ValidationPanel({
   const styles = useStyles();
   const [isValidating, setIsValidating] = useState(false);
   const [result, setResult] = useState<ContractValidationResult | null>(null);
+  const [liveFields, setLiveFields] = useState<SchemaPreviewField[] | null>(null);
+  const [isLoadingLive, setIsLoadingLive] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -120,6 +128,30 @@ export function ValidationPanel({
     };
   }, [onValidationChange, validateYaml, yaml]);
 
+  // Reset live preview when YAML changes so stale data is not shown.
+  useEffect(() => {
+    setLiveFields(null);
+    setLiveError(null);
+  }, [yaml]);
+
+  const handleLivePreview = async () => {
+    if (!getLivePreview || isLoadingLive) {
+      return;
+    }
+
+    setIsLoadingLive(true);
+    setLiveError(null);
+
+    try {
+      const fields = await getLivePreview();
+      setLiveFields(fields);
+    } catch (err) {
+      setLiveError(err instanceof Error ? err.message : 'Preview failed. Check network access and token permissions.');
+    } finally {
+      setIsLoadingLive(false);
+    }
+  };
+
   const issueSummary = useMemo(() => {
     if (!result) {
       return 'Waiting for validation...';
@@ -130,6 +162,11 @@ export function ValidationPanel({
       : `${result.issues.length} validation issue${result.issues.length === 1 ? '' : 's'} found.`;
   }, [result]);
 
+  const displayedSchema = liveFields ?? result?.schemaPreview ?? [];
+  const schemaLabel = liveFields != null ? (
+    <span><span className={styles.liveTag}>Live </span>schema from Fabric target</span>
+  ) : 'Schema preview (from YAML)';
+
   return (
     <aside className={styles.root}>
       <div className={styles.sectionHeader}>
@@ -137,12 +174,23 @@ export function ValidationPanel({
           <Subtitle2>Validation panel</Subtitle2>
           <Caption1>{issueSummary}</Caption1>
         </div>
-        <Button appearance="secondary" onClick={onPreviewAgainstLiveTable}>
+        <Button
+          appearance="secondary"
+          disabled={!getLivePreview || isLoadingLive}
+          onClick={() => void handleLivePreview()}
+        >
+          {isLoadingLive ? <Spinner size="tiny" /> : null}
           Preview against live table
         </Button>
       </div>
 
       {isValidating ? <Spinner label="Refreshing validation…" size="small" /> : null}
+
+      {liveError ? (
+        <div className={styles.issue}>
+          <Body1>Live preview error: {liveError}</Body1>
+        </div>
+      ) : null}
 
       <section className={styles.issues}>
         {result?.issues.length ? (
@@ -158,8 +206,8 @@ export function ValidationPanel({
       </section>
 
       <section>
-        <Subtitle2>Schema preview</Subtitle2>
-        <DataGrid items={result?.schemaPreview ?? []} columns={columns}>
+        <Subtitle2>{schemaLabel}</Subtitle2>
+        <DataGrid items={displayedSchema} columns={schemaColumns}>
           <DataGridHeader>
             <DataGridRow>
               {({ renderHeaderCell }) => (

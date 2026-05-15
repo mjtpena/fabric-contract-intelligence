@@ -19,6 +19,7 @@ import {
   extractServerWorkspaceId,
   synchronizeDraftYaml,
 } from '@/api/contractClient';
+import { createAiClient } from '@/api/aiClient';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { ValidationPanel } from '@/components/ContractEditor/ValidationPanel';
 import { ItemEditor, type RibbonToolbar } from '@/components/ItemEditor/ItemEditor';
@@ -300,6 +301,18 @@ function EditorWorkspace({
 }: EditorWorkspaceProps) {
   const sdk = useFabricSdk();
   const { navigateTo, view } = useViewNavigation();
+  const [isImproving, setIsImproving] = useState(false);
+
+  const aiClient = useMemo(
+    () =>
+      createAiClient({
+        baseUrl: sdk.apiBaseUrl,
+        correlationId: sdk.correlationId,
+        getAccessToken: sdk.getAccessToken,
+        workspaceId: sdk.workspaceId,
+      }),
+    [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
+  );
 
   useEffect(() => {
     if (draft) {
@@ -390,28 +403,44 @@ function EditorWorkspace({
     }
   }, [actions, draft?.id, navigateToRun, sdk]);
 
+  const handleAiImprove = useCallback(async () => {
+    if (!draft || isImproving) {
+      return;
+    }
+
+    setIsImproving(true);
+    try {
+      const result = await aiClient.improveContract({ odcsYaml: draft.odcsYaml });
+      onChangeDraft({ ...draft, odcsYaml: result.odcsYaml });
+      await sdk.notifySuccess(
+        'Contract improved',
+        `AI enriched the contract using ${result.modelUsed} in ${result.latencyMs}ms.`,
+      );
+    } catch (improveError) {
+      const message = improveError instanceof Error ? improveError.message : 'AI improvement failed.';
+      await sdk.notifyError('AI Improve failed', message);
+    } finally {
+      setIsImproving(false);
+    }
+  }, [aiClient, draft, isImproving, onChangeDraft, sdk]);
+
   const additionalToolbars = useMemo<RibbonToolbar[]>(
     () => [
       {
         actions: [
           {
-            disabled: true,
-            icon: <SparkleRegular />,
+            disabled: !draft || isImproving,
+            icon: isImproving ? <Spinner size="tiny" /> : <SparkleRegular />,
             key: 'ai-improve',
-            label: 'AI Improve (Enterprise)',
-            onClick: async () => {
-              await sdk.notifyInfo(
-                'Coming soon',
-                'AI-assisted editing is planned for a later sprint.',
-              );
-            },
+            label: isImproving ? 'Improving…' : 'AI Improve (Enterprise)',
+            onClick: handleAiImprove,
           },
         ],
         key: 'ai-improve',
         label: 'AI Improve',
       },
     ],
-    [sdk],
+    [draft, handleAiImprove, isImproving],
   );
 
   const homeToolbarActions = useMemo(
@@ -602,12 +631,20 @@ function EditorWorkspace({
               />
             </div>
             <ValidationPanel
-              onPreviewAgainstLiveTable={() => {
-                void sdk.notifyInfo(
-                  'Preview unavailable',
-                  'Live table preview is planned for a later sprint.',
-                );
-              }}
+              getLivePreview={
+                draft
+                  ? () =>
+                      client.getLiveSchemaPreview({
+                        odcsYaml: draft.odcsYaml,
+                        targetItemId: draft.targetItemId || undefined,
+                        targetWorkspaceId:
+                          draft.targetWorkspaceId && isGuid(draft.targetWorkspaceId.trim())
+                            ? draft.targetWorkspaceId.trim()
+                            : undefined,
+                        targetType: draft.targetType,
+                      })
+                  : undefined
+              }
               onValidationChange={onValidationChange}
               validateYaml={client.validate}
               yaml={draft.odcsYaml}

@@ -18,6 +18,7 @@ public static class AiServiceCollectionExtensions
         services.TryAddSingleton<ILlmRouter, LlmRouter>();
 
         services.TryAddSingleton<IContractSuggestionAgent, ContractSuggestionAgent>();
+        services.TryAddSingleton<IContractImprovementAgent, ContractImprovementAgent>();
         services.TryAddSingleton<IBreachImpactScorer, BreachImpactScorer>();
         services.TryAddSingleton<IRemediationAdvisor, RemediationAdvisor>();
         services.TryAddSingleton<INaturalLanguageQueryHandler, NaturalLanguageQueryHandler>();

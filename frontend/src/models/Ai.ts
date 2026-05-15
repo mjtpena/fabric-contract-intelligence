@@ -20,6 +20,10 @@ export interface SuggestContractResponse {
   latencyMs: number;
 }
 
+export interface ImproveContractRequest {
+  odcsYaml: string;
+}
+
 export interface NaturalLanguageQueryRequest {
   query: string;
 }

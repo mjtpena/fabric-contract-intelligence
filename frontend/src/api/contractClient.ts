@@ -9,6 +9,7 @@ import type {
   ContractValidationResult,
   ContractVersion,
   CreateContractRequest,
+  LivePreviewRequest,
   RunAccepted,
   SchemaPreviewField,
   UpdateContractRequest,
@@ -31,6 +32,7 @@ export interface ContractClient {
   listVersions: (contractId: string) => Promise<ContractVersion[]>;
   runNow: (contractId: string) => Promise<RunAccepted>;
   validate: (yaml: string) => Promise<ContractValidationResult>;
+  getLiveSchemaPreview: (request: LivePreviewRequest) => Promise<SchemaPreviewField[]>;
 }
 
 interface ProblemDetails {
@@ -118,6 +120,22 @@ export function createContractClient(options: ContractClientOptions): ContractCl
         method: 'POST',
       }),
     validate: async (yaml) => validateContractYaml(yaml),
+    getLiveSchemaPreview: async (previewRequest) => {
+      const response = await request<{ fields: Array<{ name: string; physicalType: string; nullable: boolean }>; deltaVersion: number }>(
+        '/v1/contracts/schema-preview',
+        {
+          body: JSON.stringify(previewRequest),
+          method: 'POST',
+        },
+      );
+      return response.fields.map((field) => ({
+        name: field.name,
+        logicalType: null,
+        physicalType: field.physicalType,
+        required: !field.nullable,
+        unique: false,
+      }));
+    },
   };
 }
 

@@ -5,6 +5,10 @@ using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
 using Orqentis.Data;
+using Orqentis.Engine.Common;
+using Orqentis.Engine.Delta;
+using Orqentis.Engine.Evaluation;
+using Orqentis.Engine.Models;
 using Orqentis.Engine.Odcs;
 
 namespace Orqentis.Api.Controllers;
@@ -20,6 +24,11 @@ public sealed class ContractsController : ControllerBase
     private readonly OdcsContractSerializer _serializer;
     private readonly ITenantContext _tenantContext;
     private readonly IContractSuggestionAgent _contractSuggestionAgent;
+    private readonly IOneLakeTokenBroker _tokenBroker;
+    private readonly IDeltaLogReader _deltaReader;
+    private readonly IFabricKqlSchemaReader _kqlSchemaReader;
+    private readonly IFabricSqlSchemaReader _sqlSchemaReader;
+    private readonly IFabricSemanticModelSchemaReader _semanticModelSchemaReader;
 
     public ContractsController(
         IContractStore contractStore,
@@ -27,7 +36,12 @@ public sealed class ContractsController : ControllerBase
         IOdcsContractParser parser,
         OdcsContractSerializer serializer,
         ITenantContext tenantContext,
-        IContractSuggestionAgent contractSuggestionAgent)
+        IContractSuggestionAgent contractSuggestionAgent,
+        IOneLakeTokenBroker tokenBroker,
+        IDeltaLogReader deltaReader,
+        IFabricKqlSchemaReader kqlSchemaReader,
+        IFabricSqlSchemaReader sqlSchemaReader,
+        IFabricSemanticModelSchemaReader semanticModelSchemaReader)
     {
         _contractStore = contractStore;
         _validator = validator;
@@ -35,6 +49,11 @@ public sealed class ContractsController : ControllerBase
         _serializer = serializer;
         _tenantContext = tenantContext;
         _contractSuggestionAgent = contractSuggestionAgent;
+        _tokenBroker = tokenBroker;
+        _deltaReader = deltaReader;
+        _kqlSchemaReader = kqlSchemaReader;
+        _sqlSchemaReader = sqlSchemaReader;
+        _semanticModelSchemaReader = semanticModelSchemaReader;
     }
 
     /// <summary>Lists contracts for the current tenant workspace.</summary>
@@ -272,6 +291,158 @@ public sealed class ContractsController : ControllerBase
             ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract version not found.")
             : Ok(MapVersion(contractVersion));
     }
+
+    /// <summary>
+    /// Reads the live schema of the target Fabric item referenced in the supplied ODCS YAML.
+    /// Requires a delegated OBO token to access OneLake/Fabric data-plane. Spec §9.1.
+    /// </summary>
+    [HttpPost("schema-preview")]
+    [ProducesResponseType(typeof(LivePreviewResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<LivePreviewResponse>> SchemaPreviewAsync(
+        [FromBody] LivePreviewRequest request,
+        CancellationToken ct)
+    {
+        var bearerToken = GetBearerToken();
+        if (string.IsNullOrWhiteSpace(bearerToken))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Bearer token missing.",
+                detail: "An inbound bearer token is required for OBO exchange.");
+        }
+
+        var parseResult = _parser.Parse(request.OdcsYaml);
+        if (!parseResult.IsSuccess || parseResult.Value is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid ODCS YAML.",
+                detail: parseResult.Error ?? "The contract YAML could not be parsed.");
+        }
+
+        var server = parseResult.Value.Servers.FirstOrDefault();
+        if (server is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Target server missing.",
+                detail: "The contract YAML must contain at least one server entry with a valid location.");
+        }
+
+        var format = NormalizeServerFormat(server.Format);
+
+        // Resolve target context from request parameters or YAML server block.
+        var resolvedWorkspaceId = request.TargetWorkspaceId
+            ?? server.WorkspaceId
+            ?? _tenantContext.WorkspaceId;
+
+        var targetContext = request.TargetItemId.HasValue
+            ? new EnforcementTargetContext
+            {
+                WorkspaceId = resolvedWorkspaceId,
+                TargetItemId = request.TargetItemId.Value,
+                TargetType = request.TargetType is not null
+                    ? ContractTargetTypes.Normalize(request.TargetType) ?? ContractTargetTypes.Lakehouse
+                    : ContractTargetTypes.Lakehouse,
+            }
+            : (EnforcementTargetContext?)null;
+
+        var credentials = await GetPreviewCredentialsAsync(format, bearerToken, ct).ConfigureAwait(false);
+
+        var snapshotResult = await ReadLiveSnapshotAsync(format, server, credentials, targetContext, ct).ConfigureAwait(false);
+        if (!snapshotResult.IsSuccess || snapshotResult.Value is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Schema preview failed.",
+                detail: snapshotResult.Error ?? "Unable to read live schema from the target.");
+        }
+
+        var snapshot = snapshotResult.Value;
+        return Ok(new LivePreviewResponse
+        {
+            DeltaVersion = snapshot.Version,
+            Fields = snapshot.Schema.Columns
+                .Select(column => new SchemaPreviewFieldDto
+                {
+                    Name = column.Name,
+                    PhysicalType = column.Type,
+                    Nullable = column.Nullable,
+                })
+                .ToArray(),
+        });
+    }
+
+    private Task<Result<DeltaTableSnapshot>> ReadLiveSnapshotAsync(
+        string format,
+        ContractServer server,
+        EnforcementCredentials credentials,
+        EnforcementTargetContext? target,
+        CancellationToken ct) =>
+        format switch
+        {
+            "delta" => string.IsNullOrWhiteSpace(credentials.OneLakeToken)
+                ? Task.FromResult(Result<DeltaTableSnapshot>.Failure("A delegated OneLake token is required.", "OneLakeTokenMissing"))
+                : _deltaReader.ReadAsync(server.Path, credentials.OneLakeToken, ct),
+            "sql" => target is not null
+                ? _sqlSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for SQL preview.", "TargetContextMissing")),
+            "kql" => target is not null
+                ? _kqlSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for KQL preview.", "TargetContextMissing")),
+            "semantic_model" => target is not null
+                ? _semanticModelSchemaReader.ReadAsync(server, credentials, target, ct)
+                : Task.FromResult(Result<DeltaTableSnapshot>.Failure("Target context is required for Semantic Model preview.", "TargetContextMissing")),
+            _ => Task.FromResult(Result<DeltaTableSnapshot>.Failure($"Format '{format}' is not supported for live preview.", "FormatUnsupported")),
+        };
+
+    private async Task<EnforcementCredentials> GetPreviewCredentialsAsync(string format, string bearerToken, CancellationToken ct) =>
+        format switch
+        {
+            "delta" => new EnforcementCredentials
+            {
+                OneLakeToken = await _tokenBroker.GetOneLakeTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "sql" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+                FabricSqlToken = await _tokenBroker.GetFabricSqlTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "kql" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+                KustoToken = await _tokenBroker.GetKustoTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            "semantic_model" => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+            _ => new EnforcementCredentials
+            {
+                FabricRestToken = await _tokenBroker.GetFabricRestTokenAsync(bearerToken, ct).ConfigureAwait(false),
+            },
+        };
+
+    private string? GetBearerToken()
+    {
+        if (!Request.Headers.TryGetValue("Authorization", out var authorization))
+        {
+            return null;
+        }
+
+        const string prefix = "Bearer ";
+        var headerValue = authorization.ToString();
+        return headerValue.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? headerValue[prefix.Length..].Trim()
+            : null;
+    }
+
+    private static string NormalizeServerFormat(string? format) =>
+        string.IsNullOrWhiteSpace(format)
+            ? "delta"
+            : format.Trim().Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant();
 
     private bool TryNormalizeContract(
         string name,

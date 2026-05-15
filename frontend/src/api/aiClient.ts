@@ -1,4 +1,5 @@
 import type {
+  ImproveContractRequest,
   NaturalLanguageQueryRequest,
   NaturalLanguageQueryResponse,
   SuggestContractRequest,
@@ -14,6 +15,7 @@ export interface AiClientOptions {
 
 export interface AiClient {
   suggestContract: (request: SuggestContractRequest) => Promise<SuggestContractResponse>;
+  improveContract: (request: ImproveContractRequest) => Promise<SuggestContractResponse>;
   queryContracts: (request: NaturalLanguageQueryRequest) => Promise<NaturalLanguageQueryResponse>;
 }
 
@@ -54,6 +56,7 @@ export function createAiClient(options: AiClientOptions): AiClient {
 
   return {
     suggestContract: (requestBody) => request<SuggestContractResponse>('/v1/ai/suggest-contract', requestBody),
+    improveContract: (requestBody) => request<SuggestContractResponse>('/v1/ai/improve-contract', requestBody),
     queryContracts: (requestBody) => request<NaturalLanguageQueryResponse>('/v1/ai/query', requestBody),
   };
 }
