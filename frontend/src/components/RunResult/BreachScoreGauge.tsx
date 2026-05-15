@@ -70,16 +70,16 @@ export function BreachScoreGauge({ score }: BreachScoreGaugeProps) {
           100
         </text>
       </svg>
-      <div className={styles.value}>{normalizedScore === null ? 'Pending' : Math.round(normalizedScore)}</div>
+      <div className={styles.value}>{normalizedScore === null ? '—' : Math.round(normalizedScore)}</div>
       <Caption1>AI breach score</Caption1>
       <Body1>
         {normalizedScore === null
-          ? 'Waiting for Sprint 8 scoring.'
+          ? 'No run data yet.'
           : normalizedScore >= 70
-            ? 'High severity breach.'
+            ? 'High severity breach detected.'
             : normalizedScore >= 40
-              ? 'Moderate severity breach.'
-              : 'Low severity breach.'}
+              ? 'Moderate severity — review required.'
+              : 'Low severity — contract is healthy.'}
       </Body1>
     </div>
   );

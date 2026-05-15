@@ -6,6 +6,7 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const normalizedStatus = status.toLowerCase();
+  const displayText = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
 
   return (
     <Badge
@@ -14,7 +15,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       shape="rounded"
       size="medium"
     >
-      {normalizedStatus}
+      {displayText}
     </Badge>
   );
 }

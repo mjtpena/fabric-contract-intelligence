@@ -17,6 +17,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { AlertOffRegular } from '@fluentui/react-icons';
 import { createOpsClient } from '@/api/opsClient';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -44,6 +45,15 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingHorizontalXXL,
     backgroundColor: tokens.colorNeutralBackground2,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: tokens.spacingVerticalM,
+    textAlign: 'center',
+  },
+  emptyIcon: {
+    color: tokens.colorNeutralForeground3,
+    fontSize: '40px',
   },
 });
 
@@ -128,6 +138,7 @@ export function AlertsDashboardPage() {
         <Spinner label="Loading alerts…" />
       ) : filtered.length === 0 ? (
         <div className={styles.emptyState}>
+          <AlertOffRegular className={styles.emptyIcon} />
           <Body1>No alerts matched the selected filters.</Body1>
         </div>
       ) : (

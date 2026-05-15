@@ -119,7 +119,7 @@ describe('EnforcementRunPage', () => {
       </FluentProvider>,
     );
 
-    expect(screen.getByText('Patient Encounters Contract')).toBeInTheDocument();
+    expect(screen.getAllByText('Patient Encounters Contract').length).toBeGreaterThan(0);
     expect(screen.getByText('schema.column.nullable')).toBeInTheDocument();
     expect(screen.getByText('AI breach score')).toBeInTheDocument();
 

@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import {
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
   Button,
   Caption1,
   DataGrid,
@@ -103,6 +107,16 @@ export function ContractDetailPage() {
 
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => navigate('/contracts')}>Contracts</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        <BreadcrumbItem>
+          <BreadcrumbButton current>{contract?.name ?? id ?? 'Contract'}</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <div className={styles.header}>
         <div>
           <Title2>{contract?.name ?? 'Contract detail'}</Title2>

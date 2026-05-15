@@ -21,3 +21,9 @@ a {
 button {
   font: inherit;
 }
+
+/* Workload page content should not exceed a comfortable reading/editing width */
+.fci-page-content {
+  max-width: 1400px;
+  width: 100%;
+}

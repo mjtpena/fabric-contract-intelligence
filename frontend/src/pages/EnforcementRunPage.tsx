@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
   Button,
   Caption1,
   DataGrid,
@@ -358,6 +362,26 @@ export function EnforcementRunPage() {
 
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => navigate('/contracts')}>Contracts</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        {resolvedContractId && contract ? (
+          <>
+            <BreadcrumbItem>
+              <BreadcrumbButton onClick={() => navigate(`/contracts/${resolvedContractId}`)}>
+                {contract.name}
+              </BreadcrumbButton>
+            </BreadcrumbItem>
+            <BreadcrumbDivider />
+          </>
+        ) : null}
+        <BreadcrumbItem>
+          <BreadcrumbButton current>Run {run.id.slice(0, 8)}</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <div className={styles.header}>
         <div>
           <Title2>{contract?.name ?? 'Enforcement run'}</Title2>

@@ -20,7 +20,7 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useNavigate } from 'react-router-dom';
-import { AddRegular, ArrowClockwiseRegular, PlayRegular } from '@fluentui/react-icons';
+import { AddRegular, ArrowClockwiseRegular, DocumentBulletListRegular, PlayRegular } from '@fluentui/react-icons';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -60,6 +60,11 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
     alignItems: 'flex-start',
+    padding: tokens.spacingHorizontalXXL,
+  },
+  emptyIcon: {
+    color: tokens.colorNeutralForeground3,
+    fontSize: '48px',
   },
   rowActions: {
     display: 'flex',
@@ -237,9 +242,10 @@ export function ContractListPage() {
         {error ? <Body1>{error}</Body1> : null}
         {!loading && !federatedLoading && displayedContracts.length === 0 ? (
           <div className={styles.emptyState}>
-            <Subtitle1>No contracts yet — create one</Subtitle1>
-            <Body1>Start with a draft contract and validate the YAML before saving.</Body1>
-            <Button appearance="primary" onClick={() => navigate('/contracts/new')}>
+            <DocumentBulletListRegular className={styles.emptyIcon} />
+            <Subtitle1>No contracts yet</Subtitle1>
+            <Body1>Define an ODCS contract to start enforcing data quality at the Delta table layer.</Body1>
+            <Button appearance="primary" icon={<AddRegular />} onClick={() => navigate('/contracts/new')}>
               Create contract
             </Button>
           </div>
