@@ -28,6 +28,7 @@ vi.mock('@monaco-editor/react', () => ({
       </div>
     );
   },
+  loader: { config: vi.fn(), init: vi.fn().mockResolvedValue({}) },
 }));
 
 describe('MonacoYamlEditor', () => {
