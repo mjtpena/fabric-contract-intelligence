@@ -101,9 +101,9 @@ test.describe('1. Bootstrap & Loading', () => {
   test('1.0 — public root renders representative landing page outside Fabric', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('The AI control plane for trusted Fabric data products')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Screenshots from the live Fabric tenant')).toBeVisible();
-    await expect(page.getByAltText('Orqentis Showcase Contract editor running inside Microsoft Fabric')).toBeVisible();
+    await expect(page.getByText('Data contracts that', { exact: false })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Captured from the production Fabric tenant', { exact: false })).toBeVisible();
+    await expect(page.getByAltText('Orqentis contract editor open inside Microsoft Fabric', { exact: false })).toBeVisible();
   });
 
   test('1.1 — app mounts in standalone mode without blank page', async ({ page }) => {

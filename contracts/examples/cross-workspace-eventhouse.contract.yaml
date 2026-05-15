@@ -17,9 +17,10 @@ description:
 servers:
   - server: platform-eventhouse
     type: azure
-    # The table path — "DatabaseName/TableName" when using host shortcut,
-    # or just "TableName" when workspaceId + Fabric REST discovery is used.
-    location: IotDatabase/iot_events
+    # The table path as a fully-qualified Kusto URI.
+    # Option A (recommended): set workspaceId and let Orqentis discover the cluster.
+    # Use a placeholder URI here; in production set workspaceId + host accordingly.
+    location: https://platformops.z6.kusto.windows.net/IotDatabase/iot_events
     format: kql
     # --- Cross-workspace support ---
     # Option A (recommended for Eventhouses in known workspaces):
