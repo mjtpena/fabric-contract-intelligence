@@ -91,6 +91,7 @@ var keyVaultUri = 'https://${keyVaultName}${az.environment().suffixes.keyvaultDn
 var postgresConnectionStringSecretName = 'postgres-connection-string'
 var azureAdClientSecretSecretName = 'azuread-client-secret'
 var appInsightsConnectionStringSecretName = 'application-insights-connection-string'
+var azureOpenAiApiKeySecretName = 'azure-openai-api-key'
 var postgresConnectionString = 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};SslMode=Require;Username=${pgAdminUsername};Password=${pgAdminPassword}'
 
 module observability 'modules/observability.bicep' = {
@@ -171,6 +172,8 @@ module keyvault 'modules/keyvault.bicep' = {
     azureAdClientSecret: azureAdClientSecret
     appInsightsConnectionStringSecretName: appInsightsConnectionStringSecretName
     appInsightsConnectionString: observability.outputs.appInsightsConnectionString
+    azureOpenAiApiKeySecretName: azureOpenAiApiKeySecretName
+    azureOpenAiApiKey: openai.outputs.primaryKey
     tags: tags
   }
 }
@@ -186,10 +189,12 @@ module apiSettings 'modules/app-service-settings.bicep' = {
     appInsightsConnectionStringSecretUri: '${keyVaultUri}secrets/${appInsightsConnectionStringSecretName}'
     pgConnectionStringSecretUri: '${keyVaultUri}secrets/${postgresConnectionStringSecretName}'
     azureAdClientSecretSecretUri: '${keyVaultUri}secrets/${azureAdClientSecretSecretName}'
+    azureOpenAiApiKeySecretUri: '${keyVaultUri}secrets/${azureOpenAiApiKeySecretName}'
     azureAdTenantId: azureAdTenantId
     azureAdClientId: azureAdClientId
     azureAdAudience: empty(azureAdAudience) ? 'api://${azureAdClientId}' : azureAdAudience
     openAiEndpoint: openai.outputs.endpoint
+    openAiDeploymentName: openai.outputs.deploymentName
   }
   dependsOn: [
     keyvault

@@ -30,3 +30,6 @@ resource gpt4o 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
 
 output endpoint string = oai.properties.endpoint
 output accountId string = oai.id
+output deploymentName string = gpt4o.name
+@secure()
+output primaryKey string = oai.listKeys().key1

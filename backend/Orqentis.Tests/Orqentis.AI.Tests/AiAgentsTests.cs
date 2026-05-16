@@ -35,6 +35,42 @@ public sealed class AiAgentsTests
         suggestion.ModelUsed.Should().Be("fallback-template");
     }
 
+    [Theory]
+    [InlineData("decimal")]
+    [InlineData("double")]
+    [InlineData("float")]
+    [InlineData("bigint")]
+    [InlineData("smallint")]
+    [InlineData("datetime")]
+    [InlineData("bit")]
+    [InlineData("varchar")]
+    [InlineData("struct")]
+    public async Task ContractSuggestionAgent_FallbackYaml_IsValidForCommonSparkTypes(string sourceType)
+    {
+        var validator = new OdcsContractValidator(NullLogger<OdcsContractValidator>.Instance);
+        var agent = new ContractSuggestionAgent(
+            new StubLlmRouter(null),
+            new StubPromptLoader("p"),
+            validator,
+            Options.Create(new AiOptions()),
+            NullLogger<ContractSuggestionAgent>.Instance);
+
+        var suggestion = await agent.SuggestAsync(new TableProfile
+        {
+            TableName = "fin.payments",
+            AbfssUri = "abfss://ws@onelake.dfs.fabric.microsoft.com/Lh.Lakehouse/Tables/payments",
+            Columns =
+            [
+                new TableProfileColumn("payment_id", "string", false, 100, 0),
+                new TableProfileColumn("amount", sourceType, false, 100, 0),
+            ],
+            SampleRows = [],
+        });
+
+        validator.Validate(suggestion.OdcsYaml).Should().BeEmpty(
+            because: $"fallback must produce schema-valid ODCS for source type '{sourceType}'");
+    }
+
     [Fact]
     public async Task BreachImpactScorer_ReturnsNull_WhenProviderPayloadIsInvalid()
     {

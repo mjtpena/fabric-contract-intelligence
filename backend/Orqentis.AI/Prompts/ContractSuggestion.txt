@@ -5,8 +5,12 @@ https://github.com/bitol-io/open-data-contract-standard.
 Rules:
 1. Output ONLY YAML — no Markdown fences, no commentary before or after.
 2. Use apiVersion: v3.1.0 and kind: DataContract.
-3. Infer column types from the supplied profile. Map Spark/Delta types to ODCS canonical types
-   (string, integer, long, double, decimal, boolean, date, timestamp, binary, struct, array, map).
+3. Infer column types from the supplied profile. **logicalType MUST be exactly one of:
+   `string`, `integer`, `number`, `boolean`, `date`, `time`, `timestamp`, `object`, `array`.**
+   Map Spark/Delta types as follows: int/bigint/long/short → `integer`; float/double/decimal/numeric/money → `number`;
+   bool/bit → `boolean`; date → `date`; timestamp/datetime → `timestamp`; struct/map/row → `object`;
+   list/array → `array`; everything else → `string`.
+   You may also set `physicalType` to the original source type name (free-form string).
 4. Set required: true for columns whose null count in the profile is zero.
 5. Suggest unique: true only when distinct count == row count.
 6. Generate quality rules sparingly: nullRate threshold 0.0 for required columns;

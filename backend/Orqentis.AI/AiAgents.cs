@@ -142,21 +142,31 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         return builder.ToString();
     }
 
-    private static string EscapeYaml(string value) =>
-        value.Replace(":", "\\:", StringComparison.Ordinal);
+    private static string EscapeYaml(string value)
+    {
+        if (value is null)
+        {
+            return "\"\"";
+        }
+        // Always emit as a double-quoted YAML scalar to safely carry colons, URIs,
+        // and other YAML-reserved characters. Escape backslashes and quotes.
+        var escaped = value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+        return $"\"{escaped}\"";
+    }
 
     private static string MapLogicalType(string sourceType)
     {
         var normalizedType = sourceType.Trim().ToLowerInvariant();
         return normalizedType switch
         {
-            "int" or "integer" => "integer",
-            "bigint" or "long" => "long",
-            "double" or "float" => "double",
-            "decimal" => "decimal",
-            "bool" or "boolean" => "boolean",
+            "int" or "integer" or "bigint" or "long" or "smallint" or "tinyint" or "short" or "byte" => "integer",
+            "double" or "float" or "real" or "decimal" or "numeric" or "money" => "number",
+            "bool" or "boolean" or "bit" => "boolean",
             "date" => "date",
-            "timestamp" or "datetime" => "timestamp",
+            "time" => "time",
+            "timestamp" or "datetime" or "datetime2" or "datetimeoffset" => "timestamp",
+            "array" or "list" => "array",
+            "struct" or "object" or "map" or "row" => "object",
             _ => "string",
         };
     }

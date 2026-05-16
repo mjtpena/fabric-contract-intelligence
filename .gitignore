@@ -87,3 +87,5 @@ publish/
 
 # Test run artefacts
 test-results/
+
+*.csproj.lscache

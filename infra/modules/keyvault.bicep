@@ -17,6 +17,12 @@ param azureAdClientSecret string = ''
 
 param appInsightsConnectionStringSecretName string = 'application-insights-connection-string'
 param appInsightsConnectionString string = ''
+
+param azureOpenAiApiKeySecretName string = 'azure-openai-api-key'
+
+@secure()
+param azureOpenAiApiKey string = ''
+
 param tags object
 
 resource kv 'Microsoft.KeyVault/vaults@2024-04-01-preview' = {
@@ -73,9 +79,16 @@ resource appInsightsSecret 'Microsoft.KeyVault/vaults/secrets@2024-04-01-preview
   properties: { value: appInsightsConnectionString }
 }
 
+resource azureOpenAiApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2024-04-01-preview' = if (!empty(azureOpenAiApiKey)) {
+  parent: kv
+  name: azureOpenAiApiKeySecretName
+  properties: { value: azureOpenAiApiKey }
+}
+
 output vaultId string = kv.id
 output vaultName string = kv.name
 output vaultUri string = kv.properties.vaultUri
 output postgresConnectionStringSecretUri string = '${kv.properties.vaultUri}secrets/${postgresConnectionStringSecretName}'
 output azureAdClientSecretSecretUri string = '${kv.properties.vaultUri}secrets/${azureAdClientSecretSecretName}'
 output appInsightsConnectionStringSecretUri string = '${kv.properties.vaultUri}secrets/${appInsightsConnectionStringSecretName}'
+output azureOpenAiApiKeySecretUri string = '${kv.properties.vaultUri}secrets/${azureOpenAiApiKeySecretName}'

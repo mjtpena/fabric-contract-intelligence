@@ -6,10 +6,13 @@ param keyVaultUri string
 param appInsightsConnectionStringSecretUri string
 param pgConnectionStringSecretUri string
 param azureAdClientSecretSecretUri string
+param azureOpenAiApiKeySecretUri string
 param azureAdTenantId string
 param azureAdClientId string
 param azureAdAudience string
 param openAiEndpoint string
+param openAiDeploymentName string = 'gpt-4o'
+param openAiApiVersion string = '2024-10-21'
 
 resource app 'Microsoft.Web/sites@2024-04-01' existing = {
   name: appServiceName
@@ -31,5 +34,8 @@ resource settings 'Microsoft.Web/sites/config@2024-04-01' = {
     'AzureAd__Audience': azureAdAudience
     'AzureAd__ClientSecret': '@Microsoft.KeyVault(SecretUri=${azureAdClientSecretSecretUri})'
     'AI__AzureOpenAI__Endpoint': openAiEndpoint
+    'AI__AzureOpenAI__DeploymentName': openAiDeploymentName
+    'AI__AzureOpenAI__ApiVersion': openAiApiVersion
+    'AI__AzureOpenAI__ApiKey': '@Microsoft.KeyVault(SecretUri=${azureOpenAiApiKeySecretUri})'
   }
 }
