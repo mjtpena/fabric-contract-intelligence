@@ -87,7 +87,7 @@ param tags object = {
 
 var resourceSuffix = uniqueString(resourceGroup().id, environment)
 var keyVaultName = substring('${namePrefix}-${environment}-kv-${resourceSuffix}', 0, 24)
-var keyVaultUri = 'https://${keyVaultName}.${az.environment().suffixes.keyvaultDns}/'
+var keyVaultUri = 'https://${keyVaultName}${az.environment().suffixes.keyvaultDns}/'
 var postgresConnectionStringSecretName = 'postgres-connection-string'
 var azureAdClientSecretSecretName = 'azuread-client-secret'
 var appInsightsConnectionStringSecretName = 'application-insights-connection-string'
