@@ -10,7 +10,9 @@
       "/.well-known/*",
       "/support.html",
       "/schemas/*",
-      "/favicon.ico"
+      "/favicon.ico",
+      "/robots.txt",
+      "/sitemap.xml"
     ]
   },
   "globalHeaders": {

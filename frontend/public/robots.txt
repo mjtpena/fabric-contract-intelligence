@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /standalone/
+Disallow: /standalone
+
+Sitemap: https://fabric.orqentis.com/sitemap.xml

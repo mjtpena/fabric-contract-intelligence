@@ -132,27 +132,27 @@ export function NLQueryPage() {
         <div className={styles.resultCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
             <SparkleRegular />
-            <Subtitle2>{result.explanation}</Subtitle2>
+            <Subtitle2>{result.explanation ?? 'No explanation returned.'}</Subtitle2>
           </div>
-          <Caption1>Model: {result.modelUsed}</Caption1>
+          <Caption1>Model: {result.modelUsed ?? 'unknown'}</Caption1>
 
-          {result.matches.length === 0 ? (
+          {(result.matches ?? []).length === 0 ? (
             <Body1>No matching contracts found.</Body1>
           ) : (
-            result.matches.map((match) => (
+            (result.matches ?? []).map((match) => (
               <div key={match.contractId} className={styles.matchCard}>
                 <div className={styles.matchHeader}>
                   <Link to={`/contracts/${match.contractId}`}>
-                    <strong>{match.name}</strong>
+                    <strong>{match.name ?? match.contractId}</strong>
                   </Link>
                   <Badge appearance="outline" size="small">
-                    v{match.version}
+                    v{match.version ?? '—'}
                   </Badge>
                   <Caption1 style={{ marginLeft: 'auto', opacity: 0.7 }}>
-                    relevance {(match.relevanceScore * 100).toFixed(0)}%
+                    relevance {(((match.relevanceScore ?? 0) as number) * 100).toFixed(0)}%
                   </Caption1>
                 </div>
-                <Body1>{match.explanation}</Body1>
+                <Body1>{match.explanation ?? ''}</Body1>
               </div>
             ))
           )}
