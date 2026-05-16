@@ -293,7 +293,7 @@ export function EnforcementRunPage() {
     return () => {
       cancelled = true;
     };
-  }, [itemObjectId, sdk]);
+  }, [itemObjectId, sdk.loadItemDefinition]);
 
   useEffect(() => {
     let cancelled = false;
