@@ -211,7 +211,7 @@ export function PolicyEditorPage() {
     && cronRegex.test(cronExpression.trim())
     && (actionType !== 'webhook' || isHttpsUrl(webhookUrl));
   const selectedContractName = contracts.find((contract) => contract.id === contractId)?.name;
-  const notSet = <Text className={styles.mutedValue}>Not set</Text>;
+  const renderNotSet = () => <Text className={styles.mutedValue}>Not set</Text>;
 
   return (
     <section className={styles.root}>
@@ -343,16 +343,16 @@ export function PolicyEditorPage() {
               </Text>
             </Field>
             <Field label={<Text size={300}>Webhook URL</Text>}>
-              {webhookUrl ? <Text weight="semibold">{webhookUrl}</Text> : notSet}
+              {webhookUrl ? <Text weight="semibold">{webhookUrl}</Text> : renderNotSet()}
             </Field>
             <Field label={<Text size={300}>Headers</Text>}>
-              {actionType === 'webhook' ? <Text weight="semibold">Managed by destination</Text> : notSet}
+              {actionType === 'webhook' ? <Text weight="semibold">Managed by destination</Text> : renderNotSet()}
             </Field>
             <Field label={<Text size={300}>Active</Text>}>
               <Text weight="semibold">Enabled</Text>
             </Field>
             <Field label={<Text size={300}>Contract</Text>}>
-              {selectedContractName ? <Text weight="semibold">{selectedContractName}</Text> : notSet}
+              {selectedContractName ? <Text weight="semibold">{selectedContractName}</Text> : renderNotSet()}
             </Field>
           </dl>
         </Card>
