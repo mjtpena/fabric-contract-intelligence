@@ -151,10 +151,15 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
     }
 
     private static readonly string[] _disallowedTopLevelKeys = ["quality", "freshness", "sla", "slas", "schedule"];
+    private static readonly HashSet<string> _validQualityTypes = new(StringComparer.OrdinalIgnoreCase) { "library", "sql", "custom", "text" };
 
-    /// <summary>Strips top-level keys that aren't permitted at the ODCS v3.1.0 contract root,
-    /// guarding against LLMs that hallucinate fields outside the schema. Line-based to avoid
-    /// pulling in another YAML serializer just for this hot path.</summary>
+    /// <summary>Repairs common ODCS v3.1.0 validation issues in LLM-generated YAML so the
+    /// caller doesn't lose otherwise good output to small schema drift. Specifically:
+    /// (a) strips disallowed top-level keys (quality, freshness, sla, schedule); these belong
+    ///     nested under schema/customProperties but LLMs often hoist them; and
+    /// (b) coerces any `type:` field inside a `quality:` block to `library` when the LLM emits
+    ///     a non-enum value like `type: nullRate` (it should be `type: library, rule: nullRate`).
+    /// Line-based to avoid serialization round-trips that would normalize formatting.</summary>
     internal static string? SanitizeOdcsYaml(string? content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -164,31 +169,85 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var output = new StringBuilder(content.Length);
         var skipping = false;
+        var qualityIndent = -1;
         foreach (var line in lines)
         {
-            if (line.Length == 0 || char.IsWhiteSpace(line[0]) || line.StartsWith('#') || line.StartsWith('-'))
+            if (line.Length == 0 || line.TrimStart().StartsWith('#'))
             {
-                if (skipping)
+                if (!skipping)
                 {
-                    continue;
+                    output.AppendLine(line);
                 }
+                continue;
+            }
+            if (!char.IsWhiteSpace(line[0]) && !line.StartsWith('-'))
+            {
+                var colonIdx = line.IndexOf(':');
+                if (colonIdx > 0)
+                {
+                    var key = line[..colonIdx].Trim();
+                    if (Array.IndexOf(_disallowedTopLevelKeys, key) >= 0)
+                    {
+                        skipping = true;
+                        continue;
+                    }
+                }
+                skipping = false;
+                qualityIndent = -1;
                 output.AppendLine(line);
                 continue;
             }
-            var colonIdx = line.IndexOf(':');
-            if (colonIdx > 0)
+            if (skipping)
             {
-                var key = line[..colonIdx].Trim();
-                if (Array.IndexOf(_disallowedTopLevelKeys, key) >= 0)
+                continue;
+            }
+
+            var indent = CountLeadingSpaces(line);
+            var trimmed = line.TrimStart();
+
+            if (trimmed.StartsWith("quality:", StringComparison.OrdinalIgnoreCase))
+            {
+                qualityIndent = indent;
+                output.AppendLine(line);
+                continue;
+            }
+            if (qualityIndent >= 0 && indent <= qualityIndent && !trimmed.StartsWith('-'))
+            {
+                qualityIndent = -1;
+            }
+            if (qualityIndent >= 0)
+            {
+                // Within a quality: block, normalize any `type: <value>` whose value isn't an enum
+                // member. Accept lines like `- type: nullRate` and `type: nullRate`.
+                var keyStart = trimmed.StartsWith("- ", StringComparison.Ordinal) ? trimmed[2..] : trimmed;
+                if (keyStart.StartsWith("type:", StringComparison.OrdinalIgnoreCase))
                 {
-                    skipping = true;
-                    continue;
+                    var value = keyStart[5..].Trim().Trim('"').Trim('\'');
+                    if (!string.IsNullOrEmpty(value) && !_validQualityTypes.Contains(value))
+                    {
+                        var dashPrefix = trimmed.StartsWith("- ", StringComparison.Ordinal) ? "- " : string.Empty;
+                        var pad = new string(' ', indent);
+                        var ruleIndent = new string(' ', indent + dashPrefix.Length);
+                        output.AppendLine($"{pad}{dashPrefix}type: library");
+                        output.AppendLine($"{ruleIndent}rule: {value}");
+                        continue;
+                    }
                 }
             }
-            skipping = false;
+
             output.AppendLine(line);
         }
         return output.ToString();
+    }
+
+    private static int CountLeadingSpaces(string s)
+    {
+        var n = 0;
+        while (n < s.Length && s[n] == ' ')
+        {
+            n++;
+        }
+        return n;
     }
 
     private static string? StripCodeFences(string? content)

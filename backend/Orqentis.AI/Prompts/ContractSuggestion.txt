@@ -18,6 +18,16 @@ Rules:
    (e.g. email, ISO dates). **Quality rules MUST be nested inside `schema[].quality` (for
    table-level rules) or `schema[].properties[].quality` (for column-level rules). Do NOT
    emit a top-level `quality:` field — it is not allowed by the schema.**
+   **Each quality entry MUST set `type` to exactly one of: `library`, `sql`, `custom`, `text`.**
+   For built-in rule names (nullRate, uniqueness, rowCount, regex, etc.) use `type: library`
+   and put the rule name in the `rule` field. Example column-level quality block:
+     quality:
+       - type: library
+         rule: nullCount
+         mustBe: 0
+         severity: error
+   When in doubt, omit the `quality` block entirely — an empty contract is preferable to an
+   invalid one.
 7. Encode freshness as a `customProperties` entry, NOT a top-level `freshness:` field
    (top-level `freshness` is rejected by the validator). Example:
      customProperties:

@@ -71,8 +71,17 @@ public sealed class AiAgentsTests
             because: $"fallback must produce schema-valid ODCS for source type '{sourceType}'");
     }
 
+    [Fact]
+    public void SanitizeOdcsYaml_CoercesInvalidQualityType_ToLibrary()
+    {
+        var input = "apiVersion: v3.1.0\nschema:\n  - name: \"t\"\n    properties:\n      - name: \"id\"\n        logicalType: string\n        quality:\n          - type: nullRate\n            mustBe: 0\n";
+        var cleaned = ContractSuggestionAgent.SanitizeOdcsYaml(input)!;
+        cleaned.Should().Contain("type: library");
+        cleaned.Should().Contain("rule: nullRate");
+        cleaned.Should().NotContain("type: nullRate");
+    }
+
     [Theory]
-    [InlineData("quality:\n  rules:\n    - name: x\n      threshold: 0\n")]
     [InlineData("freshness:\n  maxAgeHours: 24\n")]
     [InlineData("sla:\n  uptime: 0.99\n")]
     public void SanitizeOdcsYaml_RemovesDisallowedTopLevelKeys(string injected)
