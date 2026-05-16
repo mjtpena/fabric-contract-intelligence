@@ -89,22 +89,26 @@ public sealed class AiController : ControllerBase
         CancellationToken ct)
     {
         var contracts = await _contractStore.ListAsync(ct).ConfigureAwait(false);
-        var details = await Task.WhenAll(
-            contracts.Select(async contract =>
+        var details = new List<ContractRecord>(contracts.Count);
+        foreach (var contract in contracts)
+        {
+            var detail = await _contractStore.GetAsync(contract.ContractId, ct).ConfigureAwait(false);
+            if (detail is not null)
             {
-                var detail = await _contractStore.GetAsync(contract.ContractId, ct).ConfigureAwait(false);
-                return detail;
-            })).ConfigureAwait(false);
+                details.Add(detail);
+            }
+        }
 
         var documents = details
-            .Where(detail => detail?.CurrentVersionRecord is not null)
+            .Where(detail => detail.CurrentVersionRecord is not null
+                && !string.IsNullOrWhiteSpace(detail.CurrentVersionRecord.OdcsYaml))
             .Select(detail => new NaturalLanguageContractDocument(
-                detail!.ContractId,
-                detail.Name,
+                detail.ContractId,
+                detail.Name ?? string.Empty,
                 detail.CurrentVersionRecord?.CommitMessage,
-                detail.OwnerEmail,
+                detail.OwnerEmail ?? string.Empty,
                 detail.CurrentVersionRecord!.OdcsYaml,
-                detail.CurrentVersion))
+                detail.CurrentVersion ?? string.Empty))
             .ToArray();
 
         var result = await _queryHandler.QueryAsync(request.Query, documents, ct).ConfigureAwait(false);

@@ -79,9 +79,9 @@ public sealed class NaturalLanguageQueryHandler : INaturalLanguageQueryHandler
         var score = 0.0;
         var explanations = new List<string>();
 
-        var name = contract.Name.ToLowerInvariant();
+        var name = (contract.Name ?? string.Empty).ToLowerInvariant();
         var description = contract.Description?.ToLowerInvariant() ?? string.Empty;
-        var yaml = contract.OdcsYaml.ToLowerInvariant();
+        var yaml = (contract.OdcsYaml ?? string.Empty).ToLowerInvariant();
 
         foreach (var token in tokens)
         {
@@ -104,8 +104,8 @@ public sealed class NaturalLanguageQueryHandler : INaturalLanguageQueryHandler
 
         return new NaturalLanguageQueryMatch(
             contract.ContractId,
-            contract.Name,
-            contract.Version,
+            contract.Name ?? string.Empty,
+            contract.Version ?? string.Empty,
             explanations.Count == 0 ? "No lexical match found." : string.Join(" ", explanations.Take(2)),
             score);
     }
