@@ -1,0 +1,106 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.Api
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.AI
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.Data
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.Engine
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.Tests
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: nuget
+    directory: /backend/Orqentis.Tests/Orqentis.Integration.Tests
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /.github/workflows
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto
+    groups:
+      github-actions-minor-patch:
+        update-types:
+          - minor
+          - patch

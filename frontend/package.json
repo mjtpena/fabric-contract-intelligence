@@ -18,7 +18,8 @@
     "test:e2e:headed": "playwright test --headed",
     "typecheck": "tsc -b",
     "dev:fabric": "vite --mode dev",
-    "build:dev-manifest": "node tools/build-dev-manifest.mjs"
+    "build:dev-manifest": "node tools/build-dev-manifest.mjs",
+    "prepare": "cd .. && husky"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.56.0",
@@ -53,6 +54,17 @@
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{js,jsx,json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

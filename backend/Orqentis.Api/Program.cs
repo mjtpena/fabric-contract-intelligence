@@ -16,15 +16,25 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, loggerConfiguration) => loggerConfiguration
-    .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()
-    .Enrich.WithProperty("service", "orqentis-api")
-    .WriteTo.Console()
-    .WriteTo.ApplicationInsights(
-        ctx.Configuration["ApplicationInsights:ConnectionString"],
-        new Serilog.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter(),
-        Serilog.Events.LogEventLevel.Warning));
+builder.Host.UseSerilog((ctx, loggerConfiguration) =>
+{
+    var appInsightsConnectionString = ctx.Configuration["ApplicationInsights:ConnectionString"]
+        ?? ctx.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+
+    loggerConfiguration
+        .ReadFrom.Configuration(ctx.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("service", "orqentis-api")
+        .WriteTo.Console();
+
+    if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+    {
+        loggerConfiguration.WriteTo.ApplicationInsights(
+            appInsightsConnectionString,
+            new Serilog.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter(),
+            Serilog.Events.LogEventLevel.Warning);
+    }
+});
 
 builder.Services.Configure<AzureAdOptions>(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddProblemDetails(options =>
@@ -132,6 +142,8 @@ builder.Services.AddApplicationInsightsTelemetry();
 
 var app = builder.Build();
 
+Log.Information("App starting at {Now}", DateTimeOffset.UtcNow);
+
 var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
 if (!string.IsNullOrWhiteSpace(postgresConnectionString))
 {
@@ -143,7 +155,9 @@ if (!string.IsNullOrWhiteSpace(postgresConnectionString))
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Database-MigrateFailed");
+        logger.LogCritical(ex, "Database-MigrateFailed");
+        Log.Fatal(ex, "Database-MigrateFailed");
+        throw;
     }
 }
 

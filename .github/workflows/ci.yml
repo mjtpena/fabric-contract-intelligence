@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  security-events: write
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -31,6 +32,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test -- --reporter=dot
+      # Frontend coverage baseline gate: Vitest must keep line coverage at or above 70%.
+      - name: Enforce frontend coverage
+        run: npm run test:coverage -- --reporter=dot --coverage.thresholds.lines=70
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Run browser E2E tests
@@ -94,3 +98,72 @@ jobs:
       - name: Validate public readiness package
         shell: pwsh
         run: ./scripts/Test-PublicReadiness.ps1
+
+
+  security-scan:
+    name: Security scan (SCA + SAST)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Restore backend packages
+        working-directory: backend
+        run: dotnet restore Orqentis.sln
+      - name: Audit NuGet packages for high or critical vulnerabilities
+        shell: pwsh
+        working-directory: backend
+        run: |
+          $report = dotnet list Orqentis.sln package --vulnerable --include-transitive --format json | ConvertFrom-Json
+          $findings = @()
+          foreach ($project in $report.projects) {
+            foreach ($framework in $project.frameworks) {
+              foreach ($packageSetName in @('topLevelPackages', 'transitivePackages')) {
+                foreach ($package in @($framework.$packageSetName)) {
+                  foreach ($vulnerability in @($package.vulnerabilities)) {
+                    if ($vulnerability.severity -in @('High', 'Critical')) {
+                      $findings += [pscustomobject]@{
+                        Project = $project.path
+                        Package = $package.id
+                        Version = $package.resolvedVersion
+                        Severity = $vulnerability.severity
+                        Advisory = $vulnerability.advisoryurl
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if ($findings.Count -gt 0) {
+            $findings | Format-Table -AutoSize | Out-String | Write-Error
+            exit 1
+          }
+          'No high or critical NuGet vulnerabilities found.'
+      - name: Audit npm packages for high or critical vulnerabilities
+        run: npm --prefix frontend audit --audit-level=high
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp,javascript-typescript
+      - name: Autobuild CodeQL languages
+        uses: github/codeql-action/autobuild@v3
+      - name: Analyze CodeQL results
+        uses: github/codeql-action/analyze@v3
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@latest
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true

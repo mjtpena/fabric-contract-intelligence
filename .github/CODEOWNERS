@@ -1,0 +1,13 @@
+# Default reviewers for Orqentis. Keep service ownership close to the affected layer.
+* @mjtpena
+
+# Operational excellence ownership.
+/docs/ @mjtpena
+/.github/workflows/ @mjtpena
+/.github/dependabot.yml @mjtpena
+/scripts/ @mjtpena
+
+# Runtime service ownership.
+/backend/ @mjtpena
+/frontend/ @mjtpena
+/infra/ @mjtpena
