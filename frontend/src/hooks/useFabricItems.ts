@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { listLakehouseTables, listWorkspaceLakehouses, listWorkspaceTargetItems } from '@/api/fabricItemsClient';
 import type { FabricLakehouse, FabricLakehouseTable, FabricWorkspaceItem } from '@/api/fabricItemsClient';
 import type { ContractTargetType } from '@/models/Contract';
@@ -16,6 +16,7 @@ interface UseLakehousesParams {
 interface UseLakehousesResult {
   isLoading: boolean;
   lakehouses: FabricLakehouse[];
+  refetch: () => void;
 }
 
 /**
@@ -27,6 +28,8 @@ interface UseLakehousesResult {
 export function useLakehouses({ baseUrl, getToken, isReady, workspaceId }: UseLakehousesParams): UseLakehousesResult {
   const [lakehouses, setLakehouses] = useState<FabricLakehouse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
     if (!baseUrl || !workspaceId || !isReady) {
@@ -54,9 +57,9 @@ export function useLakehouses({ baseUrl, getToken, isReady, workspaceId }: UseLa
   // getToken is a stable callback from useFabricSdk — intentionally excluded from deps.
   // isReady is included so the effect re-fires after the SDK initialises.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, isReady, workspaceId]);
+  }, [baseUrl, isReady, reloadKey, workspaceId]);
 
-  return { isLoading, lakehouses };
+  return { isLoading, lakehouses, refetch };
 }
 
 interface UseFabricTargetItemsParams {
@@ -70,6 +73,7 @@ interface UseFabricTargetItemsParams {
 interface UseFabricTargetItemsResult {
   isLoading: boolean;
   items: FabricWorkspaceItem[];
+  refetch: () => void;
 }
 
 /**
@@ -84,6 +88,8 @@ export function useFabricTargetItems({
 }: UseFabricTargetItemsParams): UseFabricTargetItemsResult {
   const [items, setItems] = useState<FabricWorkspaceItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
     if (!baseUrl || !workspaceId || !isReady) {
@@ -111,9 +117,9 @@ export function useFabricTargetItems({
     };
   // getToken is stable — intentionally excluded. isReady triggers re-fetch on SDK init.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, isReady, targetType, workspaceId]);
+  }, [baseUrl, isReady, reloadKey, targetType, workspaceId]);
 
-  return { isLoading, items };
+  return { isLoading, items, refetch };
 }
 
 interface UseLakehouseTablesParams {
@@ -128,11 +134,12 @@ interface UseLakehouseTablesParams {
 interface UseLakehouseTablesResult {
   isLoading: boolean;
   tables: FabricLakehouseTable[];
+  refetch: () => void;
 }
 
 /**
  * Fetches Delta/Parquet tables for the given Lakehouse via the Orqentis backend proxy.
- * Clears the list and skips fetching if lakehouseId is not a valid GUID or isReady is false.
+ * Clears the list and skips fetching if lakehouseId is not a valid item ID or isReady is false.
  */
 export function useLakehouseTables({
   baseUrl,
@@ -143,6 +150,8 @@ export function useLakehouseTables({
 }: UseLakehouseTablesParams): UseLakehouseTablesResult {
   const [tables, setTables] = useState<FabricLakehouseTable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
     if (!baseUrl || !workspaceId || !isReady || !isGuid(lakehouseId)) {
@@ -170,11 +179,12 @@ export function useLakehouseTables({
     };
   // getToken is stable — intentionally excluded. isReady triggers re-fetch on SDK init.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, isReady, lakehouseId, workspaceId]);
+  }, [baseUrl, isReady, lakehouseId, reloadKey, workspaceId]);
 
-  return { isLoading, tables };
+  return { isLoading, tables, refetch };
 }
 
 function isGuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
+

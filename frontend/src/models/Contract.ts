@@ -177,7 +177,7 @@ export interface ContractDraft {
   /** Optional version change note. */
   commitMessage: string;
   /**
-   * Optional workspace GUID when the data store lives in a different workspace
+   * Optional workspace ID when the data store lives in a different workspace
    * than the one owning this Orqentis contract item. When non-empty, enforcement
    * calls Fabric REST APIs in this workspace instead of sdk.workspaceId.
    * Maps to the YAML `servers[0].workspaceId` field.
@@ -236,3 +236,4 @@ export interface ContractValidationResult {
   /** ISO-8601 timestamp of the latest validation run. */
   validatedAt: string;
 }
+

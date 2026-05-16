@@ -1,8 +1,9 @@
 import type { ContractTargetType } from '@/models/Contract';
 
 export interface WorkspaceSummary {
+  displayName?: string;
   id: string;
-  name: string;
+  name?: string;
   tier: 'community' | 'enterprise' | string;
 }
 

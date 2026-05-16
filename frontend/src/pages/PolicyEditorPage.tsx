@@ -11,7 +11,6 @@ import {
   Checkbox,
   Dropdown,
   Field,
-  Input,
   Option,
   Tab,
   TabList,
@@ -24,6 +23,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { RulePicker } from '@/components/Activator/RulePicker';
+import { IntegrationPicker, validateIntegration, type IntegrationValue } from '@/components/Integration/IntegrationPicker';
+import { ScheduleBuilder } from '@/components/Schedule/ScheduleBuilder';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
 import type { ActivatorRule } from '@/models/ops';
@@ -67,11 +68,10 @@ export function PolicyEditorPage() {
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [rules, setRules] = useState<ActivatorRule[]>([]);
   const [contractId, setContractId] = useState(searchParams.get('contractId') ?? '');
-  const [cronExpression, setCronExpression] = useState('0 */4 * * *');
+  const [cronExpression, setCronExpression] = useState('0 6 * * *');
   const [alertOnWarn, setAlertOnWarn] = useState(false);
   const [actionType, setActionType] = useState<'notify' | 'webhook'>('notify');
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [provider, setProvider] = useState<'generic' | 'slack'>('generic');
+  const [integration, setIntegration] = useState<IntegrationValue>({ webhookType: 'teams', webhookUrl: '', serviceNowTable: 'incident' });
   const [activatorRuleId, setActivatorRuleId] = useState<string | null>(null);
   const [cronError, setCronError] = useState<string | null>(null);
   const [routingError, setRoutingError] = useState<string | null>(null);
@@ -139,17 +139,9 @@ export function PolicyEditorPage() {
       return true;
     }
 
-    try {
-      const url = new URL(webhookUrl);
-      if (url.protocol !== 'https:') {
-        throw new Error('Webhook URL must use HTTPS.');
-      }
-      setRoutingError(null);
-      return true;
-    } catch {
-      setRoutingError('Webhook URL must be a valid HTTPS URL.');
-      return false;
-    }
+    const error = validateIntegration(integration);
+    setRoutingError(error);
+    return !error;
   };
 
   const goNext = () => {
@@ -179,8 +171,11 @@ export function PolicyEditorPage() {
     const actionConfig = {
       cron: cronExpression,
       alertOnWarn,
-      provider,
-      webhookUrl: webhookUrl || undefined,
+      provider: integration.webhookType,
+      webhookType: integration.webhookType,
+      webhookUrl: integration.webhookUrl || undefined,
+      headersJson: integration.headersJson || undefined,
+      serviceNowTable: integration.serviceNowTable || undefined,
     };
 
     setIsSaving(true);
@@ -209,7 +204,7 @@ export function PolicyEditorPage() {
   const canSave = step === 3
     && Boolean(contractId)
     && cronRegex.test(cronExpression.trim())
-    && (actionType !== 'webhook' || isHttpsUrl(webhookUrl));
+    && (actionType !== 'webhook' || !validateIntegration(integration));
   const selectedContractName = contracts.find((contract) => contract.id === contractId)?.name;
   const renderNotSet = () => <Text className={styles.mutedValue}>Not set</Text>;
 
@@ -257,20 +252,15 @@ export function PolicyEditorPage() {
       </Field>
 
       {step === 0 ? (
-        <Field
-          label="Cron schedule"
-          validationMessage={cronError ?? undefined}
-          validationState={cronError ? 'error' : 'none'}
-        >
-          <Input
-            value={cronExpression}
-            onChange={(_, data) => {
-              setCronExpression(data.value);
-              setCronError(null);
-            }}
-          />
-          <Caption1 italic>{cronToHuman(cronExpression)}</Caption1>
-        </Field>
+        <ScheduleBuilder
+          error={cronError}
+          value={cronExpression}
+          onChange={(cron) => {
+            setCronExpression(cron);
+            setCronError(null);
+          }}
+          onCustomEdit={() => setCronError(null)}
+        />
       ) : null}
 
       {step === 1 ? (
@@ -299,31 +289,15 @@ export function PolicyEditorPage() {
               <RulePicker rules={rules} selectedRuleId={activatorRuleId} onChange={setActivatorRuleId} />
             </Field>
           ) : (
-            <>
-              <Field label="Webhook provider">
-                <Dropdown
-                  selectedOptions={[provider]}
-                  value={provider}
-                  onOptionSelect={(_, data) => setProvider((data.optionValue as 'generic' | 'slack') ?? 'generic')}
-                >
-                  <Option value="generic">Generic</Option>
-                  <Option value="slack">Slack</Option>
-                </Dropdown>
-              </Field>
-              <Field
-                label="Webhook URL"
-                validationMessage={routingError ?? undefined}
-                validationState={routingError ? 'error' : 'none'}
-              >
-                <Input
-                  value={webhookUrl}
-                  onChange={(_, data) => {
-                    setWebhookUrl(data.value);
-                    setRoutingError(null);
-                  }}
-                />
-              </Field>
-            </>
+            <IntegrationPicker
+              client={opsClient}
+              error={routingError}
+              value={integration}
+              onChange={(next) => {
+                setIntegration(next);
+                setRoutingError(null);
+              }}
+            />
           )}
         </>
       ) : null}
@@ -339,11 +313,11 @@ export function PolicyEditorPage() {
             </Field>
             <Field label={<Text size={300}>Action</Text>}>
               <Text weight="semibold">
-                {actionType === 'notify' ? 'Notify Activator rule' : `Send ${provider} webhook`}
+                {actionType === 'notify' ? 'Notify Activator rule' : `Send ${integration.webhookType} alert`}
               </Text>
             </Field>
             <Field label={<Text size={300}>Webhook URL</Text>}>
-              {webhookUrl ? <Text weight="semibold">{webhookUrl}</Text> : renderNotSet()}
+              {integration.webhookUrl ? <Text weight="semibold">{integration.webhookType === 'pagerduty' ? 'PagerDuty routing key configured' : integration.webhookUrl}</Text> : renderNotSet()}
             </Field>
             <Field label={<Text size={300}>Headers</Text>}>
               {actionType === 'webhook' ? <Text weight="semibold">Managed by destination</Text> : renderNotSet()}
@@ -404,14 +378,6 @@ function cronToHuman(expr: string) {
     return `Runs every ${minutes[1]} minutes`;
   }
   return 'Custom schedule';
-}
-
-function isHttpsUrl(value: string) {
-  try {
-    return new URL(value).protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 function parsePersistedPolicyState(raw: string): PersistedPolicyState | null {

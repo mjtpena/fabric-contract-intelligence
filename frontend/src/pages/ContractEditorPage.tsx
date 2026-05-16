@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Badge,
   Body1,
+  Caption1,
+  Button,
   Checkbox,
   Field,
   Input,
@@ -19,7 +22,7 @@ import {
 } from '@/api/contractClient';
 import { createAiClient } from '@/api/aiClient';
 import { createOpsClient } from '@/api/opsClient';
-import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
+import { MonacoYamlEditor, type MonacoYamlEditorInstance } from '@/components/ContractEditor/MonacoYamlEditor';
 import { NewContractTypeSelector } from '@/components/ContractEditor/NewContractTypeSelector';
 import { ValidationPanel } from '@/components/ContractEditor/ValidationPanel';
 import { ItemEditor, type RibbonToolbar } from '@/components/ItemEditor/ItemEditor';
@@ -32,6 +35,7 @@ import { createRunNowAction } from '@/components/ItemEditor/actions/createRunNow
 import { createSaveAction } from '@/components/ItemEditor/actions/createSaveAction';
 import { createSettingsAction } from '@/components/ItemEditor/actions/createSettingsAction';
 import { createVersionHistoryAction } from '@/components/ItemEditor/actions/createVersionHistoryAction';
+import { WorkspacePicker } from '@/components/Fabric/WorkspacePicker';
 import {
   FabricTargetItemPicker,
   TablePicker,
@@ -40,6 +44,7 @@ import {
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { decodeUserFromToken } from '@/lib/identity';
 import type { ContractDetail, ContractDraft, ContractTargetType, ContractValidationResult } from '@/models/Contract';
 import { getContractTargetTypeLabel } from '@/models/ContractTarget';
 
@@ -89,6 +94,19 @@ const useStyles = makeStyles({
   editorPanel: {
     minHeight: 0,
     overflow: 'hidden',
+  },
+  ownerChip: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    minHeight: '32px',
+  },
+  quickRules: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXS,
+    flexWrap: 'wrap',
+    marginBottom: tokens.spacingVerticalS,
   },
 });
 
@@ -321,6 +339,9 @@ function EditorWorkspace({
   const [isRunning, setIsRunning] = useState(false);
   const [isImproving, setIsImproving] = useState(false);
   const [tier, setTier] = useState<string>('community');
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [isOwnerOverrideVisible, setIsOwnerOverrideVisible] = useState(false);
+  const editorRef = useRef<MonacoYamlEditorInstance | null>(null);
   const [useCrossWorkspaceTarget, setUseCrossWorkspaceTarget] = useState(() =>
     Boolean(draft?.targetWorkspaceId && draft.targetWorkspaceId.trim().length > 0),
   );
@@ -353,6 +374,22 @@ function EditorWorkspace({
   }, [opsClient]);
 
   useEffect(() => {
+    let cancelled = false;
+    void sdk.getAccessToken().then((token) => {
+      if (cancelled || !token) return;
+      const email = decodeUserFromToken(token);
+      if (email) setCurrentUserEmail(email);
+    });
+    return () => { cancelled = true; };
+  }, [sdk]);
+
+  useEffect(() => {
+    if (draft && !draft.ownerEmail && currentUserEmail) {
+      onChangeDraft({ ...draft, ownerEmail: currentUserEmail });
+    }
+  }, [currentUserEmail, draft, onChangeDraft]);
+
+  useEffect(() => {
     if (draft) {
       navigateTo('editor');
     }
@@ -379,17 +416,17 @@ function EditorWorkspace({
       });
 
       if (useCrossWorkspaceTarget && !preparedDraft.targetWorkspaceId?.trim()) {
-        await sdk.notifyError('Missing target workspace', 'Enter the target workspace GUID before saving.');
+        await sdk.notifyError('Missing target workspace', 'Choose the workspace that contains the data store before saving.');
         return;
       }
 
       if (preparedDraft.targetWorkspaceId?.trim() && !isGuid(preparedDraft.targetWorkspaceId.trim())) {
-        await sdk.notifyError('Invalid target workspace ID', 'Enter a valid target workspace GUID before saving.');
+        await sdk.notifyError('Invalid target workspace', 'Choose a valid Fabric workspace before saving.');
         return;
       }
 
       if (!isGuid(preparedDraft.targetItemId)) {
-        await sdk.notifyError('Invalid target item ID', 'Enter a valid Fabric item GUID before saving.');
+        await sdk.notifyError('Invalid target item', 'Select a valid Fabric item before saving.');
         return;
       }
 
@@ -480,10 +517,6 @@ function EditorWorkspace({
     try {
       const result = await aiClient.improveContract({ odcsYaml: draft.odcsYaml });
       onChangeDraft({ ...draft, odcsYaml: result.odcsYaml });
-      console.debug('AI improvement applied', {
-        latencyMs: result.latencyMs,
-        modelUsed: result.modelUsed,
-      });
       await sdk.notifySuccess('Improvement applied', 'Review the updated contract before saving.');
     } catch (improveError) {
       const message = improveError instanceof Error ? improveError.message : 'AI improvement failed.';
@@ -577,12 +610,34 @@ function EditorWorkspace({
                 onChange={(_, data) => onChangeDraft({ ...draft, name: data.value })}
               />
             </Field>
-            <Field label="Owner email">
-              <Input
-                type="email"
-                value={draft.ownerEmail}
-                onChange={(_, data) => onChangeDraft({ ...draft, ownerEmail: data.value })}
-              />
+            <Field label="Owner">
+              {isOwnerOverrideVisible ? (
+                <div className={styles.ownerChip}>
+                  <Input
+                    type="email"
+                    value={draft.ownerEmail}
+                    onChange={(_, data) => onChangeDraft({ ...draft, ownerEmail: data.value })}
+                  />
+                  <Button
+                    appearance="subtle"
+                    onClick={() => {
+                      if (currentUserEmail) {
+                        onChangeDraft({ ...draft, ownerEmail: currentUserEmail });
+                      }
+                      setIsOwnerOverrideVisible(false);
+                    }}
+                  >
+                    Use my email
+                  </Button>
+                </div>
+              ) : (
+                <div className={styles.ownerChip}>
+                  <Badge appearance="tint">{draft.ownerEmail || currentUserEmail || 'Current user'}</Badge>
+                  <Button appearance="subtle" size="small" onClick={() => setIsOwnerOverrideVisible(true)}>
+                    Change
+                  </Button>
+                </div>
+              )}
             </Field>
             <TargetTypePicker
               value={draft.targetType}
@@ -612,28 +667,13 @@ function EditorWorkspace({
               />
             </Field>
             {useCrossWorkspaceTarget && (
-              <Field
-                hint="Enter the GUID of the workspace that contains the data store."
-                label="Target workspace ID"
-                validationMessage={
-                  !draft.targetWorkspaceId?.trim()
-                    ? 'Target workspace ID is required for cross-workspace data stores.'
-                    : !isGuid(draft.targetWorkspaceId.trim())
-                      ? 'Must be a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).'
-                      : undefined
-                }
-                validationState={
-                  !draft.targetWorkspaceId?.trim() || !isGuid(draft.targetWorkspaceId.trim())
-                    ? 'error'
-                    : 'none'
-                }
-              >
-                <Input
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={draft.targetWorkspaceId ?? ''}
-                  onChange={(_, data) => onChangeDraft({ ...draft, targetWorkspaceId: data.value })}
-                />
-              </Field>
+              <WorkspacePicker
+                client={opsClient}
+                currentWorkspaceId={sdk.workspaceId}
+                isReady={sdk.isReady}
+                value={draft.targetWorkspaceId ?? ''}
+                onChange={(workspaceId) => onChangeDraft({ ...draft, targetWorkspaceId: workspaceId })}
+              />
             )}
             <FabricTargetItemPicker
               apiBaseUrl={sdk.apiBaseUrl}
@@ -701,8 +741,17 @@ function EditorWorkspace({
 
           <div className={styles.splitPane}>
             <div className={styles.editorPanel}>
+              <div className={styles.quickRules} aria-label="Quick add rule">
+                <Caption1>Quick add rule</Caption1>
+                {quickRuleSnippets.map((rule) => (
+                  <Button key={rule.label} appearance="subtle" size="small" onClick={() => insertRuleSnippet(editorRef.current, rule.snippet)}>
+                    {rule.label}
+                  </Button>
+                ))}
+              </div>
               <MonacoYamlEditor
                 onChange={(nextValue) => onChangeDraft({ ...draft, odcsYaml: nextValue })}
+                onEditorMount={(editor) => { editorRef.current = editor; }}
                 themeMode={sdk.themeMode}
                 value={draft.odcsYaml}
               />
@@ -733,6 +782,25 @@ function EditorWorkspace({
   );
 }
 
+const quickRuleSnippets = [
+  { label: 'Not null', snippet: '\n        required: true\n' },
+  { label: 'Unique', snippet: '\n        unique: true\n' },
+  { label: 'Range', snippet: '\n        quality:\n          - type: range\n            min: 0\n            max: 100\n' },
+  { label: 'Regex', snippet: '\n        quality:\n          - type: regex\n            pattern: "^[A-Z0-9_-]+$"\n' },
+  { label: 'Enum', snippet: '\n        quality:\n          - type: enum\n            values: [active, inactive]\n' },
+  { label: 'Foreign key', snippet: '\n        references:\n          table: dim_table\n          column: id\n' },
+  { label: 'Freshness SLA', snippet: '\nquality:\n  - type: freshness\n    maximumLag: PT6H\n' },
+];
+
+function insertRuleSnippet(editor: MonacoYamlEditorInstance | null, snippet: string) {
+  if (!editor) return;
+  const selection = editor.getSelection();
+  const range = selection ?? editor.getModel()?.getFullModelRange();
+  if (!range) return;
+  editor.executeEdits('quick-add-rule', [{ range, text: snippet, forceMoveMarkers: true }]);
+  editor.focus();
+}
+
 function getInitialView(contract: ContractDetail | null) {
   return contract ? 'editor' : 'empty';
 }
@@ -744,7 +812,8 @@ function createNewDraft(seed: {
   targetType: ContractTargetType;
 }): ContractDraft {
   const name = seed.name?.trim() || 'New Contract';
-  const yaml = createDefaultContractYaml(name);
+  const templateYaml = readTemplateYaml();
+  const yaml = templateYaml ?? createDefaultContractYaml(name);
   const targetPath = seed.targetTablePath || getDefaultTargetPath(seed.targetType);
 
   return {
@@ -768,6 +837,15 @@ function createNewDraft(seed: {
     targetWorkspaceId: '',
     version: '1.0.0',
   };
+}
+
+function readTemplateYaml() {
+  if (typeof sessionStorage === 'undefined') return null;
+  const yaml = sessionStorage.getItem('orqentis.contract.templateYaml');
+  if (yaml) {
+    sessionStorage.removeItem('orqentis.contract.templateYaml');
+  }
+  return yaml;
 }
 
 function prepareDraftForSave(draft: ContractDraft): ContractDraft {

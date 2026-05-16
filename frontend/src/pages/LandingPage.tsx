@@ -1,4 +1,4 @@
-import { makeStyles, tokens } from '@fluentui/react-components';
+import { FluentProvider, makeStyles, tokens, webDarkTheme } from '@fluentui/react-components';
 import {
   Button,
   Body1Strong,
@@ -713,7 +713,8 @@ export function LandingPage() {
   const open = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
 
   return (
-    <div className={styles.root}>
+    <FluentProvider theme={webDarkTheme}>
+      <div className={styles.root}>
 
       {/* ── NAV ──────────────────────────────────────────────────────────── */}
       <nav className={styles.nav}>
@@ -1169,6 +1170,7 @@ export function LandingPage() {
           © {new Date().getFullYear()} Orqentis. ODCS v3.1.0 enforced.
         </Caption1>
       </footer>
-    </div>
+      </div>
+    </FluentProvider>
   );
 }

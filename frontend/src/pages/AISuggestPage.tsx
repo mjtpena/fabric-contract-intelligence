@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
   Badge,
   Breadcrumb,
   BreadcrumbButton,
@@ -27,6 +31,7 @@ import {
 import { createAiClient } from '@/api/aiClient';
 import { createContractClient } from '@/api/contractClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { aiDescriptionTemplates } from '@/lib/aiTemplates';
 import type { ContractTargetType } from '@/models/Contract';
 import { getContractTargetTypeLabel } from '@/models/ContractTarget';
 
@@ -60,6 +65,16 @@ const useStyles = makeStyles({
     flexWrap: 'wrap',
     alignItems: 'center',
   },
+  chips: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    flexWrap: 'wrap',
+  },
+  examples: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    padding: tokens.spacingHorizontalM,
+  },
   resultHeader: {
     alignItems: 'center',
     display: 'flex',
@@ -87,6 +102,7 @@ export function AISuggestPage() {
   const [targetItemId, setTargetItemId] = useState('');
   const [targetTablePath, setTargetTablePath] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isHeuristicResult, setIsHeuristicResult] = useState(false);
 
   const tableName = targetTablePath.split('/').at(-1) ?? '';
@@ -129,10 +145,6 @@ export function AISuggestPage() {
       });
       setYaml(response.odcsYaml);
       setIsHeuristicResult(isFallbackModel(response.modelUsed));
-      console.debug('AI suggestion generated', {
-        latencyMs: response.latencyMs,
-        modelUsed: response.modelUsed,
-      });
       if (!name) {
         setName(tableName || 'Generated Contract');
       }
@@ -248,8 +260,38 @@ export function AISuggestPage() {
           <Input type="email" value={ownerEmail} onChange={(_, data) => setOwnerEmail(data.value)} />
         </Field>
         <Field className={styles.fullWidth} label="Description">
-          <Textarea value={description} onChange={(_, data) => setDescription(data.value)} />
+          <div className={styles.chips}>
+            {aiDescriptionTemplates.map((template) => (
+              <Button
+                key={template.id}
+                appearance={selectedTemplateId === template.id ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  setSelectedTemplateId(template.id);
+                  setDescription(template.prompt);
+                }}
+              >
+                {template.label}
+              </Button>
+            ))}
+            <Button appearance="subtle" size="small" onClick={() => { setSelectedTemplateId(null); setDescription(''); }}>
+              Clear
+            </Button>
+          </div>
+          <Textarea value={description} onChange={(_, data) => { setDescription(data.value); setSelectedTemplateId(null); }} />
         </Field>
+      </div>
+
+      <div className={styles.examples}>
+        <Caption1>Here's what a contract for this domain typically captures…</Caption1>
+        <Accordion collapsible multiple>
+          {aiDescriptionTemplates.slice(0, 3).map((template) => (
+            <AccordionItem key={template.id} value={template.id}>
+              <AccordionHeader>{template.label}</AccordionHeader>
+              <AccordionPanel>{template.preview}</AccordionPanel>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
 
       <div className={styles.actions}>

@@ -16,10 +16,11 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { EmptyState } from '@/components/EmptyState';
+import { FabricLink } from '@/components/FabricLink';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { NaturalLanguageQueryResponse } from '@/models/Ai';
 
@@ -43,6 +44,16 @@ const useStyles = makeStyles({
     display: 'flex',
     gap: tokens.spacingHorizontalS,
     alignItems: 'flex-end',
+  },
+  chips: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    flexWrap: 'wrap',
+  },
+  recent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
   },
   inputWrapper: {
     flex: 1,
@@ -72,6 +83,16 @@ const useStyles = makeStyles({
   },
 });
 
+const recentStorageKey = 'orqentis.nlquery.recent';
+const suggestedQueries = [
+  'contracts owned by finance',
+  'failed runs this week',
+  'deprecated contracts with active policies',
+  'contracts touching PII',
+  'tables without contracts',
+  'contracts breaching SLA',
+];
+
 function isFallbackModel(modelUsed: string | null | undefined) {
   const normalized = modelUsed?.toLowerCase() ?? '';
   return normalized.includes('heuristic') || normalized.includes('fallback') || normalized.includes('template');
@@ -85,6 +106,7 @@ export function NLQueryPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<NaturalLanguageQueryResponse | null>(null);
   const [liveMessage, setLiveMessage] = useState('');
+  const [recentQueries, setRecentQueries] = useState<string[]>(() => readRecentQueries());
 
   const aiClient = useMemo(
     () =>
@@ -97,17 +119,19 @@ export function NLQueryPage() {
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
 
-  const runQuery = async () => {
-    if (!query.trim()) {
+  const runQuery = async (nextQuery = query) => {
+    const trimmedQuery = nextQuery.trim();
+    if (!trimmedQuery) {
       return;
     }
 
+    setQuery(trimmedQuery);
     setLoading(true);
     try {
-      const response = await aiClient.queryContracts({ query });
+      const response = await aiClient.queryContracts({ query: trimmedQuery });
       setResult(response);
+      setRecentQueries(writeRecentQuery(trimmedQuery));
       setLiveMessage(`Found ${response.matches.length} matches.`);
-      console.debug('Natural language query complete', { modelUsed: response.modelUsed });
       await sdk.notifySuccess('Query complete', 'Review the matching contracts below.');
     } catch (error) {
       setResult(null);
@@ -144,6 +168,14 @@ export function NLQueryPage() {
         {liveMessage}
       </div>
 
+      <div className={styles.chips}>
+        {suggestedQueries.map((suggestion) => (
+          <Button key={suggestion} appearance={result ? 'subtle' : 'secondary'} size="small" onClick={() => { void runQuery(suggestion); }}>
+            {suggestion}
+          </Button>
+        ))}
+      </div>
+
       <div className={styles.searchRow}>
         <Field className={styles.inputWrapper} label="Natural-language query">
           <Input
@@ -167,6 +199,22 @@ export function NLQueryPage() {
         </Button>
       </div>
 
+      {!result && recentQueries.length > 0 ? (
+        <div className={styles.recent}>
+          <Caption1>Recent queries</Caption1>
+          <div className={styles.chips}>
+            {recentQueries.map((recent) => (
+              <Button key={recent} appearance="subtle" size="small" onClick={() => { void runQuery(recent); }}>
+                {recent}
+              </Button>
+            ))}
+            <Button appearance="transparent" size="small" onClick={() => { sessionStorage.removeItem(recentStorageKey); setRecentQueries([]); }}>
+              Clear recent
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {result ? (
         <div className={styles.resultCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
@@ -185,9 +233,9 @@ export function NLQueryPage() {
             (result.matches ?? []).map((match) => (
               <div key={match.contractId} className={styles.matchCard}>
                 <div className={styles.matchHeader}>
-                  <Link to={`/contracts/${match.contractId}`}>
+                  <FabricLink to={`/contracts/${match.contractId}`}>
                     <strong>{match.name ?? match.contractId}</strong>
-                  </Link>
+                  </FabricLink>
                   <Badge appearance="outline" size="small">
                     v{match.version ?? '—'}
                   </Badge>
@@ -203,6 +251,21 @@ export function NLQueryPage() {
       ) : null}
     </section>
   );
+}
+
+function readRecentQueries() {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(recentStorageKey) ?? '[]') as unknown;
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentQuery(query: string) {
+  const next = [query, ...readRecentQueries().filter((item) => item !== query)].slice(0, 5);
+  sessionStorage.setItem(recentStorageKey, JSON.stringify(next));
+  return next;
 }
 
 export default NLQueryPage;

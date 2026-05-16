@@ -7,8 +7,11 @@ import { ensureMonacoYamlSetup } from '@/monaco/setup';
 // This is required for Fabric iframe CSP and offline/headless environments.
 loader.config({ monaco });
 
+export type MonacoYamlEditorInstance = monaco.editor.IStandaloneCodeEditor;
+
 interface MonacoYamlEditorProps {
   onChange: (value: string) => void;
+  onEditorMount?: (editor: MonacoYamlEditorInstance) => void;
   readOnly?: boolean;
   themeMode: 'dark' | 'light';
   value: string;
@@ -26,14 +29,16 @@ const useStyles = makeStyles({
 
 export function MonacoYamlEditor({
   onChange,
+  onEditorMount,
   readOnly,
   themeMode,
   value,
 }: MonacoYamlEditorProps) {
   const styles = useStyles();
 
-  const handleMount: OnMount = (_editor, monaco) => {
+  const handleMount: OnMount = (editor, monaco) => {
     ensureMonacoYamlSetup(monaco);
+    onEditorMount?.(editor);
   };
 
   return (

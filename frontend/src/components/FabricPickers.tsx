@@ -1,4 +1,4 @@
-import { Combobox, Field, Option, Spinner } from '@fluentui/react-components';
+import { Combobox, Field, Link, MessageBar, MessageBarBody, Option, Spinner } from '@fluentui/react-components';
 import { useFabricTargetItems, useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 import type { ContractTargetType } from '@/models/Contract';
 import { contractTargetTypeOptions, getContractTargetTypeLabel } from '@/models/ContractTarget';
@@ -53,7 +53,7 @@ export function FabricTargetItemPicker({
   value,
   workspaceId,
 }: FabricTargetItemPickerProps) {
-  const { isLoading, items } = useFabricTargetItems({
+  const { isLoading, items, refetch } = useFabricTargetItems({
     baseUrl: apiBaseUrl,
     getToken,
     isReady,
@@ -65,21 +65,15 @@ export function FabricTargetItemPicker({
   const selectedName = items.find((item) => item.id === value)?.displayName ?? (value || undefined);
 
   return (
-    <Field
-      hint={items.length === 0 && !isLoading && isReady ? 'Paste a Fabric item GUID if the list is unavailable.' : undefined}
-      label={label}
-    >
+    <Field label={label}>
+      {items.length === 0 && !isLoading && isReady ? <PickerWarning onRetry={refetch} /> : null}
       <Combobox
-        freeform
-        placeholder={isLoading ? 'Loading Fabric items…' : 'Select or paste Fabric item ID'}
+        placeholder={isLoading ? 'Loading Fabric items…' : 'Select Fabric item'}
         value={selectedName ?? ''}
         onOptionSelect={(_, data) => {
           if (data.optionValue) {
             onChange(data.optionValue);
           }
-        }}
-        onChange={(e) => {
-          onChange(e.currentTarget.value);
         }}
       >
         {items.map((item) => (
@@ -106,26 +100,20 @@ export interface LakehousePickerProps {
 }
 
 export function LakehousePicker({ apiBaseUrl, getToken, isReady, onChange, value, workspaceId }: LakehousePickerProps) {
-  const { isLoading, lakehouses } = useLakehouses({ baseUrl: apiBaseUrl, getToken, isReady, workspaceId });
+  const { isLoading, lakehouses, refetch } = useLakehouses({ baseUrl: apiBaseUrl, getToken, isReady, workspaceId });
 
   const selectedName = lakehouses.find((l) => l.id === value)?.displayName ?? (value || undefined);
 
   return (
-    <Field
-      hint={lakehouses.length === 0 && !isLoading && isReady ? 'Paste a lakehouse GUID if the list is unavailable.' : undefined}
-      label="Target lakehouse"
-    >
+    <Field label="Target lakehouse">
+      {lakehouses.length === 0 && !isLoading && isReady ? <PickerWarning onRetry={refetch} /> : null}
       <Combobox
-        freeform
-        placeholder={isLoading ? 'Loading lakehouses…' : 'Select or paste lakehouse ID'}
+        placeholder={isLoading ? 'Loading lakehouses…' : 'Select lakehouse'}
         value={selectedName ?? ''}
         onOptionSelect={(_, data) => {
           if (data.optionValue) {
             onChange(data.optionValue);
           }
-        }}
-        onChange={(e) => {
-          onChange(e.currentTarget.value);
         }}
       >
         {lakehouses.map((lakehouse) => (
@@ -152,7 +140,7 @@ export interface TablePickerProps {
 }
 
 export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChange, value, workspaceId }: TablePickerProps) {
-  const { isLoading, tables } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, isReady, lakehouseId, workspaceId });
+  const { isLoading, tables, refetch } = useLakehouseTables({ baseUrl: apiBaseUrl, getToken, isReady, lakehouseId, workspaceId });
 
   const hasLakehouse = isGuid(lakehouseId);
   const placeholder = !hasLakehouse
@@ -161,7 +149,7 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
       ? 'Loading tables…'
       : tables.length > 0
         ? 'Select a table'
-        : 'No tables found — enter path manually';
+        : 'No tables found';
 
   // Show a human-readable display name (table name, not the full ABFSS path)
   const displayValue = deriveTableDisplayName(tables, value);
@@ -171,21 +159,18 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
       hint={!hasLakehouse ? undefined : 'The ABFSS path is auto-filled when you pick a table.'}
       label="Target table"
     >
+      {tables.length === 0 && !isLoading && hasLakehouse && isReady ? <PickerWarning onRetry={refetch} /> : null}
       {isLoading && hasLakehouse ? (
         <Spinner size="tiny" label="Loading tables…" />
       ) : (
         <Combobox
           disabled={!hasLakehouse}
-          freeform
           placeholder={placeholder}
           value={displayValue}
           onOptionSelect={(_, data) => {
             if (data.optionValue) {
               onChange(data.optionValue);
             }
-          }}
-          onChange={(e) => {
-            onChange(e.currentTarget.value);
           }}
         >
           {tables.map((table) => (
@@ -204,6 +189,16 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+function PickerWarning({ onRetry }: { onRetry: () => void }) {
+  return (
+    <MessageBar intent="warning" layout="multiline">
+      <MessageBarBody>
+        Couldn't load items. <Link onClick={onRetry}>Retry</Link>
+      </MessageBarBody>
+    </MessageBar>
+  );
+}
+
 function deriveTableDisplayName(tables: { name: string; location?: string }[], value: string): string {
   if (!value) {
     return '';
@@ -221,3 +216,4 @@ function deriveTableDisplayName(tables: { name: string; location?: string }[], v
 function isGuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
+

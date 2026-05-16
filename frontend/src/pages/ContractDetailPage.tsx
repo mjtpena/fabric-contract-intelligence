@@ -155,11 +155,6 @@ export function ContractDetailPage() {
     }
   }, [client, contract, refresh, sdk]);
 
-  const statusActions = useMemo(
-    () => (contract ? getStatusActions(contract.status) : []),
-    [contract],
-  );
-
   const columns = useMemo(
     () =>
       [
@@ -275,25 +270,37 @@ export function ContractDetailPage() {
                 <Subtitle1>Lifecycle status</Subtitle1>
                 <Caption1>Draft → Review → Active → Deprecated → Archived</Caption1>
               </div>
-              <Menu>
-                <MenuTrigger disableButtonEnhancement>
-                  <MenuButton disabled={statusUpdating || statusActions.length === 0}>Change status</MenuButton>
-                </MenuTrigger>
-                <MenuPopover>
-                  <MenuList>
-                    {statusActions.map((action) => (
-                      <MenuItem
-                        key={action.status}
-                        onClick={() => {
-                          void handleStatusChange(action.status);
-                        }}
-                      >
-                        {action.label}
-                      </MenuItem>
-                    ))}
-                  </MenuList>
-                </MenuPopover>
-              </Menu>
+              <div style={{ display: 'flex', gap: tokens.spacingHorizontalXS }}>
+                <Button
+                  appearance="primary"
+                  disabled={statusUpdating || !getPrimaryStatusAction(contract.status)}
+                  onClick={() => {
+                    const action = getPrimaryStatusAction(contract.status);
+                    if (action) void handleStatusChange(action.status);
+                  }}
+                >
+                  {getPrimaryStatusAction(contract.status)?.label ?? 'Activate'}
+                </Button>
+                <Menu>
+                  <MenuTrigger disableButtonEnhancement>
+                    <MenuButton disabled={statusUpdating || getSecondaryStatusActions(contract.status).length === 0}>More</MenuButton>
+                  </MenuTrigger>
+                  <MenuPopover>
+                    <MenuList>
+                      {getSecondaryStatusActions(contract.status).map((action) => (
+                        <MenuItem
+                          key={action.status}
+                          onClick={() => {
+                            void handleStatusChange(action.status);
+                          }}
+                        >
+                          {action.label}
+                        </MenuItem>
+                      ))}
+                    </MenuList>
+                  </MenuPopover>
+                </Menu>
+              </div>
             </div>
             <div className={styles.statusFlow} aria-label="Contract lifecycle status flow">
               {statusFlow.map((status, index) => (
@@ -364,19 +371,30 @@ function StatusFlowStep({
   return (
     <>
       {index > 0 ? <span className={styles.flowConnector}>→</span> : null}
-      <span className={`${styles.statusPill} ${isCurrent ? styles.currentStatusPill : ''}`} aria-current={isCurrent ? 'step' : undefined}>
-        {toStatusLabel(status)}
-      </span>
+      {isCurrent ? (
+        <StatusBadge status={status} />
+      ) : (
+        <span className={styles.statusPill}>{toStatusLabel(status)}</span>
+      )}
     </>
   );
 }
 
-function getStatusActions(status: string) {
+function getPrimaryStatusAction(status: string) {
   switch (status.toLowerCase()) {
     case 'draft':
-      return [{ label: 'Move to Review', status: 'review' }];
+      return { label: 'Move to Review', status: 'review' };
     case 'review':
-      return [{ label: 'Activate', status: 'active' }];
+      return { label: 'Activate', status: 'active' };
+    default:
+      return null;
+  }
+}
+
+function getSecondaryStatusActions(status: string) {
+  switch (status.toLowerCase()) {
+    case 'draft':
+    case 'review':
     case 'active':
       return [{ label: 'Deprecate', status: 'deprecated' }];
     case 'deprecated':

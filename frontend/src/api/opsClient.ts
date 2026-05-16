@@ -20,6 +20,7 @@ export interface OpsClient {
   listActivatorRules: () => Promise<ActivatorRule[]>;
   createPolicy: (request: PolicyRequest) => Promise<PolicyResponse>;
   listAuditRows: () => Promise<ReportAuditRow[]>;
+  testWebhook: (url: string, type: string) => Promise<void>;
 }
 
 export function createOpsClient(options: OpsClientOptions): OpsClient {
@@ -46,11 +47,14 @@ export function createOpsClient(options: OpsClientOptions): OpsClient {
     if (!response.ok) {
       throw new Error(`Request failed with status ${response.status}.`);
     }
+    if (response.status === 204) {
+      return undefined as T;
+    }
     return (await response.json()) as T;
   }
 
   return {
-    listWorkspaces: () => request<WorkspaceSummary[]>('/v1/workspaces'),
+    listWorkspaces: () => request<WorkspaceSummary[]>('/v1/ops/workspaces'),
     listFederatedContracts: (cursor) =>
       request<FederatedContractsResponse>(`/v1/federation/contracts${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
     listActivatorRules: () => request<ActivatorRule[]>('/v1/activator/rules'),
@@ -60,5 +64,10 @@ export function createOpsClient(options: OpsClientOptions): OpsClient {
         body: JSON.stringify(body),
       }),
     listAuditRows: () => request<ReportAuditRow[]>('/v1/reports/audit'),
+    testWebhook: (url, type) =>
+      request<void>('/v1/policies/webhooks/test', {
+        method: 'POST',
+        body: JSON.stringify({ type, url }),
+      }),
   };
 }

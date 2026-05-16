@@ -40,7 +40,7 @@ export async function listWorkspaceLakehouses(
   }
 
   try {
-    const response = await fetch(`${baseUrl}/v1/fabric/${workspaceId}/lakehouses`, {
+    const response = await fetch(`${baseUrl}/v1/ops/workspaces/${workspaceId}/fabric-items?type=Lakehouse`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -48,7 +48,7 @@ export async function listWorkspaceLakehouses(
       return [];
     }
 
-    return (await response.json()) as FabricLakehouse[];
+    return normalizeItems(await response.json()) as FabricLakehouse[];
   } catch {
     return [];
   }
@@ -73,7 +73,7 @@ export async function listWorkspaceTargetItems(
   }
 
   try {
-    const response = await fetch(`${baseUrl}/v1/fabric/${workspaceId}/items?targetType=${encodeURIComponent(targetType)}`, {
+    const response = await fetch(`${baseUrl}/v1/ops/workspaces/${workspaceId}/fabric-items?type=${encodeURIComponent(toFabricItemType(targetType))}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -81,7 +81,7 @@ export async function listWorkspaceTargetItems(
       return [];
     }
 
-    return (await response.json()) as FabricWorkspaceItem[];
+    return normalizeItems(await response.json()) as FabricWorkspaceItem[];
   } catch {
     return [];
   }
@@ -109,7 +109,7 @@ export async function listLakehouseTables(
 
   try {
     const response = await fetch(
-      `${baseUrl}/v1/fabric/${workspaceId}/lakehouses/${lakehouseId}/tables`,
+      `${baseUrl}/v1/ops/lakehouses/${lakehouseId}/tables?workspaceId=${encodeURIComponent(workspaceId)}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -119,8 +119,35 @@ export async function listLakehouseTables(
       return [];
     }
 
-    return (await response.json()) as FabricLakehouseTable[];
+    return normalizeItems(await response.json()) as FabricLakehouseTable[];
   } catch {
     return [];
   }
+}
+
+function toFabricItemType(targetType: ContractTargetType) {
+  switch (targetType) {
+    case 'warehouse':
+      return 'Warehouse';
+    case 'eventhouse':
+      return 'KQLDatabase';
+    case 'semantic_model':
+      return 'SemanticModel';
+    case 'fabric_sql':
+      return 'SQLDatabase';
+    case 'lakehouse':
+    default:
+      return 'Lakehouse';
+  }
+}
+
+function normalizeItems<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { items?: unknown[] }).items)) {
+    return (payload as { items: T[] }).items;
+  }
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { value?: unknown[] }).value)) {
+    return (payload as { value: T[] }).value;
+  }
+  return [];
 }

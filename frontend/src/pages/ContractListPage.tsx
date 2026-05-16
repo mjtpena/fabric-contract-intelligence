@@ -4,6 +4,14 @@ import {
   Body1,
   Button,
   Caption1,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -15,22 +23,25 @@ import {
   Option,
   SearchBox,
   Spinner,
+  Subtitle2,
   Title2,
   createTableColumn,
   makeStyles,
   tokens,
   type TableRowId,
 } from '@fluentui/react-components';
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { downloadZip } from 'client-zip';
 import { AddRegular, ArrowClockwiseRegular, ChevronLeftRegular, ChevronRightRegular, DocumentBulletListRegular, PlayRegular } from '@fluentui/react-icons';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { EmptyState } from '@/components/EmptyState';
+import { FabricLink } from '@/components/FabricLink';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { aiDescriptionTemplates } from '@/lib/aiTemplates';
 import { formatRelative } from '@/lib/formatDate';
 import type { ContractSummary } from '@/models/Contract';
 import { getContractTargetTypeLabel } from '@/models/ContractTarget';
@@ -109,6 +120,17 @@ const useStyles = makeStyles({
   rowActions: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
+  },
+  onboarding: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))',
+    gap: tokens.spacingHorizontalM,
+  },
+  onboardingCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    padding: tokens.spacingHorizontalL,
   },
   pagination: {
     display: 'flex',
@@ -325,6 +347,11 @@ export function ContractListPage() {
     }
   }, [client, sdk, selectedContracts]);
 
+  const openTemplate = useCallback((yaml: string) => {
+    sessionStorage.setItem('orqentis.contract.templateYaml', yaml);
+    void openWorkloadRoute('/contracts/editor?template=1');
+  }, [openWorkloadRoute]);
+
   const columns = useMemo(
     () =>
       [
@@ -332,9 +359,9 @@ export function ContractListPage() {
           columnId: 'name',
           compare: (left, right) => left.name.localeCompare(right.name),
           renderCell: (item) => (
-            <RouterLink className={styles.link} to={`/contracts/${encodeURIComponent(item.id)}`}>
+            <FabricLink className={styles.link} to={`/contracts/${encodeURIComponent(item.id)}`}>
               {item.name}
-            </RouterLink>
+            </FabricLink>
           ),
           renderHeaderCell: () => 'Name',
         }),
@@ -381,13 +408,14 @@ export function ContractListPage() {
             const runPath = `/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(runId)}`;
 
             return (
-              <RouterLink
+              <FabricLink
                 aria-label={`View last enforcement run for ${item.name}, status ${item.lastRunStatus ?? 'unknown'}`}
                 className={styles.link}
+                mode="append"
                 to={runPath}
               >
                 {formatRelative(item.lastRunAt)}
-              </RouterLink>
+              </FabricLink>
             );
           },
           renderHeaderCell: () => 'Last run',
@@ -486,16 +514,39 @@ export function ContractListPage() {
         {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
         {error ? <Body1>{error}</Body1> : null}
         {!loading && !federatedLoading && displayedContracts.length === 0 ? (
-          <EmptyState
-            actionIcon={<AddRegular />}
-            actionLabel="Create contract"
-            description="Define an ODCS contract to start enforcing data quality at the Delta table layer."
-            icon={<DocumentBulletListRegular />}
-            title="No contracts yet"
-            onAction={() => {
-              void openWorkloadRoute('/contracts/editor');
-            }}
-          />
+          sdk.isReady ? (
+            <div>
+              <Title2>Author your first contract</Title2>
+              <div className={styles.onboarding}>
+                <Card className={styles.onboardingCard}>
+                  <Subtitle2>From a Fabric table</Subtitle2>
+                  <Body1>Choose a Lakehouse or Warehouse target, then start with picker-driven metadata.</Body1>
+                  <Button appearance="primary" onClick={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}>Start from table</Button>
+                </Card>
+                <Card className={styles.onboardingCard}>
+                  <Subtitle2>From a description (AI)</Subtitle2>
+                  <Body1>Describe the data product and let Orqentis draft the ODCS YAML.</Body1>
+                  <Button onClick={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}>Open AI Suggest</Button>
+                </Card>
+                <Card className={styles.onboardingCard}>
+                  <Subtitle2>From a template</Subtitle2>
+                  <Body1>Pick a ready-made YAML contract and customize it in the editor.</Body1>
+                  <TemplateDialog openTemplate={(yaml) => openTemplate(yaml)} />
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              actionIcon={<AddRegular />}
+              actionLabel="Create contract"
+              description="Define an ODCS contract to start enforcing data quality at the Delta table layer."
+              icon={<DocumentBulletListRegular />}
+              title="No contracts yet"
+              onAction={() => {
+                void openWorkloadRoute('/contracts/editor');
+              }}
+            />
+          )
         ) : null}
 
         {!loading && !federatedLoading && displayedContracts.length > 0 ? (
@@ -628,6 +679,35 @@ export function ContractListPage() {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function TemplateDialog({ openTemplate }: { openTemplate: (yaml: string) => void }) {
+  return (
+    <Dialog>
+      <DialogTrigger disableButtonEnhancement>
+        <Button>Browse templates</Button>
+      </DialogTrigger>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>Choose contract template</DialogTitle>
+          <DialogContent>
+            <div style={{ display: 'grid', gap: tokens.spacingVerticalS }}>
+              {aiDescriptionTemplates.slice(0, 6).map((template) => (
+                <Button key={template.id} appearance="secondary" onClick={() => openTemplate(template.yaml)}>
+                  {template.label}
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button appearance="secondary">Close</Button>
+            </DialogTrigger>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }
 
