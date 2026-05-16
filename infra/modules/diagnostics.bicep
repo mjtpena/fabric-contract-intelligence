@@ -21,19 +21,18 @@ resource staticWebApp 'Microsoft.Web/staticSites@2024-04-01' existing = {
   name: staticWebAppName
 }
 
-var retentionDays = environment == 'production' ? 90 : 30
+// Retention is controlled at the Log Analytics workspace level (diagnosticSettings
+// retentionPolicy is no longer supported for newly created settings).
 var logs = [
   {
     categoryGroup: 'allLogs'
     enabled: true
-    retentionPolicy: { enabled: true, days: retentionDays }
   }
 ]
 var metrics = [
   {
     category: 'AllMetrics'
     enabled: true
-    retentionPolicy: { enabled: true, days: retentionDays }
   }
 ]
 
@@ -77,4 +76,4 @@ resource staticWebAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
   }
 }
 
-output retentionInDays int = retentionDays
+output retentionInDays int = environment == 'production' ? 90 : 30

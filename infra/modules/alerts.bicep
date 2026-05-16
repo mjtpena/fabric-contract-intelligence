@@ -197,7 +197,7 @@ resource keyVaultThrottlingAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
         {
           name: 'ServiceApiHit429'
           criterionType: 'StaticThresholdCriterion'
-          metricName: 'ServiceApiHit'
+          metricName: 'ServiceApiResult'
           metricNamespace: 'Microsoft.KeyVault/vaults'
           dimensions: [
             {
