@@ -23,3 +23,48 @@ Rules:
 10. Owner must be the placeholder string "TBD". The caller will replace it.
 
 Always prefer fewer, higher-confidence rules over many speculative ones.
+
+Required top-level fields: `version`, `apiVersion`, `kind`, `id`, `status`.
+Quote any string value that contains `:`, `/`, `@`, or other YAML-reserved characters
+(use double-quoted scalars). Always double-quote the `location:` field for abfss URIs.
+
+The following example demonstrates the exact shape that validates against the schema.
+Mirror this structure for every contract you emit (adjust columns/quality to fit the profile):
+
+apiVersion: v3.1.0
+kind: DataContract
+id: urn:orqentis:orqentis:CONTRACT_ID
+name: "fin_payments"
+version: 0.1.0
+status: draft
+description:
+  purpose: "AI-generated draft for fin_payments"
+  usage: "Contract bootstrap"
+servers:
+  - server: fabric
+    type: azure
+    location: "abfss://ws@onelake.dfs.fabric.microsoft.com/Lh.Lakehouse/Tables/fin_payments"
+    format: delta
+schema:
+  - name: "fin_payments"
+    physicalType: table
+    description: "Schema for fin_payments"
+    properties:
+      - name: "payment_id"
+        logicalType: string
+        physicalType: STRING
+        required: true
+        unique: true
+        description: "Primary key"
+      - name: "amount"
+        logicalType: number
+        physicalType: DECIMAL
+        required: true
+        unique: false
+        description: "Transaction amount"
+customProperties:
+  - property: orqentisInfo
+    value:
+      title: "fin_payments"
+      description: "AI-generated ODCS draft"
+      owner: TBD

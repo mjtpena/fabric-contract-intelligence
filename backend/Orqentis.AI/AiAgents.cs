@@ -42,7 +42,7 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         _logger.LogDebug("AI-ContractSuggestion-Prompt Prompt={Prompt}", prompt);
         var llmResult = await _llmRouter.CompleteAsync("ContractSuggestion", prompt, userInput, ct).ConfigureAwait(false);
 
-        var candidateYaml = llmResult?.Content;
+        var candidateYaml = StripCodeFences(llmResult?.Content);
         if (!string.IsNullOrWhiteSpace(candidateYaml))
         {
             var validationErrors = _validator.Validate(candidateYaml);
@@ -56,6 +56,13 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
                     Latency = DateTimeOffset.UtcNow - started,
                 };
             }
+
+            _logger.LogWarning(
+                "AI-ContractSuggestion-LlmYamlInvalid Model={Model} ErrorCount={ErrorCount} Errors={Errors} YamlPrefix={YamlPrefix}",
+                llmResult?.ModelUsed,
+                validationErrors.Count,
+                string.Join(" | ", validationErrors.Take(8)),
+                candidateYaml.Length > 600 ? candidateYaml[..600] : candidateYaml);
         }
 
         _logger.LogWarning("AI-ContractSuggestion-FallbackUsed FallbackEnabled={FallbackEnabled}", _options.FallbackEnabled);
@@ -140,6 +147,30 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         builder.AppendLine("      maxAgeHours: 24");
         builder.AppendLine("      severity: warning");
         return builder.ToString();
+    }
+
+    private static string? StripCodeFences(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+        var trimmed = content.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+        var firstNewline = trimmed.IndexOf('\n');
+        if (firstNewline < 0)
+        {
+            return trimmed;
+        }
+        var inner = trimmed[(firstNewline + 1)..];
+        if (inner.EndsWith("```", StringComparison.Ordinal))
+        {
+            inner = inner[..^3];
+        }
+        return inner.Trim();
     }
 
     private static string EscapeYaml(string value)
