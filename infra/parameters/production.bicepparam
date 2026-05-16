@@ -8,7 +8,7 @@ param pgAdminUsername = 'orqentisadmin'
 // Initial bootstrap secret only; rotate in Key Vault out-of-band after deployment.
 param pgAdminPassword = readEnvironmentVariable('PG_ADMIN_PASSWORD', 'CHANGE_ME')
 param highAvailabilityMode = 'ZoneRedundant'
-param storageSizeGB = 128
+param storageSizeGB = 256
 param azureAdTenantId = readEnvironmentVariable('AZURE_AD_TENANT_ID', '')
 param azureAdClientId = readEnvironmentVariable('ORQENTIS_APP_CLIENT_ID', '')
 param azureAdClientSecret = readEnvironmentVariable('ORQENTIS_APP_CLIENT_SECRET', '')
