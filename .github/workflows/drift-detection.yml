@@ -59,7 +59,7 @@ jobs:
           fi
       - name: Create drift issue
         if: steps.whatif.outputs.drift == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const body = `Production drift detection found changes or what-if errors.\n\n\`\`\`text\n${{ steps.whatif.outputs.body }}\n\`\`\``;
