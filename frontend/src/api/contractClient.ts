@@ -1,5 +1,4 @@
-import Ajv2019 from 'ajv/dist/2019';
-import type { ErrorObject } from 'ajv';
+import type { ErrorObject, ValidateFunction } from 'ajv';
 import { parseDocument, stringify } from 'yaml';
 import odcsSchema from '@/monaco/odcs-v3.1.0.schema.json';
 import type {
@@ -28,6 +27,7 @@ export interface ContractClient {
   getContract: (contractId: string, options?: Pick<RequestInit, 'signal'>) => Promise<ContractDetail>;
   createContract: (request: CreateContractRequest) => Promise<ContractDetail>;
   updateContract: (contractId: string, request: UpdateContractRequest) => Promise<ContractDetail>;
+  updateStatus: (contractId: string, status: string) => Promise<ContractDetail>;
   deleteContract: (contractId: string) => Promise<void>;
   listVersions: (contractId: string, options?: Pick<RequestInit, 'signal'>) => Promise<ContractVersion[]>;
   runNow: (contractId: string) => Promise<RunAccepted>;
@@ -53,7 +53,18 @@ export class ContractClientError extends Error {
   }
 }
 
-const validator = createValidator();
+let validator: ValidateFunction | null = null;
+let validatorPromise: Promise<ValidateFunction> | null = null;
+
+async function getValidator(): Promise<ValidateFunction> {
+  if (validator) {
+    return validator;
+  }
+
+  validatorPromise ??= createValidator();
+  validator = await validatorPromise;
+  return validator;
+}
 
 export function createContractClient(options: ContractClientOptions): ContractClient {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
@@ -107,6 +118,11 @@ export function createContractClient(options: ContractClientOptions): ContractCl
     updateContract: (contractId, requestBody) =>
       request<ContractDetail>(`/v1/contracts/${contractId}`, {
         body: JSON.stringify(requestBody),
+        method: 'PUT',
+      }),
+    updateStatus: (contractId, status) =>
+      request<ContractDetail>(`/v1/contracts/${contractId}/status`, {
+        body: JSON.stringify({ status }),
         method: 'PUT',
       }),
     deleteContract: (contractId) =>
@@ -268,7 +284,8 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
 }
 
-function createValidator() {
+async function createValidator(): Promise<ValidateFunction> {
+  const { default: Ajv2019 } = await import('ajv/dist/2019');
   const ajv = new Ajv2019({
     allErrors: true,
     allowUnionTypes: true,
@@ -279,7 +296,7 @@ function createValidator() {
   return ajv.compile(odcsSchema as object);
 }
 
-async function validateContractYaml(yaml: string): Promise<ContractValidationResult> {
+export async function validateContractYaml(yaml: string): Promise<ContractValidationResult> {
   const document = parseDocument(yaml);
   const issues: ValidationIssue[] = document.errors.map((error) => ({
     message: error.message,
@@ -297,10 +314,11 @@ async function validateContractYaml(yaml: string): Promise<ContractValidationRes
   }
 
   const parsed = document.toJSON() as unknown;
+  const schemaValidator = await getValidator();
 
-  if (!validator(parsed)) {
+  if (!schemaValidator(parsed)) {
     issues.push(
-      ...(validator.errors ?? []).map((error) => ({
+      ...(schemaValidator.errors ?? []).map((error) => ({
         message: formatAjvMessage(error),
         path: error.instancePath || '/',
         severity: 'error' as const,

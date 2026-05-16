@@ -70,16 +70,28 @@ vi.mock('./hooks/useContract', () => ({
   }),
 }));
 
+vi.mock('./pages/ContractListPage', () => ({
+  default: () => <div>Contract library</div>,
+  ContractListPage: () => <div>Contract library</div>,
+}));
+
+vi.mock('./pages/ContractEditorPage', () => ({
+  default: () => <div>Choose contract target type</div>,
+  ContractEditorPage: () => <div>Choose contract target type</div>,
+}));
+
 vi.mock('./pages/EnforcementRunPage', () => ({
+  default: () => <div>Enforcement run page</div>,
   EnforcementRunPage: () => <div>Enforcement run page</div>,
 }));
 
 vi.mock('./pages/WorkspaceSettingsPage', () => ({
+  default: () => <div>Workspace settings page</div>,
   WorkspaceSettingsPage: () => <div>Workspace settings page</div>,
 }));
 
 describe('App', () => {
-  it('renders the contract list at /contracts', () => {
+  it('renders the contract list at /contracts', async () => {
     render(
       <FluentProvider theme={webLightTheme}>
         <MemoryRouter
@@ -93,10 +105,10 @@ describe('App', () => {
 
     // Fabric provides its own chrome; the workload renders only the item content area.
     // ContractListPage is the default view at /contracts.
-    expect(screen.getByText('Contract library')).toBeInTheDocument();
+    expect(await screen.findByText('Contract library')).toBeInTheDocument();
   });
 
-  it('renders the contract editor when navigating to a Fabric item editor URL', () => {
+  it('renders the contract editor when navigating to a Fabric item editor URL', async () => {
     render(
       <FluentProvider theme={webLightTheme}>
         <MemoryRouter
@@ -109,6 +121,6 @@ describe('App', () => {
     );
 
     // ContractEditorPage shows the type selector when no contract is loaded yet.
-    expect(screen.getByText('Choose contract target type')).toBeInTheDocument();
+    expect(await screen.findByText('Choose contract target type')).toBeInTheDocument();
   });
 });

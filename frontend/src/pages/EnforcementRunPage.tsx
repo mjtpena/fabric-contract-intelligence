@@ -21,11 +21,12 @@ import {
   Tab,
   TabList,
   Title2,
+  Tooltip,
   createTableColumn,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { ArrowClockwiseRegular, ArrowLeftRegular } from '@fluentui/react-icons';
+import { ArrowClockwiseRegular, ArrowDownload16Regular, ArrowLeftRegular, Copy16Regular, Link16Regular, Play16Regular } from '@fluentui/react-icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
@@ -37,6 +38,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { useContract } from '@/hooks/useContract';
 import { useEnforcementRun } from '@/hooks/useEnforcementRun';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { formatDateTime } from '@/lib/formatDate';
 import type { RuleResult, RunDetail, RunSummary, SchemaDiff } from '@/models/enforcement';
 import type { ReportAuditRow } from '@/models/ops';
 
@@ -68,15 +70,46 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     alignItems: 'center',
   },
+  titleRow: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: tokens.spacingHorizontalXS,
+  },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
+  },
   summary: {
     display: 'grid',
     gap: tokens.spacingHorizontalL,
-    gridTemplateColumns: '2fr 1fr',
+    gridTemplateColumns: 'minmax(18rem, 1.4fr) minmax(16rem, 1fr)',
   },
-  summaryCards: {
+  heroCard: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: tokens.spacingHorizontalXL,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+  },
+  metricsStrip: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: tokens.spacingHorizontalL,
     display: 'grid',
-    gap: tokens.spacingHorizontalL,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))',
+    gap: tokens.spacingVerticalM,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(8rem, 1fr))',
+  },
+  metricItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  scoreDelta: {
+    color: tokens.colorNeutralForeground3,
+    textAlign: 'center',
   },
   card: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -138,6 +171,7 @@ export function EnforcementRunPage() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState('');
+  const [secondaryActionInFlight, setSecondaryActionInFlight] = useState(false);
 
   const requestedContractId = routeContractId ?? searchParams.get('contractId') ?? persistedReportState?.contractId ?? null;
   const requestedRunId = routeRunId ?? searchParams.get('runId') ?? persistedReportState?.runId ?? null;
@@ -178,7 +212,7 @@ export function EnforcementRunPage() {
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
 
-  const { clearError = noop, error, loading, refresh, run, runs } = useEnforcementRun(
+  const { clearError = noop, error, isPollingPaused, loading, refresh, resumePolling, run, runs } = useEnforcementRun(
     runClient,
     requestedContractId,
     requestedRunId,
@@ -327,6 +361,22 @@ export function EnforcementRunPage() {
     };
   }, [itemDefinitionLoaded, opsClient, requestedRunId]);
 
+  const runSecondaryAction = useCallback(async (action: () => Promise<void>) => {
+    setSecondaryActionInFlight(true);
+    try {
+      await action();
+    } catch (actionError) {
+      const message = actionError instanceof Error ? actionError.message : 'The run action could not be completed.';
+      await sdk.notifyError('Run action failed', message);
+    } finally {
+      setSecondaryActionInFlight(false);
+    }
+  }, [sdk]);
+
+  const copyText = useCallback(async (value: string) => {
+    await navigator.clipboard.writeText(value);
+  }, []);
+
   const openAuditRow = async (row: ReportAuditRow) => {
     if (itemObjectId) {
       const persistedState: PersistedReportState = {
@@ -358,7 +408,7 @@ export function EnforcementRunPage() {
       }),
       createTableColumn<RunSummary>({
         columnId: 'triggeredAt',
-        renderCell: (item) => formatDate(item.triggeredAt),
+        renderCell: (item) => formatDateTime(item.triggeredAt),
         renderHeaderCell: () => 'Triggered',
       }),
       createTableColumn<RunSummary>({
@@ -422,6 +472,14 @@ export function EnforcementRunPage() {
   }
 
   const remediationSuggestions = resolveRemediationSuggestions(run);
+  const displayBreachScore = resolveDisplayBreachScore(run);
+  const previousRun = runs
+    .filter((candidate) => candidate.id !== run.id && new Date(candidate.triggeredAt).getTime() <= new Date(run.triggeredAt).getTime())
+    .sort((left, right) => new Date(right.triggeredAt).getTime() - new Date(left.triggeredAt).getTime())[0];
+  const previousScore = resolveSummaryBreachScore(previousRun);
+  const breachDelta = displayBreachScore != null && previousScore != null
+    ? formatBreachDelta(displayBreachScore - previousScore)
+    : null;
 
   return (
     <section className={styles.root}>
@@ -455,10 +513,73 @@ export function EnforcementRunPage() {
 
       <div className={styles.header}>
         <div>
-          <Title2>{contract?.name ?? 'Enforcement run'}</Title2>
-          <Caption1>
-            {contract?.targetTablePath ??
-              'Review schema rules, quality rules, freshness, diff, and remediation guidance.'}
+          <div className={styles.titleRow}>
+            <Title2>{contract?.name ?? 'Enforcement run'}</Title2>
+            <Tooltip content="Copy correlation ID" relationship="label">
+              <Button
+                appearance="subtle"
+                aria-label="Copy correlation ID"
+                disabled={secondaryActionInFlight || !run.correlationId}
+                icon={<Copy16Regular />}
+                size="small"
+                onClick={() => {
+                  void runSecondaryAction(async () => {
+                    await copyText(run.correlationId);
+                    await sdk.notifySuccess('Copied', 'Correlation ID copied to clipboard.');
+                  });
+                }}
+              />
+            </Tooltip>
+            <Tooltip content="Run this contract again" relationship="label">
+              <Button
+                appearance="subtle"
+                aria-label="Run this contract again"
+                disabled={secondaryActionInFlight || !resolvedContractId}
+                icon={<Play16Regular />}
+                size="small"
+                onClick={() => {
+                  void runSecondaryAction(async () => {
+                    if (!resolvedContractId) return;
+                    const nextRun = await runClient.runNow(resolvedContractId);
+                    await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
+                    await openWorkloadRoute(buildRunLink(resolvedContractId, nextRun.runId), 'append');
+                  });
+                }}
+              />
+            </Tooltip>
+            <Tooltip content="Download run result" relationship="label">
+              <Button
+                appearance="subtle"
+                aria-label="Download run result"
+                disabled={secondaryActionInFlight}
+                icon={<ArrowDownload16Regular />}
+                size="small"
+                onClick={() => {
+                  void runSecondaryAction(async () => {
+                    downloadJson(run, `run-${run.id}.json`);
+                    await sdk.notifySuccess('Downloaded', 'Run result JSON download started.');
+                  });
+                }}
+              />
+            </Tooltip>
+            <Tooltip content="Copy shareable link" relationship="label">
+              <Button
+                appearance="subtle"
+                aria-label="Copy shareable link"
+                disabled={secondaryActionInFlight}
+                icon={<Link16Regular />}
+                size="small"
+                onClick={() => {
+                  void runSecondaryAction(async () => {
+                    await copyText(window.location.href);
+                    await sdk.notifySuccess('Copied', 'Shareable link copied to clipboard.');
+                  });
+                }}
+              />
+            </Tooltip>
+          </div>
+          <Caption1 className={styles.subtitle}>
+            {contract?.targetTablePath ?? 'Review failed rules and remediation guidance for this run.'}
           </Caption1>
         </div>
         <div className={styles.headerActions}>
@@ -471,6 +592,17 @@ export function EnforcementRunPage() {
               }}
             >
               Back to contract
+            </Button>
+          ) : null}
+          {isPollingPaused ? (
+            <Button
+              appearance="primary"
+              icon={<ArrowClockwiseRegular />}
+              onClick={() => {
+                void resumePolling();
+              }}
+            >
+              Resume polling
             </Button>
           ) : null}
           <Button
@@ -488,32 +620,29 @@ export function EnforcementRunPage() {
       {error ? <Body1>{error}</Body1> : null}
 
       <div className={styles.summary}>
-        <div className={styles.summaryCards}>
-          <div className={styles.card}>
-            <Caption1>Status</Caption1>
-            <StatusBadge status={run.status} />
-            <Body1>Overall result: {run.resultJson.overallStatus}</Body1>
-          </div>
-          <div className={styles.card}>
-            <Caption1>Started</Caption1>
-            <Body1>{formatDate(run.triggeredAt)}</Body1>
-            <Caption1>Completed</Caption1>
-            <Body1>{run.completedAt ? formatDate(run.completedAt) : 'Still running'}</Body1>
-          </div>
-          <div className={styles.card}>
-            <Caption1>Table version</Caption1>
-            <Body1>{String(run.resultJson.tableVersion ?? run.deltaTableVersion ?? '—')}</Body1>
-            <Caption1>Triggered by</Caption1>
-            <Body1>{run.triggeredBy}</Body1>
-          </div>
-          <div className={styles.card}>
-            <Caption1>Correlation ID</Caption1>
-            <Body1>{run.correlationId}</Body1>
-          </div>
+        <div className={styles.heroCard}>
+          <BreachScoreGauge score={displayBreachScore} />
+          {breachDelta ? <Caption1 className={styles.scoreDelta}>{breachDelta}</Caption1> : null}
         </div>
 
-        <div className={styles.card}>
-          <BreachScoreGauge score={resolveDisplayBreachScore(run)} />
+        <div className={styles.metricsStrip}>
+          <div className={styles.metricItem}>
+            <Caption1>Status</Caption1>
+            <StatusBadge status={run.status} />
+            <Body1>Overall: {run.resultJson.overallStatus}</Body1>
+          </div>
+          <div className={styles.metricItem}>
+            <Caption1>Started</Caption1>
+            <Body1>{formatDateTime(run.triggeredAt)}</Body1>
+          </div>
+          <div className={styles.metricItem}>
+            <Caption1>Duration</Caption1>
+            <Body1>{formatDuration(run.triggeredAt, run.completedAt)}</Body1>
+          </div>
+          <div className={styles.metricItem}>
+            <Caption1>Mode</Caption1>
+            <Body1>{formatRunMode(run.triggeredBy)}</Body1>
+          </div>
         </div>
       </div>
 
@@ -678,12 +807,12 @@ function ReportItemDashboard({
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'score',
-        renderCell: (row) => (row.breachScore != null ? row.breachScore.toFixed(2) : 'n/a'),
+        renderCell: (row) => (row.breachScore != null ? row.breachScore.toFixed(2) : '—'),
         renderHeaderCell: () => 'Breach score',
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'triggeredAt',
-        renderCell: (row) => formatDate(row.triggeredAt),
+        renderCell: (row) => formatDateTime(row.triggeredAt),
         renderHeaderCell: () => 'Triggered',
       }),
       createTableColumn<ReportAuditRow>({
@@ -704,7 +833,7 @@ function ReportItemDashboard({
       <div className={styles.header}>
         <div>
           <Title2>Contract reports</Title2>
-          <Caption1>Open persisted enforcement runs and breach reports for this workspace.</Caption1>
+          <Caption1 className={styles.subtitle}>Open saved enforcement reports and investigate breached contracts.</Caption1>
         </div>
       </div>
 
@@ -915,6 +1044,16 @@ function buildRunLink(contractId: string | null | undefined, runId: string) {
     : `/contracts/runs?runId=${encodeURIComponent(runId)}`;
 }
 
+function downloadJson(value: unknown, fileName: string) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 function resolveDisplayBreachScore(run: RunDetail) {
   const persistedScore = run.resultJson.breachScore ?? run.breachScore;
   if (persistedScore !== null && persistedScore !== undefined) {
@@ -951,12 +1090,52 @@ function parsePersistedReportState(raw: string): PersistedReportState | null {
   }
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(d);
+function resolveSummaryBreachScore(run: RunSummary | undefined) {
+  const candidate = run as (RunSummary & { breachScore?: number | null; resultJson?: { breachScore?: number | null } }) | undefined;
+  return candidate?.breachScore ?? candidate?.resultJson?.breachScore ?? null;
 }
+
+function formatBreachDelta(delta: number) {
+  if (Math.abs(delta) < 0.5) {
+    return 'No meaningful change from last run';
+  }
+
+  const rounded = Math.abs(Math.round(delta));
+  return delta < 0
+    ? `${rounded}% better than last run`
+    : `${rounded}% worse than last run`;
+}
+
+function formatDuration(start: string, end: string | null) {
+  if (!end) {
+    return 'Still running';
+  }
+
+  const elapsedMs = new Date(end).getTime() - new Date(start).getTime();
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
+    return '—';
+  }
+
+  const seconds = Math.round(elapsedMs / 1000);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`;
+}
+
+function formatRunMode(value: string | null | undefined) {
+  if (!value) {
+    return '—';
+  }
+
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
+    .join(' ');
+}
+
+export default EnforcementRunPage;

@@ -12,6 +12,12 @@ export interface ContractSummary {
   name: string;
   /** Fabric data product type targeted by the contract. */
   targetType: ContractTargetType;
+  /** Owner email captured by list endpoints when available. */
+  ownerEmail?: string;
+  /** Alternate owner field returned by federated APIs. */
+  owner?: string;
+  /** Target object path returned by list endpoints when available. */
+  targetTablePath?: string;
   /** Persisted lifecycle status. */
   status: string;
   /** Current contract version. */
@@ -22,6 +28,10 @@ export interface ContractSummary {
   lastRunAt: string | null;
   /** Latest run identifier for deep-linking to run history. */
   lastRunId?: string | null;
+  /** Latest breach score returned by list endpoints when available. */
+  breachScore?: number | null;
+  /** Alternate latest breach score field returned by federated APIs. */
+  lastRunBreachScore?: number | null;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { ContractClientError } from '@/api/contractClient';
+import type { RunAccepted } from '@/models/Contract';
 import type { RunDetail, RunSummary } from '@/models/enforcement';
 
 export interface RunClientOptions {
@@ -11,6 +12,7 @@ export interface RunClientOptions {
 export interface RunClient {
   getRun: (runId: string) => Promise<RunDetail>;
   listRuns: (contractId: string) => Promise<RunSummary[]>;
+  runNow: (contractId: string) => Promise<RunAccepted>;
 }
 
 interface ProblemDetails {
@@ -59,6 +61,11 @@ export function createRunClient(options: RunClientOptions): RunClient {
   return {
     getRun: (runId) => request<RunDetail>(`/v1/runs/${runId}`),
     listRuns: (contractId) => request<RunSummary[]>(`/v1/contracts/${contractId}/runs`),
+    runNow: (contractId) =>
+      request<RunAccepted>(`/v1/contracts/${contractId}/runs`, {
+        body: JSON.stringify({}),
+        method: 'POST',
+      }),
   };
 }
 
