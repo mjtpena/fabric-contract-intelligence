@@ -1,4 +1,4 @@
-import { SettingsRegular } from '@fluentui/react-icons';
+import { ShieldCheckmarkRegular } from '@fluentui/react-icons';
 import type { RibbonAction } from '../ItemEditor';
 
 interface CreateSettingsActionOptions {
@@ -9,9 +9,9 @@ interface CreateSettingsActionOptions {
 export function createSettingsAction(options: CreateSettingsActionOptions): RibbonAction {
   return {
     disabled: options.disabled,
-    icon: <SettingsRegular />,
+    icon: <ShieldCheckmarkRegular />,
     key: 'settings',
-    label: 'Settings',
+    label: 'Alerts & policies',
     onClick: options.onClick,
   };
 }

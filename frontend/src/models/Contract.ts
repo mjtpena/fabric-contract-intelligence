@@ -6,6 +6,8 @@ export type ContractTargetType = 'lakehouse' | 'warehouse' | 'eventhouse' | 'sem
 export interface ContractSummary {
   /** Persisted contract identifier. */
   id: string;
+  /** Alternate contract identifier returned by federated APIs. */
+  contractId?: string;
   /** Contract display name. */
   name: string;
   /** Fabric data product type targeted by the contract. */
@@ -18,6 +20,8 @@ export interface ContractSummary {
   lastRunStatus: string | null;
   /** ISO-8601 timestamp of the latest run, when available. */
   lastRunAt: string | null;
+  /** Latest run identifier for deep-linking to run history. */
+  lastRunId?: string | null;
 }
 
 /**
@@ -168,7 +172,7 @@ export interface ContractDraft {
    * calls Fabric REST APIs in this workspace instead of sdk.workspaceId.
    * Maps to the YAML `servers[0].workspaceId` field.
    */
-  targetWorkspaceId: string;
+  targetWorkspaceId?: string;
 }
 
 /**

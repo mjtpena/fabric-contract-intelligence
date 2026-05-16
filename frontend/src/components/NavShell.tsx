@@ -13,6 +13,7 @@ import {
 import {
   AlertRegular,
   DocumentBulletListRegular,
+  HistoryRegular,
   SearchRegular,
   SettingsRegular,
   ShieldCheckmarkRegular,
@@ -54,8 +55,10 @@ const useStyles = makeStyles({
 });
 
 function getSelectedValue(path: string): string {
+  if (path.startsWith('/contracts/runs')) return '/contracts/runs';
   if (path.startsWith('/contracts/ai-suggest')) return '/contracts/ai-suggest';
   if (path.startsWith('/contracts/ai-query')) return '/contracts/ai-query';
+  if (path.startsWith('/contracts/policies')) return '/contracts/policies';
   if (path.startsWith('/contracts/alerts')) return '/contracts/alerts';
   if (path.startsWith('/workspace/settings')) return '/workspace/settings';
   return '/contracts';
@@ -90,11 +93,17 @@ export function NavShell() {
             <NavItem icon={<DocumentBulletListRegular />} value="/contracts">
               Library
             </NavItem>
+            <NavItem icon={<HistoryRegular />} value="/contracts/runs">
+              Run history
+            </NavItem>
             <NavItem icon={<SparkleRegular />} value="/contracts/ai-suggest">
               AI Generate
             </NavItem>
             <NavItem icon={<SearchRegular />} value="/contracts/ai-query">
               AI Query
+            </NavItem>
+            <NavItem icon={<ShieldCheckmarkRegular />} value="/contracts/policies">
+              Policies
             </NavItem>
             <NavDivider />
             <NavSectionHeader>Monitoring</NavSectionHeader>

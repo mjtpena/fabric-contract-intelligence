@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
   Button,
   Caption1,
   Field,
@@ -65,6 +69,7 @@ export function AISuggestPage() {
   const navigate = useNavigate();
   const sdk = useFabricSdk();
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [yaml, setYaml] = useState('');
   const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
@@ -125,11 +130,17 @@ export function AISuggestPage() {
   };
 
   const saveDraft = async () => {
-    if (!yaml.trim()) {
-      await sdk.notifyInfo('Missing draft', 'Generate or paste a YAML draft before saving.');
+    if (isSaving) {
       return;
     }
 
+    const trimmedYaml = yaml.trim();
+    if (!trimmedYaml || trimmedYaml.startsWith('# Select a Fabric target above')) {
+      await sdk.notifyError('No contract content', 'Generate a contract before saving.');
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const created = await contractClient.createContract({
         mode: 'direct',
@@ -147,11 +158,23 @@ export function AISuggestPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save AI-generated draft.';
       await sdk.notifyError('Save failed', message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => navigate('/contracts')}>Library</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        <BreadcrumbItem>
+          <BreadcrumbButton current>AI generate</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <div className={styles.header}>
         <Title2>AI Contract Suggest</Title2>
         <Body1>Generate an ODCS contract from a Fabric data product, refine in Monaco, then save.</Body1>
@@ -224,10 +247,10 @@ export function AISuggestPage() {
         </Button>
         <Button
           appearance="secondary"
-          disabled={loading || !yaml.trim()}
+          disabled={loading || isSaving || !yaml.trim()}
           onClick={() => { void saveDraft(); }}
         >
-          Save draft
+          {isSaving ? 'Saving…' : 'Save draft'}
         </Button>
         <Button appearance="subtle" onClick={() => navigate('/contracts')}>
           Back to contracts

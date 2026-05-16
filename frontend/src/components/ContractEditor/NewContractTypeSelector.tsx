@@ -3,6 +3,8 @@ import {
   Body1,
   Button,
   Caption1,
+  Radio,
+  RadioGroup,
   Subtitle2,
   makeStyles,
   tokens,
@@ -46,6 +48,9 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
     gap: tokens.spacingHorizontalM,
     width: '100%',
+  },
+  radio: {
+    margin: 0,
   },
   tile: {
     display: 'flex',
@@ -98,30 +103,30 @@ export function NewContractTypeSelector({ onConfirm, onCancel }: NewContractType
         </Body1>
       </div>
 
-      <div className={styles.grid}>
+      <RadioGroup
+        aria-label="Select target type"
+        className={styles.grid}
+        layout="horizontal"
+        value={selected}
+        onChange={(_, data) => setSelected(data.value as ContractTargetType)}
+      >
         {contractTargetTypeOptions.map((option) => (
-          <div
+          <Radio
             key={option.value}
-            role="radio"
-            aria-checked={selected === option.value}
-            className={`${styles.tile} ${selected === option.value ? styles.tileSelected : ''}`}
-            tabIndex={0}
-            onClick={() => setSelected(option.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setSelected(option.value);
-              }
-            }}
-          >
-            <span className={styles.tileIcon}>{TYPE_ICONS[option.value]}</span>
-            <Caption1 style={{ fontWeight: tokens.fontWeightSemibold }}>{option.label}</Caption1>
-            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-              {TYPE_DESCRIPTIONS[option.value]}
-            </Caption1>
-          </div>
+            className={styles.radio}
+            value={option.value}
+            label={(
+              <span className={`${styles.tile} ${selected === option.value ? styles.tileSelected : ''}`}>
+                <span className={styles.tileIcon}>{TYPE_ICONS[option.value]}</span>
+                <Caption1 style={{ fontWeight: tokens.fontWeightSemibold }}>{option.label}</Caption1>
+                <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                  {TYPE_DESCRIPTIONS[option.value]}
+                </Caption1>
+              </span>
+            )}
+          />
         ))}
-      </div>
+      </RadioGroup>
 
       <div className={styles.actions}>
         <Button

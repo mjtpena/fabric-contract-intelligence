@@ -9,12 +9,14 @@ export interface WorkspaceSummary {
 export interface FederatedContractsResponse {
   contracts: Array<{
     id: string;
+    contractId?: string;
     name: string;
     targetType: ContractTargetType;
     status: string;
     version: string;
     lastRunStatus: string | null;
     lastRunAt: string | null;
+    lastRunId?: string | null;
   }>;
   nextCursor: string | null;
 }

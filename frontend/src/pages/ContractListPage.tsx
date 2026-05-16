@@ -11,6 +11,7 @@ import {
   DataGridRow,
   Dropdown,
   Field,
+  Link,
   Option,
   Spinner,
   Subtitle1,
@@ -93,6 +94,7 @@ export function ContractListPage() {
   const [tier, setTier] = useState<string>('community');
   const [federatedContracts, setFederatedContracts] = useState<ContractSummary[]>([]);
   const [federatedLoading, setFederatedLoading] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
 
   const opsClient = useMemo(
     () =>
@@ -134,6 +136,12 @@ export function ContractListPage() {
     ? federatedContracts
     : contracts;
 
+  useEffect(() => {
+    if (!loading && !federatedLoading) {
+      setLiveMessage(`Loaded ${displayedContracts.length} contracts.`);
+    }
+  }, [displayedContracts.length, federatedLoading, loading]);
+
   const handleRunNow = useCallback(async (contractId: string) => {
     try {
       const run = await runNow(contractId);
@@ -172,7 +180,28 @@ export function ContractListPage() {
         }),
         createTableColumn<ContractSummary>({
           columnId: 'lastRun',
-          renderCell: (item) => item.lastRunAt ? formatDate(item.lastRunAt) : 'Not run yet',
+          renderCell: (item) => {
+            if (!item.lastRunAt) {
+              return <Body1>Not run yet</Body1>;
+            }
+
+            const contractId = item.contractId ?? item.id;
+            const runId = item.lastRunId ?? '';
+            const runPath = `/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(runId)}`;
+
+            return (
+              <Link
+                aria-label={`View last enforcement run for ${item.name}, status ${item.lastRunStatus}`}
+                href={runPath}
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(runPath);
+                }}
+              >
+                {formatDate(item.lastRunAt)}
+              </Link>
+            );
+          },
           renderHeaderCell: () => 'Last run',
         }),
         createTableColumn<ContractSummary>({
@@ -206,7 +235,7 @@ export function ContractListPage() {
           renderHeaderCell: () => 'Actions',
         }),
       ],
-    [handleRunNow, openWorkloadRoute, styles.rowActions],
+    [handleRunNow, navigate, openWorkloadRoute, styles.rowActions],
   );
 
   return (
@@ -252,6 +281,15 @@ export function ContractListPage() {
             Create contract
           </Button>
         </div>
+      </div>
+
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        role="status"
+        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {liveMessage}
       </div>
 
       <div className={styles.surface}>

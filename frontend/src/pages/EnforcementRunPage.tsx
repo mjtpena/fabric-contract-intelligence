@@ -47,6 +47,8 @@ interface PersistedReportState {
   runId: string | null;
 }
 
+const noop = () => undefined;
+
 const useStyles = makeStyles({
   root: {
     display: 'flex',
@@ -135,9 +137,13 @@ export function EnforcementRunPage() {
   const [auditRows, setAuditRows] = useState<ReportAuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [liveMessage, setLiveMessage] = useState('');
 
   const requestedContractId = routeContractId ?? searchParams.get('contractId') ?? persistedReportState?.contractId ?? null;
   const requestedRunId = routeRunId ?? searchParams.get('runId') ?? persistedReportState?.runId ?? null;
+  const compareRequested = searchParams.get('compare') === '1';
+  const requestedLeftVersion = searchParams.get('left');
+  const requestedRightVersion = searchParams.get('right');
 
   const contractClient = useMemo(
     () =>
@@ -172,7 +178,7 @@ export function EnforcementRunPage() {
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
 
-  const { error, loading, refresh, run, runs } = useEnforcementRun(
+  const { clearError = noop, error, loading, refresh, run, runs } = useEnforcementRun(
     runClient,
     requestedContractId,
     requestedRunId,
@@ -202,7 +208,18 @@ export function EnforcementRunPage() {
       return;
     }
 
+    const leftVersionFromQuery = requestedLeftVersion
+      ? sortedVersions.find((version) => version.version === requestedLeftVersion)?.id
+      : null;
+    const rightVersionFromQuery = requestedRightVersion
+      ? sortedVersions.find((version) => version.version === requestedRightVersion)?.id
+      : null;
+
     setLeftVersionId((current) => {
+      if (leftVersionFromQuery) {
+        return leftVersionFromQuery;
+      }
+
       if (current && sortedVersions.some((version) => version.id === current)) {
         return current;
       }
@@ -211,13 +228,33 @@ export function EnforcementRunPage() {
     });
 
     setRightVersionId((current) => {
+      if (rightVersionFromQuery) {
+        return rightVersionFromQuery;
+      }
+
       if (current && sortedVersions.some((version) => version.id === current)) {
         return current;
       }
 
       return sortedVersions[sortedVersions.length - 1].id;
     });
-  }, [sortedVersions]);
+  }, [requestedLeftVersion, requestedRightVersion, sortedVersions]);
+
+  useEffect(() => {
+    if (compareRequested) {
+      setSelectedTab('schema-diff');
+    }
+  }, [compareRequested]);
+
+  useEffect(() => {
+    clearError();
+  }, [clearError, requestedRunId]);
+
+  useEffect(() => {
+    if (run) {
+      setLiveMessage(`Run ${run.id.slice(0, 8)} is ${run.status}.`);
+    }
+  }, [run]);
 
   const selectedLeftVersion = sortedVersions.find((version) => version.id === leftVersionId) ?? null;
   const selectedRightVersion = sortedVersions.find((version) => version.id === rightVersionId) ?? null;
@@ -347,6 +384,14 @@ export function EnforcementRunPage() {
   if ((itemObjectId && !itemDefinitionLoaded) || (loading && !run)) {
     return (
       <section className={styles.root}>
+        <div
+          aria-atomic="true"
+          aria-live="polite"
+          role="status"
+          style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
+        >
+          {liveMessage}
+        </div>
         <Spinner label="Loading enforcement run…" />
       </section>
     );
@@ -355,6 +400,14 @@ export function EnforcementRunPage() {
   if (!run) {
     return (
       <section className={styles.root}>
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        role="status"
+        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {liveMessage}
+      </div>
         <ReportItemDashboard
           auditError={auditError ?? error}
           auditLoading={auditLoading}
@@ -372,6 +425,14 @@ export function EnforcementRunPage() {
 
   return (
     <section className={styles.root}>
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        role="status"
+        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {liveMessage}
+      </div>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>

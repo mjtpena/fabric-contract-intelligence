@@ -316,7 +316,12 @@ function EditorWorkspace({
 }: EditorWorkspaceProps) {
   const sdk = useFabricSdk();
   const { navigateTo, view } = useViewNavigation();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const [isImproving, setIsImproving] = useState(false);
+  const [useCrossWorkspaceTarget, setUseCrossWorkspaceTarget] = useState(() =>
+    Boolean(draft?.targetWorkspaceId && draft.targetWorkspaceId.trim().length > 0),
+  );
 
   const aiClient = useMemo(
     () =>
@@ -335,35 +340,54 @@ function EditorWorkspace({
     }
   }, [draft, navigateTo]);
 
+  useEffect(() => {
+    setUseCrossWorkspaceTarget(Boolean(draft?.targetWorkspaceId && draft.targetWorkspaceId.trim().length > 0));
+  }, [contractId, draft?.id]);
+
+  const isCrossWorkspaceTargetInvalid = useCrossWorkspaceTarget
+    && (!draft?.targetWorkspaceId?.trim() || !isGuid(draft.targetWorkspaceId.trim()));
+
   const saveDraft = useCallback(async (nextStatus?: string) => {
-    if (!draft) {
+    if (!draft || isSaving) {
       return;
     }
 
-    const preparedDraft = prepareDraftForSave({
-      ...draft,
-      status: nextStatus ?? draft.status,
-    });
-
-    if (!isGuid(preparedDraft.targetItemId)) {
-      await sdk.notifyError('Invalid target item ID', 'Enter a valid Fabric item GUID before saving.');
-      return;
-    }
-
-    if (!preparedDraft.name.trim() || !preparedDraft.ownerEmail.trim() || !preparedDraft.targetTablePath.trim()) {
-      await sdk.notifyError('Missing metadata', 'Name, owner email and target table path are required.');
-      return;
-    }
-
-    const latestValidation = validationResult ?? (await client.validate(preparedDraft.odcsYaml));
-    onValidationChange(latestValidation);
-
-    if (!latestValidation.isValid) {
-      await sdk.notifyError('Validation failed', 'Fix the YAML validation issues before saving.');
-      return;
-    }
-
+    setIsSaving(true);
     try {
+      const preparedDraft = prepareDraftForSave({
+        ...draft,
+        status: nextStatus ?? draft.status,
+        targetWorkspaceId: useCrossWorkspaceTarget ? draft.targetWorkspaceId : undefined,
+      });
+
+      if (useCrossWorkspaceTarget && !preparedDraft.targetWorkspaceId?.trim()) {
+        await sdk.notifyError('Missing target workspace', 'Enter the target workspace GUID before saving.');
+        return;
+      }
+
+      if (preparedDraft.targetWorkspaceId?.trim() && !isGuid(preparedDraft.targetWorkspaceId.trim())) {
+        await sdk.notifyError('Invalid target workspace ID', 'Enter a valid target workspace GUID before saving.');
+        return;
+      }
+
+      if (!isGuid(preparedDraft.targetItemId)) {
+        await sdk.notifyError('Invalid target item ID', 'Enter a valid Fabric item GUID before saving.');
+        return;
+      }
+
+      if (!preparedDraft.name.trim() || !preparedDraft.ownerEmail.trim() || !preparedDraft.targetTablePath.trim()) {
+        await sdk.notifyError('Missing metadata', 'Name, owner email and target table path are required.');
+        return;
+      }
+
+      const latestValidation = validationResult ?? (await client.validate(preparedDraft.odcsYaml));
+      onValidationChange(latestValidation);
+
+      if (!latestValidation.isValid) {
+        await sdk.notifyError('Validation failed', 'Fix the YAML validation issues before saving.');
+        return;
+      }
+
       const savedContract =
         nextStatus === 'active'
           ? await actions.activate(preparedDraft)
@@ -401,15 +425,20 @@ function EditorWorkspace({
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Unable to save the contract.';
       await sdk.notifyError('Save failed', message);
+    } finally {
+      setIsSaving(false);
     }
-  }, [actions, client, draft, fabricItemId, navigateToDetail, onValidationChange, sdk, validationResult]);
+  }, [actions, client, draft, fabricItemId, isSaving, navigateToDetail, onValidationChange, sdk, useCrossWorkspaceTarget, validationResult]);
 
   const handleRunNow = useCallback(async () => {
-    if (!draft?.id) {
-      await sdk.notifyInfo('Save required', 'Save the contract before requesting a run.');
+    if (!draft?.id || isRunning) {
+      if (!draft?.id) {
+        await sdk.notifyInfo('Save required', 'Save the contract before requesting a run.');
+      }
       return;
     }
 
+    setIsRunning(true);
     try {
       const run = await actions.runNow(draft.id);
       await sdk.notifySuccess('Run queued', 'The enforcement run request was submitted.');
@@ -417,8 +446,10 @@ function EditorWorkspace({
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
       await sdk.notifyError('Run failed', message);
+    } finally {
+      setIsRunning(false);
     }
-  }, [actions, draft?.id, navigateToRun, sdk]);
+  }, [actions, draft?.id, isRunning, navigateToRun, sdk]);
 
   const handleAiImprove = useCallback(async () => {
     if (!draft || isImproving) {
@@ -463,17 +494,17 @@ function EditorWorkspace({
   const homeToolbarActions = useMemo(
     () => [
       createSaveAction({
-        disabled: !draft,
+        disabled: !draft || isSaving || isCrossWorkspaceTargetInvalid,
         onClick: () => saveDraft('draft'),
       }),
       createActivateAction({
-        disabled: !draft,
+        disabled: !draft || isSaving || isCrossWorkspaceTargetInvalid,
         onClick: () => saveDraft('active'),
       }),
-       createRunNowAction({
-         disabled: !draft?.id,
-         onClick: handleRunNow,
-       }),
+      createRunNowAction({
+        disabled: !draft?.id || isRunning,
+        onClick: handleRunNow,
+      }),
       createSettingsAction({
         disabled: !draft?.id,
         onClick: () => {
@@ -491,7 +522,7 @@ function EditorWorkspace({
         },
       }),
     ],
-    [draft, handleRunNow, navigateToDetail, navigateToPolicy, saveDraft],
+    [draft, handleRunNow, isCrossWorkspaceTargetInvalid, isRunning, isSaving, navigateToDetail, navigateToPolicy, saveDraft],
   );
 
   return (
@@ -545,31 +576,39 @@ function EditorWorkspace({
             />
             <Field label="Cross-workspace data store" style={{ alignSelf: 'center' }}>
               <Checkbox
-                checked={draft.targetWorkspaceId !== ''}
+                checked={useCrossWorkspaceTarget}
                 label="Data store is in another workspace"
-                onChange={(_, data) =>
-                  onChangeDraft({ ...draft, targetWorkspaceId: data.checked ? ' ' : '' })
-                }
+                onChange={(_, data) => {
+                  if (data.checked) {
+                    setUseCrossWorkspaceTarget(true);
+                    onChangeDraft({ ...draft, targetWorkspaceId: '' });
+                  } else {
+                    setUseCrossWorkspaceTarget(false);
+                    onChangeDraft({ ...draft, targetWorkspaceId: undefined });
+                  }
+                }}
               />
             </Field>
-            {draft.targetWorkspaceId !== '' && (
+            {useCrossWorkspaceTarget && (
               <Field
                 hint="Enter the GUID of the workspace that contains the data store."
                 label="Target workspace ID"
                 validationMessage={
-                  draft.targetWorkspaceId.trim() !== '' && !isGuid(draft.targetWorkspaceId.trim())
-                    ? 'Must be a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).'
-                    : undefined
+                  !draft.targetWorkspaceId?.trim()
+                    ? 'Target workspace ID is required for cross-workspace data stores.'
+                    : !isGuid(draft.targetWorkspaceId.trim())
+                      ? 'Must be a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).'
+                      : undefined
                 }
                 validationState={
-                  draft.targetWorkspaceId.trim() !== '' && !isGuid(draft.targetWorkspaceId.trim())
+                  !draft.targetWorkspaceId?.trim() || !isGuid(draft.targetWorkspaceId.trim())
                     ? 'error'
                     : 'none'
                 }
               >
                 <Input
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={draft.targetWorkspaceId}
+                  value={draft.targetWorkspaceId ?? ''}
                   onChange={(_, data) => onChangeDraft({ ...draft, targetWorkspaceId: data.value })}
                 />
               </Field>
@@ -717,7 +756,7 @@ function prepareDraftForSave(draft: ContractDraft): ContractDraft {
       status: draft.status,
       targetTablePath: draft.targetTablePath,
       targetType: draft.targetType,
-      targetWorkspaceId: draft.targetWorkspaceId,
+      targetWorkspaceId: draft.targetWorkspaceId?.trim() || undefined,
       version: draft.version,
     }),
   };

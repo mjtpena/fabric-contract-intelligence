@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react';
 import {
   Badge,
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
   Button,
   Caption1,
   Field,
@@ -12,7 +16,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -65,10 +69,12 @@ const useStyles = makeStyles({
 
 export function NLQueryPage() {
   const styles = useStyles();
+  const navigate = useNavigate();
   const sdk = useFabricSdk();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<NaturalLanguageQueryResponse | null>(null);
+  const [liveMessage, setLiveMessage] = useState('');
 
   const aiClient = useMemo(
     () =>
@@ -90,7 +96,9 @@ export function NLQueryPage() {
     try {
       const response = await aiClient.queryContracts({ query });
       setResult(response);
+      setLiveMessage(`Found ${response.matches.length} matches.`);
     } catch (error) {
+      setResult(null);
       const message = error instanceof Error ? error.message : 'Failed to run contract query.';
       await sdk.notifyError('AI query failed', message);
     } finally {
@@ -100,9 +108,28 @@ export function NLQueryPage() {
 
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => navigate('/contracts')}>Library</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        <BreadcrumbItem>
+          <BreadcrumbButton current>AI query</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <div className={styles.header}>
         <Title2>AI Contract Query</Title2>
         <Body1>Ask questions in plain English to locate relevant contracts and explanations.</Body1>
+      </div>
+
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        role="status"
+        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {liveMessage}
       </div>
 
       <div className={styles.searchRow}>

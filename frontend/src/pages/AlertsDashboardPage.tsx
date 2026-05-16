@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
+  Button,
   Caption1,
   DataGrid,
   DataGridBody,
@@ -18,6 +23,7 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { AlertOffRegular } from '@fluentui/react-icons';
+import { useNavigate } from 'react-router-dom';
 import { createOpsClient } from '@/api/opsClient';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -59,6 +65,7 @@ const useStyles = makeStyles({
 
 export function AlertsDashboardPage() {
   const styles = useStyles();
+  const navigate = useNavigate();
   const sdk = useFabricSdk();
   const [rows, setRows] = useState<ReportAuditRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,6 +92,10 @@ export function AlertsDashboardPage() {
 
   const filtered = rows.filter((row) => status === 'all' || row.status === status);
 
+  const openRun = useCallback((row: ReportAuditRow) => {
+    navigate(`/contracts/runs?contractId=${encodeURIComponent(row.contractId)}&runId=${encodeURIComponent(row.runId)}`);
+  }, [navigate]);
+
   const columns = useMemo(
     () => [
       createTableColumn<ReportAuditRow>({
@@ -107,12 +118,36 @@ export function AlertsDashboardPage() {
         renderHeaderCell: () => 'Triggered',
         renderCell: (row) => row.triggeredAt ? formatDate(row.triggeredAt) : '—',
       }),
+      createTableColumn<ReportAuditRow>({
+        columnId: 'actions',
+        renderHeaderCell: () => 'Actions',
+        renderCell: (row) => (
+          <Button
+            appearance="subtle"
+            aria-label={`Open run ${row.runId.slice(0, 8)} for contract ${row.contractName}`}
+            size="small"
+            onClick={() => openRun(row)}
+          >
+            Open run
+          </Button>
+        ),
+      }),
     ],
-    [],
+    [openRun],
   );
 
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => navigate('/contracts/alerts')}>Alerts</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        <BreadcrumbItem>
+          <BreadcrumbButton current>Dashboard</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <div className={styles.header}>
         <Title2>Alerts dashboard</Title2>
         <Caption1>Audit log of all enforcement runs and their breach scores.</Caption1>
@@ -150,7 +185,15 @@ export function AlertsDashboardPage() {
           </DataGridHeader>
           <DataGridBody<ReportAuditRow>>
             {({ item, rowId }) => (
-              <DataGridRow<ReportAuditRow> key={rowId}>
+              <DataGridRow<ReportAuditRow>
+                key={rowId}
+                tabIndex={0}
+                onKeyDown={(event: KeyboardEvent) => {
+                  if (event.key === 'Enter') {
+                    openRun(item);
+                  }
+                }}
+              >
                 {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
               </DataGridRow>
             )}

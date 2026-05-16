@@ -25,11 +25,11 @@ export interface ContractClientOptions {
 
 export interface ContractClient {
   listContracts: () => Promise<ContractSummary[]>;
-  getContract: (contractId: string) => Promise<ContractDetail>;
+  getContract: (contractId: string, options?: Pick<RequestInit, 'signal'>) => Promise<ContractDetail>;
   createContract: (request: CreateContractRequest) => Promise<ContractDetail>;
   updateContract: (contractId: string, request: UpdateContractRequest) => Promise<ContractDetail>;
   deleteContract: (contractId: string) => Promise<void>;
-  listVersions: (contractId: string) => Promise<ContractVersion[]>;
+  listVersions: (contractId: string, options?: Pick<RequestInit, 'signal'>) => Promise<ContractVersion[]>;
   runNow: (contractId: string) => Promise<RunAccepted>;
   validate: (yaml: string) => Promise<ContractValidationResult>;
   getLiveSchemaPreview: (request: LivePreviewRequest) => Promise<SchemaPreviewField[]>;
@@ -98,7 +98,7 @@ export function createContractClient(options: ContractClientOptions): ContractCl
 
   return {
     listContracts: () => request<ContractSummary[]>('/v1/contracts'),
-    getContract: (contractId) => request<ContractDetail>(`/v1/contracts/${contractId}`),
+    getContract: (contractId, requestOptions) => request<ContractDetail>(`/v1/contracts/${contractId}`, requestOptions),
     createContract: (requestBody) =>
       request<ContractDetail>('/v1/contracts', {
         body: JSON.stringify(requestBody),
@@ -113,7 +113,8 @@ export function createContractClient(options: ContractClientOptions): ContractCl
       request<void>(`/v1/contracts/${contractId}`, {
         method: 'DELETE',
       }),
-    listVersions: (contractId) => request<ContractVersion[]>(`/v1/contracts/${contractId}/versions`),
+    listVersions: (contractId, requestOptions) =>
+      request<ContractVersion[]>(`/v1/contracts/${contractId}/versions`, requestOptions),
     runNow: (contractId) =>
       request<RunAccepted>(`/v1/contracts/${contractId}/runs`, {
         body: JSON.stringify({}),

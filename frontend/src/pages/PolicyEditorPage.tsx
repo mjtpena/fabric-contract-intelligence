@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Body1,
+  Breadcrumb,
+  BreadcrumbButton,
+  BreadcrumbDivider,
+  BreadcrumbItem,
   Button,
   Caption1,
   Checkbox,
@@ -21,8 +25,6 @@ import { RulePicker } from '@/components/Activator/RulePicker';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
 import type { ActivatorRule } from '@/models/ops';
-
-type Step = 'schedule' | 'behaviour' | 'routing' | 'review';
 
 interface PersistedPolicyState {
   contractId: string | null;
@@ -47,7 +49,7 @@ export function PolicyEditorPage() {
   const { itemObjectId } = useParams();
   const [searchParams] = useSearchParams();
   const sdk = useFabricSdk();
-  const [step, setStep] = useState<Step>('schedule');
+  const [step, setStep] = useState<number>(0);
   const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [rules, setRules] = useState<ActivatorRule[]>([]);
   const [contractId, setContractId] = useState(searchParams.get('contractId') ?? '');
@@ -57,6 +59,9 @@ export function PolicyEditorPage() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [provider, setProvider] = useState<'generic' | 'slack'>('generic');
   const [activatorRuleId, setActivatorRuleId] = useState<string | null>(null);
+  const [cronError, setCronError] = useState<string | null>(null);
+  const [routingError, setRoutingError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const contractClient = useMemo(
     () =>
@@ -108,9 +113,52 @@ export function PolicyEditorPage() {
     }
   };
 
+  const validateSchedule = () => {
+    const isValid = cronRegex.test(cronExpression.trim());
+    setCronError(isValid ? null : 'Cron must be 5 fields, e.g. 0 */4 * * *');
+    return isValid;
+  };
+
+  const validateRouting = () => {
+    if (actionType !== 'webhook') {
+      setRoutingError(null);
+      return true;
+    }
+
+    try {
+      const url = new URL(webhookUrl);
+      if (url.protocol !== 'https:') {
+        throw new Error('Webhook URL must use HTTPS.');
+      }
+      setRoutingError(null);
+      return true;
+    } catch {
+      setRoutingError('Webhook URL must be a valid HTTPS URL.');
+      return false;
+    }
+  };
+
+  const goNext = () => {
+    if (step === 0 && !validateSchedule()) {
+      return;
+    }
+    if (step === 2 && !validateRouting()) {
+      return;
+    }
+    setStep((current) => Math.min(current + 1, stepLabels.length - 1));
+  };
+
   const savePolicy = async () => {
+    if (isSaving) {
+      return;
+    }
+
     if (!contractId) {
       await sdk.notifyError('Missing contract', 'Select a contract before saving policy.');
+      return;
+    }
+
+    if (!validateSchedule() || !validateRouting()) {
       return;
     }
 
@@ -121,6 +169,7 @@ export function PolicyEditorPage() {
       webhookUrl: webhookUrl || undefined,
     };
 
+    setIsSaving(true);
     try {
       await opsClient.createPolicy({
         contractId,
@@ -138,19 +187,43 @@ export function PolicyEditorPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save policy.';
       await sdk.notifyError('Save failed', message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  const canSave = step === 3
+    && Boolean(contractId)
+    && cronRegex.test(cronExpression.trim())
+    && (actionType !== 'webhook' || isHttpsUrl(webhookUrl));
+
   return (
     <section className={styles.root}>
+      <Breadcrumb>
+        <BreadcrumbItem>
+          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Library</BreadcrumbButton>
+        </BreadcrumbItem>
+        <BreadcrumbDivider />
+        <BreadcrumbItem>
+          <BreadcrumbButton current>Policies</BreadcrumbButton>
+        </BreadcrumbItem>
+      </Breadcrumb>
+
       <Title2>Policy editor wizard</Title2>
       <Caption1>Configure schedule, alert behavior, routing, then review and save.</Caption1>
 
-      <TabList selectedValue={step} onTabSelect={(_, data) => setStep(data.value as Step)}>
-        <Tab value="schedule">1. Schedule</Tab>
-        <Tab value="behaviour">2. Behavior</Tab>
-        <Tab value="routing">3. Routing</Tab>
-        <Tab value="review">4. Review</Tab>
+      <Body1 aria-current="step">Step {step + 1} of 4 · {stepLabels[step]}</Body1>
+
+      <TabList selectedValue={step} onTabSelect={(_, data) => {
+        const nextStep = Number(data.value);
+        if (Number.isInteger(nextStep) && nextStep <= step) {
+          setStep(nextStep);
+        }
+      }}>
+        <Tab value={0}>1. Schedule</Tab>
+        <Tab disabled={step < 1} value={1}>2. Behavior</Tab>
+        <Tab disabled={step < 2} value={2}>3. Routing</Tab>
+        <Tab disabled={step < 3} value={3}>4. Review</Tab>
       </TabList>
 
       <Field label="Contract">
@@ -167,13 +240,24 @@ export function PolicyEditorPage() {
         </Dropdown>
       </Field>
 
-      {step === 'schedule' ? (
-        <Field label="Cron schedule">
-          <Input value={cronExpression} onChange={(_, data) => setCronExpression(data.value)} />
+      {step === 0 ? (
+        <Field
+          label="Cron schedule"
+          validationMessage={cronError ?? undefined}
+          validationState={cronError ? 'error' : 'none'}
+        >
+          <Input
+            value={cronExpression}
+            onChange={(_, data) => {
+              setCronExpression(data.value);
+              setCronError(null);
+            }}
+          />
+          <Caption1 italic>{cronToHuman(cronExpression)}</Caption1>
         </Field>
       ) : null}
 
-      {step === 'behaviour' ? (
+      {step === 1 ? (
         <Checkbox
           label="Alert on warned runs (not just failed runs)"
           checked={alertOnWarn}
@@ -181,7 +265,7 @@ export function PolicyEditorPage() {
         />
       ) : null}
 
-      {step === 'routing' ? (
+      {step === 2 ? (
         <>
           <Field label="Routing mode">
             <Dropdown
@@ -210,24 +294,45 @@ export function PolicyEditorPage() {
                   <Option value="slack">Slack</Option>
                 </Dropdown>
               </Field>
-              <Field label="Webhook URL">
-                <Input value={webhookUrl} onChange={(_, data) => setWebhookUrl(data.value)} />
+              <Field
+                label="Webhook URL"
+                validationMessage={routingError ?? undefined}
+                validationState={routingError ? 'error' : 'none'}
+              >
+                <Input
+                  value={webhookUrl}
+                  onChange={(_, data) => {
+                    setWebhookUrl(data.value);
+                    setRoutingError(null);
+                  }}
+                />
               </Field>
             </>
           )}
         </>
       ) : null}
 
-      {step === 'review' ? (
+      {step === 3 ? (
         <Body1>
           Contract {contractId || '(none)'} | Cron {cronExpression} | Alert on warn {String(alertOnWarn)} | Route {actionType}
         </Body1>
       ) : null}
 
       <div className={styles.actions}>
-        <Button appearance="primary" onClick={() => { void savePolicy(); }}>
-          Save policy
-        </Button>
+        {step > 0 ? (
+          <Button appearance="secondary" onClick={() => setStep((current) => Math.max(current - 1, 0))}>
+            Previous
+          </Button>
+        ) : null}
+        {step < 3 ? (
+          <Button appearance="primary" onClick={goNext}>
+            Next
+          </Button>
+        ) : (
+          <Button appearance="primary" disabled={!canSave || isSaving} onClick={() => { void savePolicy(); }}>
+            {isSaving ? 'Saving…' : 'Save policy'}
+          </Button>
+        )}
         <Button
           appearance="secondary"
           onClick={() => {
@@ -239,6 +344,34 @@ export function PolicyEditorPage() {
       </div>
     </section>
   );
+}
+
+const stepLabels = ['Schedule', 'Behavior', 'Routing', 'Review'] as const;
+
+const cronRegex = /^(\*|([0-5]?\d)(-[0-5]?\d)?)(\/\d+)?(\s+(\*|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?)(\/\d+)?){4}$/;
+
+function cronToHuman(expr: string) {
+  const trimmed = expr.trim();
+  const hourly = /^0 \*\/(\d+) \* \* \*$/.exec(trimmed);
+  if (hourly) {
+    return `Runs every ${hourly[1]} hours, on the hour`;
+  }
+  if (trimmed === '0 0 * * *') {
+    return 'Runs daily at midnight UTC';
+  }
+  const minutes = /^\*\/(\d+) \* \* \* \*$/.exec(trimmed);
+  if (minutes) {
+    return `Runs every ${minutes[1]} minutes`;
+  }
+  return 'Custom schedule';
+}
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function parsePersistedPolicyState(raw: string): PersistedPolicyState | null {

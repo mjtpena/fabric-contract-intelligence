@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  DialogTrigger,
   Field,
   Input,
   Spinner,
@@ -163,9 +164,14 @@ export function WorkspaceSettingsPage() {
     [client, sdk],
   );
 
-  const copyToClipboard = useCallback((text: string) => {
-    void navigator.clipboard.writeText(text).catch(() => undefined);
-  }, []);
+  const copyToClipboard = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      await sdk.notifySuccess('Copied', 'API key copied to clipboard.');
+    } catch {
+      await sdk.notifyError('Copy failed', 'Clipboard access denied. Select and copy manually.');
+    }
+  }, [sdk]);
 
   return (
     <section className={styles.root}>
@@ -281,7 +287,7 @@ export function WorkspaceSettingsPage() {
                   <Button
                     appearance="subtle"
                     icon={<CopyRegular />}
-                    onClick={() => copyToClipboard(newKey.rawKey)}
+                    onClick={() => { void copyToClipboard(newKey.rawKey); }}
                   >
                     Copy to clipboard
                   </Button>
@@ -330,12 +336,35 @@ export function WorkspaceSettingsPage() {
                           </TableCell>
                           <TableCell>{new Date(k.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <Button
-                              appearance="subtle"
-                              icon={<DeleteRegular />}
-                              aria-label="Revoke"
-                              onClick={() => void handleRevoke(k.id)}
-                            />
+                            <Dialog>
+                              <DialogTrigger disableButtonEnhancement>
+                                <Button
+                                  appearance="subtle"
+                                  icon={<DeleteRegular />}
+                                  aria-label="Revoke"
+                                />
+                              </DialogTrigger>
+                              <DialogSurface>
+                                <DialogBody>
+                                  <DialogTitle>Revoke API key?</DialogTitle>
+                                  <DialogContent>
+                                    This will immediately invalidate the key. Any scripts or pipelines using it will fail. This action cannot be undone.
+                                  </DialogContent>
+                                  <DialogActions>
+                                    <DialogTrigger disableButtonEnhancement>
+                                      <Button appearance="secondary">Cancel</Button>
+                                    </DialogTrigger>
+                                    <Button
+                                      appearance="primary"
+                                      icon={<DeleteRegular />}
+                                      onClick={() => { void handleRevoke(k.id); }}
+                                    >
+                                      Revoke key
+                                    </Button>
+                                  </DialogActions>
+                                </DialogBody>
+                              </DialogSurface>
+                            </Dialog>
                           </TableCell>
                         </TableRow>
                       ))}

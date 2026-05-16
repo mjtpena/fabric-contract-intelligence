@@ -12,6 +12,7 @@ interface RunStoreState {
   loading: boolean;
   runs: RunSummary[];
   clear: () => void;
+  clearError: () => void;
   loadRun: (client: RunClient, runId: string, options?: LoadOptions) => Promise<RunDetail | null>;
   loadRuns: (client: RunClient, contractId: string, options?: LoadOptions) => Promise<RunSummary[]>;
 }
@@ -28,6 +29,9 @@ export const useRunStore = create<RunStoreState>((set) => ({
       loading: false,
       runs: [],
     });
+  },
+  clearError: () => {
+    set({ error: null });
   },
   loadRun: async (client, runId, options) => {
     if (!options?.background) {

@@ -12,6 +12,7 @@ export function useEnforcementRun(
   const loading = useRunStore((state) => state.loading);
   const runs = useRunStore((state) => state.runs);
   const clear = useRunStore((state) => state.clear);
+  const clearError = useRunStore((state) => state.clearError);
   const loadRun = useRunStore((state) => state.loadRun);
   const loadRuns = useRunStore((state) => state.loadRuns);
 
@@ -85,6 +86,7 @@ export function useEnforcementRun(
   }, [client, contractId, currentRun?.contractId, currentRun?.id, loadRun, loadRuns, runId, runs]);
 
   return {
+    clearError,
     error,
     loading,
     refresh,

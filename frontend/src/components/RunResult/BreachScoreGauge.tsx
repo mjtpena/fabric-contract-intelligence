@@ -1,4 +1,4 @@
-import { Body1, Caption1, makeStyles, tokens } from '@fluentui/react-components';
+import { Badge, Body1, Caption1, makeStyles, tokens } from '@fluentui/react-components';
 
 interface BreachScoreGaugeProps {
   score: number | null | undefined;
@@ -9,6 +9,11 @@ const useStyles = makeStyles({
     display: 'grid',
     justifyItems: 'center',
     gap: tokens.spacingVerticalXS,
+  },
+  valueRow: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
   },
   value: {
     fontSize: tokens.fontSizeHero700,
@@ -21,6 +26,7 @@ export function BreachScoreGauge({ score }: BreachScoreGaugeProps) {
   const styles = useStyles();
   const normalizedScore = score === null || score === undefined ? null : Math.max(0, Math.min(100, score));
   const angle = normalizedScore === null ? 180 : 180 - normalizedScore * 1.8;
+  const severity = getSeverity(normalizedScore);
   const arcColor =
     normalizedScore === null
       ? tokens.colorNeutralStroke2
@@ -29,60 +35,86 @@ export function BreachScoreGauge({ score }: BreachScoreGaugeProps) {
         : normalizedScore >= 40
           ? tokens.colorPaletteDarkOrangeForeground1
           : tokens.colorPaletteGreenForeground1;
+  const displayScore = normalizedScore === null ? '—' : String(Math.round(normalizedScore));
 
   return (
     <div className={styles.root}>
-      <svg
-        aria-label="Breach score gauge"
-        height="120"
-        role="img"
-        viewBox="0 0 200 120"
-        width="200"
-      >
-        <path
-          d={describeArc(100, 100, 70, 180, 0)}
-          fill="none"
-          stroke={tokens.colorNeutralStroke2}
-          strokeLinecap="round"
-          strokeWidth="16"
-        />
-        <path
-          d={describeArc(100, 100, 70, 180, angle)}
-          fill="none"
-          stroke={arcColor}
-          strokeLinecap="round"
-          strokeWidth="16"
-        />
-        <line
-          stroke={tokens.colorNeutralForeground1}
-          strokeLinecap="round"
-          strokeWidth="6"
-          x1="100"
-          x2={String(100 + 52 * Math.cos((Math.PI * angle) / 180))}
-          y1="100"
-          y2={String(100 - 52 * Math.sin((Math.PI * angle) / 180))}
-        />
-        <circle cx="100" cy="100" fill={tokens.colorNeutralForeground1} r="7" />
-        <text fill={tokens.colorNeutralForeground3} fontSize="12" x="16" y="104">
-          0
-        </text>
-        <text fill={tokens.colorNeutralForeground3} fontSize="12" x="172" y="104">
-          100
-        </text>
-      </svg>
-      <div className={styles.value}>{normalizedScore === null ? '—' : Math.round(normalizedScore)}</div>
+      <div aria-label={`Breach score ${displayScore} of 100, ${severity.label}`} role="img">
+        <svg aria-hidden="true" height="120" viewBox="0 0 200 120" width="200">
+          <path
+            aria-hidden="true"
+            d={describeArc(100, 100, 70, 180, 0)}
+            fill="none"
+            stroke={tokens.colorNeutralStroke2}
+            strokeLinecap="round"
+            strokeWidth="16"
+          />
+          <path
+            aria-hidden="true"
+            d={describeArc(100, 100, 70, 180, angle)}
+            fill="none"
+            stroke={arcColor}
+            strokeLinecap="round"
+            strokeWidth="16"
+          />
+          <line
+            stroke={tokens.colorNeutralForeground1}
+            strokeLinecap="round"
+            strokeWidth="6"
+            x1="100"
+            x2={String(100 + 52 * Math.cos((Math.PI * angle) / 180))}
+            y1="100"
+            y2={String(100 - 52 * Math.sin((Math.PI * angle) / 180))}
+          />
+          <circle cx="100" cy="100" fill={tokens.colorNeutralForeground1} r="7" />
+          <text fill={tokens.colorNeutralForeground3} fontSize="12" x="16" y="104">
+            0
+          </text>
+          <text fill={tokens.colorNeutralForeground3} fontSize="12" x="172" y="104">
+            100
+          </text>
+        </svg>
+      </div>
+      <div className={styles.valueRow}>
+        <div className={styles.value}>{displayScore}</div>
+        <Badge color={severity.color}>{severity.label}</Badge>
+      </div>
       <Caption1>AI breach score</Caption1>
-      <Body1>
-        {normalizedScore === null
-          ? 'No run data yet.'
-          : normalizedScore >= 70
-            ? 'High severity breach detected.'
-            : normalizedScore >= 40
-              ? 'Moderate severity — review required.'
-              : 'Low severity — contract is healthy.'}
-      </Body1>
+      <Body1>{severity.description}</Body1>
     </div>
   );
+}
+
+function getSeverity(score: number | null) {
+  if (score === null) {
+    return {
+      color: 'subtle' as const,
+      description: 'No run data yet.',
+      label: 'No data',
+    };
+  }
+
+  if (score >= 70) {
+    return {
+      color: 'danger' as const,
+      description: 'High severity breach detected.',
+      label: 'Critical',
+    };
+  }
+
+  if (score >= 40) {
+    return {
+      color: 'warning' as const,
+      description: 'Moderate severity — review required.',
+      label: 'Warning',
+    };
+  }
+
+  return {
+    color: 'success' as const,
+    description: 'Low severity — contract is healthy.',
+    label: 'Healthy',
+  };
 }
 
 function describeArc(

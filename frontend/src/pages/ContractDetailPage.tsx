@@ -16,6 +16,7 @@ import {
   Spinner,
   Subtitle1,
   Title2,
+  Tooltip,
   createTableColumn,
   makeStyles,
   tokens,
@@ -81,6 +82,11 @@ export function ContractDetailPage() {
   );
 
   const { contract, error, loading, versions } = useContract(client, id);
+  const sortedVersions = useMemo(() => [...versions].sort(compareContractVersions), [versions]);
+  const previousVersionByVersion = useMemo(
+    () => new Map(sortedVersions.map((version, index) => [version.version, sortedVersions[index - 1]?.version ?? null])),
+    [sortedVersions],
+  );
 
   const openWorkloadRoute = useCallback(async (path: string) => {
     if (!(await sdk.openWorkloadRoute(path))) {
@@ -93,7 +99,7 @@ export function ContractDetailPage() {
       [
         createTableColumn<ContractVersion>({
           columnId: 'version',
-          compare: (left, right) => left.version.localeCompare(right.version),
+          compare: compareContractVersions,
           renderCell: (item) => item.version,
           renderHeaderCell: () => 'Version',
         }),
@@ -104,11 +110,43 @@ export function ContractDetailPage() {
         }),
         createTableColumn<ContractVersion>({
           columnId: 'commitMessage',
-          renderCell: (item) => item.commitMessage ?? 'â€”',
+          renderCell: (item) => item.commitMessage ?? '—',
           renderHeaderCell: () => 'Commit message',
         }),
+        createTableColumn<ContractVersion>({
+          columnId: 'actions',
+          renderCell: (item) => {
+            const previousVersion = previousVersionByVersion.get(item.version);
+            const contractId = contract?.id ?? id;
+            const comparePath = contractId && previousVersion
+              ? `/contracts/${encodeURIComponent(contractId)}/runs?compare=1&right=${encodeURIComponent(item.version)}&left=${encodeURIComponent(previousVersion)}`
+              : null;
+
+            return (
+              <Tooltip
+                content={previousVersion ? 'Compare this version with the previous version.' : 'No older version to compare.'}
+                relationship="label"
+              >
+                <Button
+                  appearance="subtle"
+                  aria-disabled={!previousVersion}
+                  disabled={!previousVersion}
+                  size="small"
+                  onClick={() => {
+                    if (comparePath) {
+                      void openWorkloadRoute(comparePath);
+                    }
+                  }}
+                >
+                  Compare with previous
+                </Button>
+              </Tooltip>
+            );
+          },
+          renderHeaderCell: () => 'Actions',
+        }),
       ],
-    [],
+    [contract?.id, id, openWorkloadRoute, previousVersionByVersion],
   );
 
   return (
@@ -167,7 +205,8 @@ export function ContractDetailPage() {
 
           <div className={styles.card}>
             <Subtitle1>Version history</Subtitle1>
-            <DataGrid items={versions} columns={columns}>
+            <Body1>Tip: open any run to view a side-by-side schema diff between any two versions.</Body1>
+            <DataGrid items={sortedVersions} columns={columns}>
               <DataGridHeader>
                 <DataGridRow>
                   {({ renderHeaderCell }) => (
@@ -200,6 +239,10 @@ export function ContractDetailPage() {
       ) : null}
     </section>
   );
+}
+
+function compareContractVersions(left: ContractVersion, right: ContractVersion) {
+  return left.version.localeCompare(right.version, undefined, { numeric: true, sensitivity: 'base' });
 }
 
 function formatDate(value: string | null | undefined) {

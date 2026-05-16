@@ -41,8 +41,44 @@ export function useContract(client: ContractClient, contractId?: string | null) 
       return;
     }
 
-    void Promise.all([loadOne(client, contractId), loadVersions(client, contractId)]);
-  }, [clearActive, client, contractId, loadOne, loadVersions]);
+    let cancelled = false;
+    const abort = new AbortController();
+
+    useContractStore.setState({
+      error: null,
+      loading: true,
+    });
+
+    void (async () => {
+      try {
+        const [activeContract, loadedVersions] = await Promise.all([
+          client.getContract(contractId, { signal: abort.signal }),
+          client.listVersions(contractId, { signal: abort.signal }),
+        ]);
+
+        if (!cancelled) {
+          useContractStore.setState({
+            activeContract,
+            error: null,
+            loading: false,
+            versions: loadedVersions,
+          });
+        }
+      } catch (err) {
+        if (!cancelled && !abort.signal.aborted) {
+          useContractStore.setState({
+            error: err instanceof Error ? err.message : 'Unable to load the selected contract.',
+            loading: false,
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      abort.abort();
+    };
+  }, [clearActive, client, contractId]);
 
   return {
     contract,
