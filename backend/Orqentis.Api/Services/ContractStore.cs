@@ -11,15 +11,18 @@ public sealed class ContractStore : IContractStore
 {
     private readonly OrqentisDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
+    private readonly ISchemaPreviewCacheRegistry _schemaPreviewCacheRegistry;
     private readonly ILogger<ContractStore> _logger;
 
     public ContractStore(
         OrqentisDbContext dbContext,
         ITenantContext tenantContext,
+        ISchemaPreviewCacheRegistry schemaPreviewCacheRegistry,
         ILogger<ContractStore> logger)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
+        _schemaPreviewCacheRegistry = schemaPreviewCacheRegistry;
         _logger = logger;
     }
 
@@ -28,8 +31,16 @@ public sealed class ContractStore : IContractStore
     {
         var contracts = await _dbContext.Contracts
             .AsNoTracking()
-            .Where(c => _tenantContext.WorkspaceId == Guid.Empty || c.WorkspaceId == _tenantContext.WorkspaceId)
+            .Where(c => c.WorkspaceId == _tenantContext.WorkspaceId)
             .OrderBy(c => c.Name)
+            .Select(c => new
+            {
+                c.ContractId,
+                c.Name,
+                c.TargetType,
+                c.Status,
+                c.CurrentVersion,
+            })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
@@ -47,13 +58,38 @@ public sealed class ContractStore : IContractStore
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ContractRecord>> ListWithLatestVersionAsync(CancellationToken ct = default)
+    {
+        var rows = await _dbContext.Contracts
+            .AsNoTracking()
+            .Where(c => c.WorkspaceId == _tenantContext.WorkspaceId)
+            .OrderBy(c => c.Name)
+            .Select(contract => new
+            {
+                Contract = contract,
+                Version = _dbContext.ContractVersions
+                    .AsNoTracking()
+                    .Where(version => version.ContractId == contract.ContractId)
+                    .OrderByDescending(version => version.CreatedAt)
+                    .ThenByDescending(version => version.VersionId)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(row => MapContract(row.Contract, row.Version is null ? null : MapVersion(row.Version), null))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
     public async Task<ContractRecord?> GetAsync(Guid contractId, CancellationToken ct = default)
     {
         var contract = await _dbContext.Contracts
             .AsNoTracking()
             .SingleOrDefaultAsync(
                 c => c.ContractId == contractId &&
-                    (_tenantContext.WorkspaceId == Guid.Empty || c.WorkspaceId == _tenantContext.WorkspaceId),
+                    (c.WorkspaceId == _tenantContext.WorkspaceId),
                 ct)
             .ConfigureAwait(false);
 
@@ -128,6 +164,7 @@ public sealed class ContractStore : IContractStore
         _dbContext.ContractVersions.Add(version);
 
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        _schemaPreviewCacheRegistry.EvictAll();
 
         _logger.LogInformation(
             "Contract-Created ContractId={ContractId} TenantId={TenantId}",
@@ -143,7 +180,7 @@ public sealed class ContractStore : IContractStore
         var contract = await _dbContext.Contracts
             .SingleOrDefaultAsync(
                 c => c.ContractId == contractId &&
-                    (_tenantContext.WorkspaceId == Guid.Empty || c.WorkspaceId == _tenantContext.WorkspaceId),
+                    (c.WorkspaceId == _tenantContext.WorkspaceId),
                 ct)
             .ConfigureAwait(false);
 
@@ -181,6 +218,7 @@ public sealed class ContractStore : IContractStore
 
         _dbContext.ContractVersions.Add(version);
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        _schemaPreviewCacheRegistry.EvictAll();
 
         _logger.LogInformation(
             "Contract-Updated ContractId={ContractId} Version={Version}",
@@ -196,7 +234,7 @@ public sealed class ContractStore : IContractStore
         var contract = await _dbContext.Contracts
             .SingleOrDefaultAsync(
                 c => c.ContractId == contractId &&
-                    (_tenantContext.WorkspaceId == Guid.Empty || c.WorkspaceId == _tenantContext.WorkspaceId),
+                    (c.WorkspaceId == _tenantContext.WorkspaceId),
                 ct)
             .ConfigureAwait(false);
 
@@ -209,6 +247,7 @@ public sealed class ContractStore : IContractStore
         contract.DeletedAt = DateTimeOffset.UtcNow;
         contract.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        _schemaPreviewCacheRegistry.EvictAll();
         return true;
     }
 
@@ -276,20 +315,28 @@ public sealed class ContractStore : IContractStore
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<EnforcementRunRecord>> ListRunsAsync(Guid contractId, CancellationToken ct = default)
+    public async Task<PagedRunsRecord> ListRunsAsync(Guid contractId, int page, int pageSize, CancellationToken ct = default)
     {
         if (!await ContractExistsAsync(contractId, ct).ConfigureAwait(false))
         {
-            return [];
+            return new PagedRunsRecord([], 0);
         }
 
-        return await _dbContext.EnforcementRuns
+        var effectivePage = Math.Max(1, page);
+        var effectivePageSize = Math.Clamp(pageSize, 1, 200);
+        var query = _dbContext.EnforcementRuns
             .AsNoTracking()
-            .Where(r => r.ContractId == contractId)
+            .Where(r => r.ContractId == contractId);
+        var totalCount = await query.CountAsync(ct).ConfigureAwait(false);
+        var runs = await query
             .OrderByDescending(r => r.TriggeredAt)
+            .Skip((effectivePage - 1) * effectivePageSize)
+            .Take(effectivePageSize)
             .Select(r => MapRun(r))
             .ToArrayAsync(ct)
             .ConfigureAwait(false);
+
+        return new PagedRunsRecord(runs, totalCount);
     }
 
     /// <inheritdoc />
@@ -299,7 +346,7 @@ public sealed class ContractStore : IContractStore
             from run in _dbContext.EnforcementRuns.AsNoTracking()
             join contract in _dbContext.Contracts.AsNoTracking() on run.ContractId equals contract.ContractId
             where run.RunId == runId &&
-                (_tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId)
+                contract.WorkspaceId == _tenantContext.WorkspaceId
             select MapRun(run))
             .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
@@ -312,7 +359,7 @@ public sealed class ContractStore : IContractStore
             from run in _dbContext.EnforcementRuns
             join contract in _dbContext.Contracts on run.ContractId equals contract.ContractId
             where run.RunId == command.RunId &&
-                (_tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId)
+                contract.WorkspaceId == _tenantContext.WorkspaceId
             select run)
             .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
@@ -411,7 +458,7 @@ public sealed class ContractStore : IContractStore
             .AsNoTracking()
             .AnyAsync(
                 c => c.ContractId == contractId &&
-                    (_tenantContext.WorkspaceId == Guid.Empty || c.WorkspaceId == _tenantContext.WorkspaceId),
+                    (c.WorkspaceId == _tenantContext.WorkspaceId),
                 ct)
             .ConfigureAwait(false);
     }

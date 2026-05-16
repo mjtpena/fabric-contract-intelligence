@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Orqentis.AI;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
 using Orqentis.Api.Services;
+using Orqentis.Engine.Odcs;
 
 namespace Orqentis.Api.Controllers;
 
@@ -10,28 +12,34 @@ namespace Orqentis.Api.Controllers;
 [ApiController]
 [Route("v1/ai")]
 [Enterprise]
+[EnableRateLimiting("ai-endpoints")]
 public sealed class AiController : ControllerBase
 {
     private readonly IContractSuggestionAgent _suggestionAgent;
     private readonly IContractImprovementAgent _improvementAgent;
     private readonly INaturalLanguageQueryHandler _queryHandler;
     private readonly IContractStore _contractStore;
+    private readonly IOdcsContractValidator _validator;
 
     public AiController(
         IContractSuggestionAgent suggestionAgent,
         IContractImprovementAgent improvementAgent,
         INaturalLanguageQueryHandler queryHandler,
-        IContractStore contractStore)
+        IContractStore contractStore,
+        IOdcsContractValidator validator)
     {
         _suggestionAgent = suggestionAgent;
         _improvementAgent = improvementAgent;
         _queryHandler = queryHandler;
         _contractStore = contractStore;
+        _validator = validator;
     }
 
     /// <summary>Generates an ODCS draft from table profile metadata.</summary>
     [HttpPost("suggest-contract")]
+    [RequestSizeLimit(1_048_576)]
     [ProducesResponseType(typeof(SuggestContractResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
     public async Task<ActionResult<SuggestContractResponse>> SuggestContractAsync(
         [FromBody] SuggestContractRequest request,
         CancellationToken ct)
@@ -54,6 +62,12 @@ public sealed class AiController : ControllerBase
         };
 
         var suggestion = await _suggestionAgent.SuggestAsync(profile, ct).ConfigureAwait(false);
+        var validationProblem = ValidateSuggestion(suggestion.OdcsYaml);
+        if (validationProblem is not null)
+        {
+            return validationProblem;
+        }
+
         return Ok(new SuggestContractResponse
         {
             OdcsYaml = suggestion.OdcsYaml,
@@ -67,11 +81,18 @@ public sealed class AiController : ControllerBase
     [HttpPost("improve-contract")]
     [ProducesResponseType(typeof(SuggestContractResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
     public async Task<ActionResult<SuggestContractResponse>> ImproveContractAsync(
         [FromBody] ImproveContractRequest request,
         CancellationToken ct)
     {
         var suggestion = await _improvementAgent.ImproveAsync(request.OdcsYaml, ct).ConfigureAwait(false);
+        var validationProblem = ValidateSuggestion(suggestion.OdcsYaml);
+        if (validationProblem is not null)
+        {
+            return validationProblem;
+        }
+
         return Ok(new SuggestContractResponse
         {
             OdcsYaml = suggestion.OdcsYaml,
@@ -88,16 +109,7 @@ public sealed class AiController : ControllerBase
         [FromBody] NaturalLanguageQueryRequest request,
         CancellationToken ct)
     {
-        var contracts = await _contractStore.ListAsync(ct).ConfigureAwait(false);
-        var details = new List<ContractRecord>(contracts.Count);
-        foreach (var contract in contracts)
-        {
-            var detail = await _contractStore.GetAsync(contract.ContractId, ct).ConfigureAwait(false);
-            if (detail is not null)
-            {
-                details.Add(detail);
-            }
-        }
+        var details = await _contractStore.ListWithLatestVersionAsync(ct).ConfigureAwait(false);
 
         var documents = details
             .Where(detail => detail.CurrentVersionRecord is not null
@@ -127,5 +139,19 @@ public sealed class AiController : ControllerBase
                 })
                 .ToArray(),
         });
+    }
+
+    private ActionResult<SuggestContractResponse>? ValidateSuggestion(string odcsYaml)
+    {
+        var errors = _validator.Validate(odcsYaml);
+        if (errors.Count == 0)
+        {
+            return null;
+        }
+
+        return Problem(
+            statusCode: StatusCodes.Status502BadGateway,
+            title: "Invalid AI-generated ODCS YAML.",
+            detail: "The AI model returned YAML that failed ODCS validation and was not returned to the caller.");
     }
 }

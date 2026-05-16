@@ -11,6 +11,9 @@ public interface IContractStore
     /// <summary>Gets a single contract aggregate or null when it does not exist.</summary>
     Task<ContractRecord?> GetAsync(Guid contractId, CancellationToken ct = default);
 
+    /// <summary>Lists contracts with their latest immutable version in one database query.</summary>
+    Task<IReadOnlyList<ContractRecord>> ListWithLatestVersionAsync(CancellationToken ct = default);
+
     /// <summary>Creates a contract and its initial immutable version snapshot.</summary>
     Task<ContractRecord> CreateAsync(CreateContractCommand command, CancellationToken ct = default);
 
@@ -29,8 +32,8 @@ public interface IContractStore
     /// <summary>Persists a completed enforcement run.</summary>
     Task<EnforcementRunRecord?> CreateRunAsync(CreateRunCommand command, CancellationToken ct = default);
 
-    /// <summary>Lists runs for a contract.</summary>
-    Task<IReadOnlyList<EnforcementRunRecord>> ListRunsAsync(Guid contractId, CancellationToken ct = default);
+    /// <summary>Lists a paged set of runs for a contract.</summary>
+    Task<PagedRunsRecord> ListRunsAsync(Guid contractId, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Gets a single run detail record.</summary>
     Task<EnforcementRunRecord?> GetRunAsync(Guid runId, CancellationToken ct = default);
@@ -128,6 +131,10 @@ public sealed record ContractVersionRecord(
     string? CommitMessage);
 
 /// <summary>Read model for an enforcement run.</summary>
+public sealed record PagedRunsRecord(
+    IReadOnlyList<EnforcementRunRecord> Runs,
+    int TotalCount);
+
 public sealed record EnforcementRunRecord(
     Guid RunId,
     Guid ContractId,

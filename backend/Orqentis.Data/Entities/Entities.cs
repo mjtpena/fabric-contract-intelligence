@@ -93,6 +93,18 @@ public sealed class WorkspaceApiKey
     [Column("deleted_at")] public DateTimeOffset? DeletedAt { get; set; }
 }
 
+[Table("idempotency_keys")]
+public sealed class IdempotencyKey
+{
+    [Column("key")] public string Key { get; set; } = string.Empty;
+    [Column("workspace_id")] public Guid WorkspaceId { get; set; }
+    [Column("user_oid")] public Guid UserOid { get; set; }
+    [Column("response_body")] public string ResponseBody { get; set; } = "{}";
+    [Column("status")] public int Status { get; set; }
+    [Column("created_at")] public DateTimeOffset CreatedAt { get; set; }
+    [Column("expires_at")] public DateTimeOffset ExpiresAt { get; set; }
+}
+
 [Table("workspace_links")]
 public sealed class WorkspaceLink
 {

@@ -7,6 +7,26 @@ namespace Orqentis.Tests.Orqentis.Api.Tests.Controllers;
 
 public sealed class ContractsControllerTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task ListAsync_MissingOrEmptyWorkspaceContext_ReturnsBadRequest(string? workspaceId)
+    {
+        // Arrange
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateClient();
+        if (workspaceId is not null)
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Workspace-Id", workspaceId);
+        }
+
+        // Act
+        var response = await client.GetAsync("/v1/contracts");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     [Fact]
     public async Task CreateAsync_WarehouseTarget_PersistsGenericFabricTarget()
     {

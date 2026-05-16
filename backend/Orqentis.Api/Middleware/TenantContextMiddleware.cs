@@ -33,9 +33,10 @@ public sealed class TenantContextMiddleware
         tenant.UserEmail = context.User.FindFirst("preferred_username")?.Value
             ?? context.User.FindFirst("upn")?.Value
             ?? string.Empty;
-        tenant.WorkspaceId = ParseGuid(
-            context.Request.Headers["X-Workspace-Id"].FirstOrDefault()
-            ?? context.User.FindFirst("workspace_id")?.Value);
+        tenant.WorkspaceId = context.Items.TryGetValue(WorkspaceContextMiddleware.WorkspaceIdItemKey, out var workspaceId) &&
+            workspaceId is Guid parsedWorkspaceId
+            ? parsedWorkspaceId
+            : Guid.Empty;
 
         if (tenant.EntraTenantId == Guid.Empty)
         {

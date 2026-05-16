@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Orqentis.AI;
 using Orqentis.Api.Auth;
@@ -49,6 +50,7 @@ public sealed class RunsController : ControllerBase
 
     /// <summary>Runs contract enforcement immediately and persists the resulting run record.</summary>
     [HttpPost("contracts/{id:guid}/runs")]
+    [EnableRateLimiting("ai-endpoints")]
     [ProducesResponseType(typeof(RunAcceptedDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RunAcceptedDto>> CreateRunAsync(Guid id, CancellationToken ct)
@@ -154,10 +156,18 @@ public sealed class RunsController : ControllerBase
     /// <summary>Lists persisted runs for a contract.</summary>
     [HttpGet("contracts/{id:guid}/runs")]
     [ProducesResponseType(typeof(IReadOnlyList<RunSummaryDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<RunSummaryDto>>> ListRunsAsync(Guid id, CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<RunSummaryDto>>> ListRunsAsync(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
     {
-        var runs = await _contractStore.ListRunsAsync(id, ct).ConfigureAwait(false);
-        return Ok(runs.Select(MapSummary).ToArray());
+        var effectivePage = Math.Max(1, page);
+        var effectivePageSize = Math.Clamp(pageSize, 1, 200);
+        var result = await _contractStore.ListRunsAsync(id, effectivePage, effectivePageSize, ct).ConfigureAwait(false);
+        Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        AddPaginationLinks(id, effectivePage, effectivePageSize, result.TotalCount);
+        return Ok(result.Runs.Select(MapSummary).ToArray());
     }
 
     /// <summary>Gets one persisted enforcement run.</summary>
@@ -170,6 +180,26 @@ public sealed class RunsController : ControllerBase
         return run is null
             ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Run not found.")
             : Ok(MapDetail(run));
+    }
+
+    private void AddPaginationLinks(Guid contractId, int page, int pageSize, int totalCount)
+    {
+        var links = new List<string>();
+        var path = $"/v1/contracts/{contractId}/runs";
+        if (page > 1)
+        {
+            links.Add($"<{path}?page={page - 1}&pageSize={pageSize}>; rel=\"prev\"");
+        }
+
+        if (page * pageSize < totalCount)
+        {
+            links.Add($"<{path}?page={page + 1}&pageSize={pageSize}>; rel=\"next\"");
+        }
+
+        if (links.Count > 0)
+        {
+            Response.Headers["Link"] = string.Join(", ", links);
+        }
     }
 
     private string? GetBearerToken()

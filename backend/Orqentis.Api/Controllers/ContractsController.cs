@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.Caching.Memory;
 using Orqentis.AI;
 using Orqentis.Api.Auth;
 using Orqentis.Api.Dtos;
@@ -29,6 +31,9 @@ public sealed class ContractsController : ControllerBase
     private readonly IFabricKqlSchemaReader _kqlSchemaReader;
     private readonly IFabricSqlSchemaReader _sqlSchemaReader;
     private readonly IFabricSemanticModelSchemaReader _semanticModelSchemaReader;
+    private readonly IMemoryCache _memoryCache;
+    private readonly ISchemaPreviewCacheRegistry _schemaPreviewCacheRegistry;
+    private readonly IOutputCacheStore _outputCacheStore;
 
     public ContractsController(
         IContractStore contractStore,
@@ -41,7 +46,10 @@ public sealed class ContractsController : ControllerBase
         IDeltaLogReader deltaReader,
         IFabricKqlSchemaReader kqlSchemaReader,
         IFabricSqlSchemaReader sqlSchemaReader,
-        IFabricSemanticModelSchemaReader semanticModelSchemaReader)
+        IFabricSemanticModelSchemaReader semanticModelSchemaReader,
+        IMemoryCache memoryCache,
+        ISchemaPreviewCacheRegistry schemaPreviewCacheRegistry,
+        IOutputCacheStore outputCacheStore)
     {
         _contractStore = contractStore;
         _validator = validator;
@@ -54,10 +62,14 @@ public sealed class ContractsController : ControllerBase
         _kqlSchemaReader = kqlSchemaReader;
         _sqlSchemaReader = sqlSchemaReader;
         _semanticModelSchemaReader = semanticModelSchemaReader;
+        _memoryCache = memoryCache;
+        _schemaPreviewCacheRegistry = schemaPreviewCacheRegistry;
+        _outputCacheStore = outputCacheStore;
     }
 
     /// <summary>Lists contracts for the current tenant workspace.</summary>
     [HttpGet]
+    [OutputCache(VaryByQueryKeys = ["workspaceId", "filter"], VaryByHeaderNames = ["Authorization", "X-Workspace-Id"], Tags = ["contracts"])]
     [ProducesResponseType(typeof(IReadOnlyList<ContractSummaryDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ContractSummaryDto>>> ListAsync(CancellationToken ct)
     {
@@ -67,6 +79,7 @@ public sealed class ContractsController : ControllerBase
 
     /// <summary>Creates a new contract and its initial version snapshot.</summary>
     [HttpPost]
+    [RequestSizeLimit(1_048_576)]
     [ProducesResponseType(typeof(ContractDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status402PaymentRequired)]
@@ -161,6 +174,7 @@ public sealed class ContractsController : ControllerBase
                     normalizedYaml,
                     null),
                 ct).ConfigureAwait(false);
+            await _outputCacheStore.EvictByTagAsync("contracts", ct).ConfigureAwait(false);
 
             return Created($"/v1/contracts/{created.ContractId}", MapContract(created, isAiGenerated));
         }
@@ -187,6 +201,7 @@ public sealed class ContractsController : ControllerBase
 
     /// <summary>Creates a new immutable contract version and updates the current pointer.</summary>
     [HttpPut("{id:guid}")]
+    [RequestSizeLimit(1_048_576)]
     [ProducesResponseType(typeof(ContractDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -246,9 +261,13 @@ public sealed class ContractsController : ControllerBase
                     request.CommitMessage),
                 ct).ConfigureAwait(false);
 
-            return updated is null
-                ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract not found.")
-                : Ok(MapContract(updated));
+            if (updated is null)
+            {
+                return Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract not found.");
+            }
+
+            await _outputCacheStore.EvictByTagAsync("contracts", ct).ConfigureAwait(false);
+            return Ok(MapContract(updated));
         }
         catch (ContractConflictException ex)
         {
@@ -266,9 +285,13 @@ public sealed class ContractsController : ControllerBase
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken ct)
     {
         var deleted = await _contractStore.SoftDeleteAsync(id, ct).ConfigureAwait(false);
-        return deleted
-            ? NoContent()
-            : Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract not found.");
+        if (!deleted)
+        {
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract not found.");
+        }
+
+        await _outputCacheStore.EvictByTagAsync("contracts", ct).ConfigureAwait(false);
+        return NoContent();
     }
 
     /// <summary>Lists all immutable versions for a contract.</summary>
@@ -351,19 +374,33 @@ public sealed class ContractsController : ControllerBase
 
         var credentials = await GetPreviewCredentialsAsync(format, bearerToken, ct).ConfigureAwait(false);
 
-        var snapshotResult = await ReadLiveSnapshotAsync(format, server, credentials, targetContext, ct).ConfigureAwait(false);
-        if (!snapshotResult.IsSuccess || snapshotResult.Value is null)
+        var cacheKey = BuildSchemaPreviewCacheKey(format, server.Path);
+        if (!_memoryCache.TryGetValue(cacheKey, out DeltaTableSnapshot? snapshot))
         {
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Schema preview failed.",
-                detail: snapshotResult.Error ?? "Unable to read live schema from the target.");
+            var snapshotResult = await ReadLiveSnapshotAsync(format, server, credentials, targetContext, ct).ConfigureAwait(false);
+            if (!snapshotResult.IsSuccess || snapshotResult.Value is null)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Schema preview failed.",
+                    detail: snapshotResult.Error ?? "Unable to read live schema from the target.");
+            }
+
+            snapshot = snapshotResult.Value;
+            _memoryCache.Set(
+                cacheKey,
+                snapshot,
+                new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                    Size = Math.Max(1, snapshot.Schema.Columns.Count * 256),
+                });
+            _schemaPreviewCacheRegistry.Track(cacheKey);
         }
 
-        var snapshot = snapshotResult.Value;
         return Ok(new LivePreviewResponse
         {
-            DeltaVersion = snapshot.Version,
+            DeltaVersion = snapshot!.Version,
             Fields = snapshot.Schema.Columns
                 .Select(column => new SchemaPreviewFieldDto
                 {
@@ -373,6 +410,12 @@ public sealed class ContractsController : ControllerBase
                 })
                 .ToArray(),
         });
+    }
+
+    private static string BuildSchemaPreviewCacheKey(string format, string path)
+    {
+        var normalizedPath = string.IsNullOrWhiteSpace(path) ? "unknown" : path.Trim().ToLowerInvariant();
+        return $"schema-preview:{format}:{normalizedPath}";
     }
 
     private Task<Result<DeltaTableSnapshot>> ReadLiveSnapshotAsync(

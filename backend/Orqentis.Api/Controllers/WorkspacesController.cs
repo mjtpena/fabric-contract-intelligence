@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Orqentis.Api.Dtos;
 using Orqentis.Data;
 using Orqentis.Data.Entities;
@@ -15,21 +17,36 @@ public sealed class WorkspacesController : ControllerBase
 {
     private readonly ITenantContext _tenantContext;
     private readonly OrqentisDbContext _dbContext;
+    private readonly IMemoryCache _memoryCache;
+    private readonly IOutputCacheStore _outputCacheStore;
 
-    public WorkspacesController(ITenantContext tenantContext, OrqentisDbContext dbContext)
+    public WorkspacesController(
+        ITenantContext tenantContext,
+        OrqentisDbContext dbContext,
+        IMemoryCache memoryCache,
+        IOutputCacheStore outputCacheStore)
     {
         _tenantContext = tenantContext;
         _dbContext = dbContext;
+        _memoryCache = memoryCache;
+        _outputCacheStore = outputCacheStore;
     }
 
     /// <summary>Lists workspaces visible to the current caller.</summary>
     [HttpGet]
+    [OutputCache(VaryByHeaderNames = ["Authorization", "X-Workspace-Id"], Tags = ["ops-workspaces"])]
     [ProducesResponseType(typeof(IReadOnlyList<WorkspaceSummaryDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<WorkspaceSummaryDto>>> ListAsync(CancellationToken ct)
     {
         if (_tenantContext.WorkspaceId == Guid.Empty)
         {
             return Ok(Array.Empty<WorkspaceSummaryDto>());
+        }
+
+        var cacheKey = $"workspaces:{_tenantContext.UserObjectId}:{_tenantContext.WorkspaceId}";
+        if (_memoryCache.TryGetValue(cacheKey, out IReadOnlyList<WorkspaceSummaryDto>? cached))
+        {
+            return Ok(cached);
         }
 
         var results = new List<WorkspaceSummaryDto>
@@ -59,7 +76,17 @@ public sealed class WorkspacesController : ControllerBase
             }));
         }
 
-        return Ok(results);
+        var response = results.ToArray();
+        _memoryCache.Set(
+            cacheKey,
+            response,
+            new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                Size = Math.Max(1, response.Length * 256),
+            });
+
+        return Ok(response);
     }
 
     /// <summary>Lists Delta tables for a workspace. Stubbed in Sprint 4.</summary>
@@ -154,6 +181,8 @@ public sealed class WorkspacesController : ControllerBase
 
         _dbContext.WorkspaceApiKeys.Add(entity);
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        EvictWorkspaceCaches();
+        await _outputCacheStore.EvictByTagAsync("ops-workspaces", ct).ConfigureAwait(false);
 
         var response = new CreateApiKeyResponse
         {
@@ -184,7 +213,14 @@ public sealed class WorkspacesController : ControllerBase
 
         key.DeletedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        EvictWorkspaceCaches();
+        await _outputCacheStore.EvictByTagAsync("ops-workspaces", ct).ConfigureAwait(false);
         return NoContent();
+    }
+
+    private void EvictWorkspaceCaches()
+    {
+        _memoryCache.Remove($"workspaces:{_tenantContext.UserObjectId}:{_tenantContext.WorkspaceId}");
     }
 
     private static string Base64Url(byte[] bytes)

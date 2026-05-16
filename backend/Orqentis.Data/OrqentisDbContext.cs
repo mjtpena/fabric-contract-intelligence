@@ -24,6 +24,7 @@ public sealed class OrqentisDbContext : DbContext
     public DbSet<ContractPolicy> ContractPolicies => Set<ContractPolicy>();
     public DbSet<WorkspaceLink> WorkspaceLinks => Set<WorkspaceLink>();
     public DbSet<WorkspaceApiKey> WorkspaceApiKeys => Set<WorkspaceApiKey>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,6 +97,13 @@ public sealed class OrqentisDbContext : DbContext
                 (!_tenantContext.HasTenant || k.TenantId == _tenantContext.TenantId));
             b.HasIndex(k => k.KeyHash).IsUnique().HasFilter("deleted_at IS NULL");
             b.HasIndex(k => new { k.TenantId, k.WorkspaceId }).HasDatabaseName("ix_workspace_api_keys_workspace");
+        });
+
+        modelBuilder.Entity<IdempotencyKey>(b =>
+        {
+            b.HasKey(k => new { k.WorkspaceId, k.UserOid, k.Key });
+            b.Property(k => k.ResponseBody).HasColumnType("jsonb");
+            b.HasIndex(k => k.ExpiresAt).HasDatabaseName("ix_idempotency_keys_expires_at");
         });
     }
 }

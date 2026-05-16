@@ -1,5 +1,6 @@
 using Azure;
 using Azure.Core;
+using System.Text.Json;
 using Azure.Storage.Files.DataLake;
 using Microsoft.Extensions.Logging;
 using Orqentis.Engine.Common;
@@ -110,7 +111,11 @@ internal sealed class DeltaLogReader : IDeltaLogReader
         var files = new List<TransactionLogFile>();
         var baseUri = EnsureTrailingSlash(tableUri);
 
-        for (long version = 0; ; version++)
+        var startVersion = await TryReadHttpCheckpointVersionAsync(baseUri, ct).ConfigureAwait(false) is { } checkpointVersion
+            ? checkpointVersion + 1
+            : 0;
+
+        for (long version = startVersion; ; version++)
         {
             var fileName = $"{version:D20}.json";
             var requestUri = new Uri(new Uri(baseUri), $"{_deltaLogFolderName}/{fileName}");
@@ -130,6 +135,19 @@ internal sealed class DeltaLogReader : IDeltaLogReader
         return files;
     }
 
+    private async Task<long?> TryReadHttpCheckpointVersionAsync(string baseUri, CancellationToken ct)
+    {
+        using var response = await _httpClient.GetAsync(new Uri(new Uri(baseUri), $"{_deltaLogFolderName}/_last_checkpoint"), ct).ConfigureAwait(false);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        return TryParseCheckpointVersion(content);
+    }
+
     private static async Task<IReadOnlyList<TransactionLogFile>> ReadAbfssLogFilesAsync(
         string abfssUri,
         string oneLakeOboToken,
@@ -144,6 +162,7 @@ internal sealed class DeltaLogReader : IDeltaLogReader
             : $"{descriptor.TablePath.TrimEnd('/')}/{_deltaLogFolderName}";
 
         var files = new List<TransactionLogFile>();
+        var checkpointVersion = await TryReadAbfssCheckpointVersionAsync(fileSystemClient, deltaLogPath, ct).ConfigureAwait(false);
 
         await foreach (var pathItem in fileSystemClient.GetPathsAsync(
             path: deltaLogPath,
@@ -166,6 +185,11 @@ internal sealed class DeltaLogReader : IDeltaLogReader
                 continue;
             }
 
+            if (checkpointVersion.HasValue && version <= checkpointVersion.Value)
+            {
+                continue;
+            }
+
             var fileClient = fileSystemClient.GetFileClient(pathItem.Name);
             var response = await fileClient.ReadAsync(cancellationToken: ct).ConfigureAwait(false);
             using var stream = response.Value.Content;
@@ -176,6 +200,34 @@ internal sealed class DeltaLogReader : IDeltaLogReader
         }
 
         return files;
+    }
+
+    private static async Task<long?> TryReadAbfssCheckpointVersionAsync(
+        Azure.Storage.Files.DataLake.DataLakeFileSystemClient fileSystemClient,
+        string deltaLogPath,
+        CancellationToken ct)
+    {
+        try
+        {
+            var checkpointPath = $"{deltaLogPath.TrimEnd('/')}/_last_checkpoint";
+            var fileClient = fileSystemClient.GetFileClient(checkpointPath);
+            var response = await fileClient.ReadAsync(cancellationToken: ct).ConfigureAwait(false);
+            using var stream = response.Value.Content;
+            using var reader = new StreamReader(stream);
+            return TryParseCheckpointVersion(await reader.ReadToEndAsync(ct).ConfigureAwait(false));
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    private static long? TryParseCheckpointVersion(string checkpointJson)
+    {
+        using var document = JsonDocument.Parse(checkpointJson);
+        return document.RootElement.TryGetProperty("version", out var versionElement) && versionElement.TryGetInt64(out var version)
+            ? version
+            : null;
     }
 
     private static string EnsureTrailingSlash(string uri) =>

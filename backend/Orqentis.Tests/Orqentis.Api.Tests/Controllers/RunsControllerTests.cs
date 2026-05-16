@@ -58,6 +58,7 @@ public sealed class RunsControllerTests
         created.Should().NotBeNull();
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "inbound-user-token");
+        client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
 
         var runResponse = await client.PostAsync($"/v1/contracts/{created!.Id}/runs", content: null);
 
@@ -161,6 +162,7 @@ public sealed class RunsControllerTests
         created.Should().NotBeNull();
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "inbound-user-token");
+        client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
         var runResponse = await client.PostAsync($"/v1/contracts/{created!.Id}/runs", content: null);
 
         runResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
@@ -174,5 +176,81 @@ public sealed class RunsControllerTests
         var dbContext = scope.ServiceProvider.GetRequiredService<OrqentisDbContext>();
         dbContext.EnforcementRuns.Should().ContainSingle();
         dbContext.EnforcementRuns.Single().ResultJson.Should().Contain("\"overallStatus\":\"passed\"");
+    }
+
+    [Fact]
+    public async Task CreateRunAsync_SameIdempotencyKey_ReplaysResponseAndPersistsSingleRun()
+    {
+        var tokenBroker = new CapturingTokenBroker();
+        var orchestrator = new StubEnforcementOrchestrator();
+        var scorer = new StubBreachImpactScorer { Result = null };
+        var advisor = new StubRemediationAdvisor { Suggestions = [] };
+        var dispatcher = new StubBreachAlertDispatcher();
+
+        using var factory = new ApiWebApplicationFactory(
+            configureServices: services =>
+            {
+                services.RemoveAll<IOneLakeTokenBroker>();
+                services.RemoveAll<IEnforcementOrchestrator>();
+                services.RemoveAll<IBreachImpactScorer>();
+                services.RemoveAll<IRemediationAdvisor>();
+                services.RemoveAll<IBreachAlertDispatcher>();
+                services.AddSingleton<IOneLakeTokenBroker>(tokenBroker);
+                services.AddSingleton<IEnforcementOrchestrator>(orchestrator);
+                services.AddSingleton<IBreachImpactScorer>(scorer);
+                services.AddSingleton<IRemediationAdvisor>(advisor);
+                services.AddSingleton<IBreachAlertDispatcher>(dispatcher);
+            });
+
+        using var client = factory.CreateAuthenticatedClient();
+        var createResponse = await client.PostAsJsonAsync(
+            "/v1/contracts",
+            new CreateContractRequest
+            {
+                Mode = "direct",
+                Name = "Idempotent Contract",
+                Description = "Duplicate run guard",
+                OwnerEmail = "owner@example.com",
+                TargetTablePath = "abfss://clinical@onelake.dfs.fabric.microsoft.com/ClinicalLakehouse.Lakehouse/Tables/patient_encounters",
+                TargetLakehouseId = TestIdentifiers.LakehouseId,
+                OdcsYaml = ContractSample.CreateYaml("1.0.0"),
+            });
+        var created = await createResponse.Content.ReadFromJsonAsync<ContractDto>();
+        created.Should().NotBeNull();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "inbound-user-token");
+        client.DefaultRequestHeaders.Add("Idempotency-Key", "same-run-key");
+
+        var firstResponse = await client.PostAsync($"/v1/contracts/{created!.Id}/runs", content: null);
+        var firstBody = await firstResponse.Content.ReadAsStringAsync();
+        var secondResponse = await client.PostAsync($"/v1/contracts/{created.Id}/runs", content: null);
+        var secondBody = await secondResponse.Content.ReadAsStringAsync();
+
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        secondBody.Should().Be(firstBody);
+        orchestrator.CallCount.Should().Be(1);
+
+        using var scope = factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrqentisDbContext>();
+        dbContext.EnforcementRuns.Should().ContainSingle();
+        dbContext.IdempotencyKeys.Should().ContainSingle(key =>
+            key.Key == "same-run-key" &&
+            key.WorkspaceId == TestIdentifiers.WorkspaceId &&
+            key.UserOid == TestIdentifiers.UserObjectId);
+    }
+
+    [Fact]
+    public async Task CreateRunAsync_MissingIdempotencyKey_ReturnsBadRequest()
+    {
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateAuthenticatedClient();
+        var contractId = Guid.NewGuid();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "inbound-user-token");
+
+        var response = await client.PostAsync($"/v1/contracts/{contractId}/runs", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

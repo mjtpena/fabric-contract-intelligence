@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -13,50 +16,67 @@ public interface ILlmRouter
     Task<LlmResult?> CompleteAsync(string operation, string systemPrompt, string userInput, CancellationToken ct = default);
 }
 
-public sealed record LlmResult(string Content, string ModelUsed);
+public sealed record LlmResult(string Content, string ModelUsed, int? TotalTokens = null, int? PromptTokens = null, int? CompletionTokens = null);
+
+public sealed record LlmUsage(int? PromptTokens, int? CompletionTokens, int? TotalTokens);
+
+public sealed record LlmProviderResult(string Content, string ModelUsed, LlmUsage? Usage = null);
 
 public interface ILlmProvider
 {
     string Name { get; }
     bool IsConfigured { get; }
-    Task<string?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default);
+    Task<LlmProviderResult?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default);
 }
 
 public sealed class LlmRouter : ILlmRouter
 {
+    private const int MaxTokens = 2048;
+    private const double Temperature = 0.1;
+
     private readonly AiOptions _options;
     private readonly IReadOnlyDictionary<string, ILlmProvider> _providers;
+    private readonly IMemoryCache _memoryCache;
     private readonly ILogger<LlmRouter> _logger;
-    private readonly ResiliencePipeline<string?> _retryPipeline;
+    private readonly ResiliencePipeline<LlmProviderResult?> _retryPipeline;
 
     public LlmRouter(
         IEnumerable<ILlmProvider> providers,
         IOptions<AiOptions> options,
+        IMemoryCache memoryCache,
         ILogger<LlmRouter> logger)
     {
         _options = options.Value;
+        _memoryCache = memoryCache;
         _logger = logger;
         _providers = providers.ToDictionary(provider => provider.Name, StringComparer.OrdinalIgnoreCase);
 
-        _retryPipeline = new ResiliencePipelineBuilder<string?>()
-            .AddRetry(new RetryStrategyOptions<string?>
+        _retryPipeline = new ResiliencePipelineBuilder<LlmProviderResult?>()
+            .AddRetry(new RetryStrategyOptions<LlmProviderResult?>
             {
                 BackoffType = DelayBackoffType.Exponential,
                 Delay = TimeSpan.FromSeconds(1),
                 MaxRetryAttempts = 3,
                 UseJitter = false,
-                ShouldHandle = new PredicateBuilder<string?>()
+                ShouldHandle = new PredicateBuilder<LlmProviderResult?>()
                     .Handle<Exception>()
-                    .HandleResult(value => string.IsNullOrWhiteSpace(value)),
+                    .HandleResult(value => value is null || string.IsNullOrWhiteSpace(value.Content)),
             })
             .Build();
     }
 
     public async Task<LlmResult?> CompleteAsync(string operation, string systemPrompt, string userInput, CancellationToken ct = default)
     {
+        var cacheKey = BuildCacheKey(systemPrompt, userInput, MaxTokens, Temperature);
+        if (Temperature <= 0.3 && _memoryCache.TryGetValue(cacheKey, out LlmResult? cached))
+        {
+            return cached;
+        }
+
         var primaryResult = await ExecuteWithProviderAsync("azure-openai", operation, systemPrompt, userInput, ct).ConfigureAwait(false);
         if (primaryResult is not null)
         {
+            CacheResult(cacheKey, primaryResult);
             return primaryResult;
         }
 
@@ -65,7 +85,13 @@ public sealed class LlmRouter : ILlmRouter
             return null;
         }
 
-        return await ExecuteWithProviderAsync("anthropic", operation, systemPrompt, userInput, ct).ConfigureAwait(false);
+        var fallbackResult = await ExecuteWithProviderAsync("anthropic", operation, systemPrompt, userInput, ct).ConfigureAwait(false);
+        if (fallbackResult is not null)
+        {
+            CacheResult(cacheKey, fallbackResult);
+        }
+
+        return fallbackResult;
     }
 
     private async Task<LlmResult?> ExecuteWithProviderAsync(
@@ -83,15 +109,38 @@ public sealed class LlmRouter : ILlmRouter
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(_options.CallTimeout);
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            var content = await _retryPipeline.ExecuteAsync(
+            var providerResult = await _retryPipeline.ExecuteAsync(
                     async token => await provider.CompleteAsync(systemPrompt, userInput, token).ConfigureAwait(false),
                     timeoutCts.Token)
                 .ConfigureAwait(false);
 
-            return string.IsNullOrWhiteSpace(content) ? null : new LlmResult(content, provider.Name);
+            stopwatch.Stop();
+            if (providerResult is null || string.IsNullOrWhiteSpace(providerResult.Content))
+            {
+                return null;
+            }
+
+            _logger.LogInformation(
+                "AI-{Feature}-Usage WorkspaceId={WorkspaceId} Feature={Feature} PromptTokens={PromptTokens} CompletionTokens={CompletionTokens} Provider={Provider} ModelUsed={ModelUsed} LatencyMs={LatencyMs}",
+                operation,
+                "unknown",
+                operation,
+                providerResult.Usage?.PromptTokens,
+                providerResult.Usage?.CompletionTokens,
+                provider.Name,
+                providerResult.ModelUsed,
+                stopwatch.ElapsedMilliseconds);
+
+            return new LlmResult(
+                providerResult.Content,
+                providerResult.ModelUsed,
+                providerResult.Usage?.TotalTokens,
+                providerResult.Usage?.PromptTokens,
+                providerResult.Usage?.CompletionTokens);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -104,10 +153,31 @@ public sealed class LlmRouter : ILlmRouter
             return null;
         }
     }
+
+    private void CacheResult(string cacheKey, LlmResult result)
+    {
+        var responseBytes = Encoding.UTF8.GetByteCount(result.Content);
+        _memoryCache.Set(
+            cacheKey,
+            result,
+            new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                Size = Math.Max(1, responseBytes),
+            });
+    }
+
+    private static string BuildCacheKey(string systemPrompt, string userInput, int maxTokens, double temperature)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{systemPrompt}\u001f{userInput}\u001f{maxTokens}\u001f{temperature}"));
+        return $"llm:{Convert.ToHexString(bytes).ToLowerInvariant()}";
+    }
 }
 
 internal sealed class AzureOpenAiLlmProvider : ILlmProvider
 {
+    private const int MaxTokens = 2048;
+    private const double Temperature = 0.1;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AiOptions _options;
 
@@ -124,7 +194,7 @@ internal sealed class AzureOpenAiLlmProvider : ILlmProvider
         !string.IsNullOrWhiteSpace(_options.AzureOpenAI.DeploymentName) &&
         !string.IsNullOrWhiteSpace(_options.AzureOpenAI.ApiKey);
 
-    public async Task<string?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default)
+    public async Task<LlmProviderResult?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default)
     {
         if (!IsConfigured)
         {
@@ -138,7 +208,8 @@ internal sealed class AzureOpenAiLlmProvider : ILlmProvider
 
         var payload = new
         {
-            temperature = 0.1,
+            temperature = Temperature,
+            max_tokens = MaxTokens,
             messages = new object[]
             {
                 new { role = "system", content = systemPrompt },
@@ -160,8 +231,29 @@ internal sealed class AzureOpenAiLlmProvider : ILlmProvider
             .GetProperty("message")
             .GetProperty("content")
             .GetString();
-        return content?.Trim();
+        var usage = TryReadAzureUsage(document.RootElement);
+        return string.IsNullOrWhiteSpace(content)
+            ? null
+            : new LlmProviderResult(content.Trim(), _options.AzureOpenAI.DeploymentName, usage);
     }
+
+    private static LlmUsage? TryReadAzureUsage(JsonElement root)
+    {
+        if (!root.TryGetProperty("usage", out var usage))
+        {
+            return null;
+        }
+
+        return new LlmUsage(
+            TryGetInt(usage, "prompt_tokens"),
+            TryGetInt(usage, "completion_tokens"),
+            TryGetInt(usage, "total_tokens"));
+    }
+
+    private static int? TryGetInt(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
+            ? value
+            : null;
 }
 
 internal sealed class AnthropicLlmProvider : ILlmProvider
@@ -182,7 +274,7 @@ internal sealed class AnthropicLlmProvider : ILlmProvider
         !string.IsNullOrWhiteSpace(_options.Anthropic.Endpoint) &&
         !string.IsNullOrWhiteSpace(_options.Anthropic.ApiKey);
 
-    public async Task<string?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default)
+    public async Task<LlmProviderResult?> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct = default)
     {
         if (!IsConfigured)
         {
@@ -219,6 +311,26 @@ internal sealed class AnthropicLlmProvider : ILlmProvider
             .GetProperty("content")[0]
             .GetProperty("text")
             .GetString();
-        return text?.Trim();
+        var usage = TryReadAnthropicUsage(document.RootElement);
+        return string.IsNullOrWhiteSpace(text)
+            ? null
+            : new LlmProviderResult(text.Trim(), _options.Anthropic.Model, usage);
     }
+
+    private static LlmUsage? TryReadAnthropicUsage(JsonElement root)
+    {
+        if (!root.TryGetProperty("usage", out var usage))
+        {
+            return null;
+        }
+
+        var promptTokens = TryGetInt(usage, "input_tokens");
+        var completionTokens = TryGetInt(usage, "output_tokens");
+        return new LlmUsage(promptTokens, completionTokens, promptTokens + completionTokens);
+    }
+
+    private static int? TryGetInt(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
+            ? value
+            : null;
 }

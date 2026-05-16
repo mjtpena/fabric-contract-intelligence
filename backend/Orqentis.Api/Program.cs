@@ -1,17 +1,29 @@
+using System.Globalization;
+using System.IO.Compression;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Orqentis.AI;
 using Orqentis.Api.Auth;
+using Orqentis.Api.Http;
 using Orqentis.Api.Middleware;
 using Orqentis.Api.Services;
+using Orqentis.Api.Services.Webhooks;
 using Orqentis.Data;
 using Orqentis.Data.Entities;
 using Orqentis.Engine;
+using Polly;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,24 +72,76 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => FixedIpWindow(context, 100));
+    options.AddPolicy("default", context => FixedIpWindow(context, 100));
+    options.AddPolicy("auth", context => FixedIpWindow(context, 30));
+    options.AddPolicy("ai-endpoints", context => FixedUserWindow(context, 10));
+    options.OnRejected = async (context, _) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        await WriteProblemAsync(
+            context.HttpContext,
+            StatusCodes.Status429TooManyRequests,
+            "Too many requests.",
+            "The rate limit for this endpoint has been exceeded.").ConfigureAwait(false);
+    };
+});
+
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache(opts => opts.SizeLimit = 64 * 1024 * 1024 /* 64 MB */);
+builder.Services.AddOutputCache(opts =>
+{
+    opts.AddBasePolicy(builder => builder.Expire(TimeSpan.FromSeconds(30)));
+});
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.EnableForHttps = true;
+    opts.Providers.Add<BrotliCompressionProvider>();
+    opts.Providers.Add<GzipCompressionProvider>();
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes
+        .Concat(["application/x-yaml", "application/problem+json"]);
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(serviceProvider => serviceProvider.GetRequiredService<HttpTenantContext>());
 builder.Services.AddScoped<IContractStore, ContractStore>();
-builder.Services.AddScoped<IOneLakeTokenBroker, OneLakeTokenBroker>();
-builder.Services.AddHttpClient<IActivatorClient, ActivatorClient>();
-builder.Services.AddHttpClient("fabric-rest", client =>
-{
-    client.BaseAddress = new Uri("https://api.fabric.microsoft.com/");
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+builder.Services.AddSingleton<ISchemaPreviewCacheRegistry, SchemaPreviewCacheRegistry>();
+builder.Services.AddTransient<CorrelationIdDelegatingHandler>();
+builder.Services.AddSingleton<IOboTokenAcquirer, AzureIdentityOboTokenAcquirer>();
+builder.Services.AddSingleton<IOneLakeTokenBroker, OneLakeTokenBroker>();
+ConfigureOutboundResilience(
+    builder.Services.AddHttpClient<IActivatorClient, ActivatorClient>(client => client.Timeout = TimeSpan.FromSeconds(30)),
+    TimeSpan.FromSeconds(10));
+ConfigureOutboundResilience(
+    builder.Services.AddHttpClient("fabric-rest", client =>
+    {
+        client.BaseAddress = new Uri("https://api.fabric.microsoft.com/");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+        client.Timeout = TimeSpan.FromSeconds(30);
+    }),
+    TimeSpan.FromSeconds(10));
+ConfigureOutboundResilience(
+    builder.Services.AddHttpClient("key-vault-health", client => client.Timeout = TimeSpan.FromSeconds(5)),
+    TimeSpan.FromSeconds(5));
+ConfigureOutboundResilience(
+    builder.Services.AddHttpClient("azure-openai-health", client => client.Timeout = TimeSpan.FromSeconds(5)),
+    TimeSpan.FromSeconds(5));
 builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.IGenericWebhookSender, Orqentis.Api.Services.Webhooks.GenericWebhookSender>();
 builder.Services.AddHttpClient<Orqentis.Api.Services.Webhooks.ISlackWebhookSender, Orqentis.Api.Services.Webhooks.SlackWebhookSender>();
 builder.Services.AddScoped<IBreachAlertDispatcher, BreachAlertDispatcher>();
+builder.Services.AddSingleton<IWebhookDnsResolver, WebhookDnsResolver>();
+builder.Services.AddSingleton<WebhookUrlValidator>();
 
 builder.Services.AddOrqentisData(builder.Configuration);
-builder.Services.AddOrqentisEngine();
-builder.Services.AddOrqentisAi(builder.Configuration);
+builder.Services.AddOrqentisEngine(client => client.AddHttpMessageHandler<CorrelationIdDelegatingHandler>());
+builder.Services.AddOrqentisAi(builder.Configuration, client => client.AddHttpMessageHandler<CorrelationIdDelegatingHandler>());
 
 builder.Services.AddCors(options =>
 {
@@ -135,8 +199,10 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services
     .AddHealthChecks()
-    .AddCheck<OrqentisDatabaseHealthCheck>("postgres", tags: ["ready"])
-    .AddCheck<KeyVaultConfigurationHealthCheck>("key-vault", tags: ["ready"]);
+    .AddCheck<OrqentisDatabaseHealthCheck>("postgres", tags: ["ready"], timeout: TimeSpan.FromSeconds(5))
+    .AddCheck<KeyVaultReachabilityHealthCheck>("key-vault", tags: ["ready"], timeout: TimeSpan.FromSeconds(5))
+    .AddCheck<AzureOpenAiHealthCheck>("azure-openai", tags: ["ready"], timeout: TimeSpan.FromSeconds(5))
+    .AddCheck<FabricRestHealthCheck>("fabric-rest", tags: ["ready"], timeout: TimeSpan.FromSeconds(5));
 
 builder.Services.AddApplicationInsightsTelemetry();
 
@@ -145,7 +211,7 @@ var app = builder.Build();
 Log.Information("App starting at {Now}", DateTimeOffset.UtcNow);
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
-if (!string.IsNullOrWhiteSpace(postgresConnectionString))
+if (!app.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(postgresConnectionString))
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     try
@@ -173,13 +239,23 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseResponseCompression();
 app.UseCors("fabric-origins");
 app.UseAuthentication();
+app.UseMiddleware<WorkspaceContextMiddleware>();
 app.UseMiddleware<TenantContextMiddleware>();
 app.UseAuthorization();
+app.UseRateLimiter();
+app.UseOutputCache();
+app.UseIdempotency();
 app.MapControllers();
-app.MapHealthChecks("/health").AllowAnonymous();
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapGet("/healthz", () => Results.Ok()).AllowAnonymous();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false,
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready"),
     ResponseWriter = async (context, report) =>
@@ -199,6 +275,26 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 }).AllowAnonymous();
 
 app.Run();
+
+static void ConfigureOutboundResilience(IHttpClientBuilder builder, TimeSpan attemptTimeout)
+{
+    builder
+        .AddHttpMessageHandler<CorrelationIdDelegatingHandler>()
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 3;
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+            options.Retry.MaxDelay = TimeSpan.FromSeconds(8);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+            options.CircuitBreaker.MinimumThroughput = 10;
+            options.CircuitBreaker.FailureRatio = 1.0;
+            options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+            options.AttemptTimeout.Timeout = attemptTimeout;
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(60);
+        });
+}
 
 static void ConfigureJwtBearer(
     JwtBearerOptions options,
@@ -260,6 +356,34 @@ static void ConfigureJwtBearer(
             "Forbidden.",
             "The caller does not have access to this resource."),
     };
+}
+
+static RateLimitPartition<string> FixedIpWindow(HttpContext context, int permitLimit)
+{
+    var partitionKey = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+    return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = permitLimit,
+        Window = TimeSpan.FromMinutes(1),
+        QueueLimit = 0,
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        AutoReplenishment = true,
+    });
+}
+
+static RateLimitPartition<string> FixedUserWindow(HttpContext context, int permitLimit)
+{
+    var partitionKey = context.User.FindFirst("oid")?.Value
+        ?? context.Connection.RemoteIpAddress?.ToString()
+        ?? "anonymous";
+    return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = permitLimit,
+        Window = TimeSpan.FromMinutes(1),
+        QueueLimit = 0,
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        AutoReplenishment = true,
+    });
 }
 
 static IEnumerable<string> BuildValidAudiences(AzureAdOptions options)

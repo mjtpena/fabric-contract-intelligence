@@ -11,7 +11,10 @@ export interface RunClientOptions {
 
 export interface RunClient {
   getRun: (runId: string) => Promise<RunDetail>;
-  listRuns: (contractId: string) => Promise<RunSummary[]>;
+  listRuns: (
+    contractId: string,
+    params?: { page?: number; pageSize?: number },
+  ) => Promise<RunSummary[]>;
   runNow: (contractId: string) => Promise<RunAccepted>;
 }
 
@@ -60,7 +63,12 @@ export function createRunClient(options: RunClientOptions): RunClient {
 
   return {
     getRun: (runId) => request<RunDetail>(`/v1/runs/${runId}`),
-    listRuns: (contractId) => request<RunSummary[]>(`/v1/contracts/${contractId}/runs`),
+    listRuns: (contractId, params) => {
+      const query = new URLSearchParams();
+      query.set('page', String(params?.page ?? 1));
+      query.set('pageSize', String(params?.pageSize ?? 50));
+      return request<RunSummary[]>(`/v1/contracts/${contractId}/runs?${query.toString()}`);
+    },
     runNow: (contractId) =>
       request<RunAccepted>(`/v1/contracts/${contractId}/runs`, {
         body: JSON.stringify({}),

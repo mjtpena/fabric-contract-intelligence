@@ -31,17 +31,28 @@ public sealed class ReportsController : ControllerBase
                     where _tenantContext.WorkspaceId == Guid.Empty || contract.WorkspaceId == _tenantContext.WorkspaceId
                     select run;
 
-        var runs = await query.ToListAsync(ct).ConfigureAwait(false);
-        var latest = runs.OrderByDescending(run => run.TriggeredAt).FirstOrDefault();
+        var summary = await query
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                TotalRuns = group.Count(),
+                PassedRuns = group.Count(run => run.Status == "passed"),
+                FailedRuns = group.Count(run => run.Status == "failed"),
+                WarnedRuns = group.Count(run => run.Status == "warned"),
+                ErrorRuns = group.Count(run => run.Status == "error"),
+                LastRunAt = group.Max(run => (DateTimeOffset?)run.TriggeredAt),
+            })
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
 
         return Ok(new ReportSummaryDto
         {
-            TotalRuns = runs.Count,
-            PassedRuns = runs.Count(run => string.Equals(run.Status, "passed", StringComparison.OrdinalIgnoreCase)),
-            FailedRuns = runs.Count(run => string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase)),
-            WarnedRuns = runs.Count(run => string.Equals(run.Status, "warned", StringComparison.OrdinalIgnoreCase)),
-            ErrorRuns = runs.Count(run => string.Equals(run.Status, "error", StringComparison.OrdinalIgnoreCase)),
-            LastRunAt = latest is null ? null : ToIsoString(latest.TriggeredAt),
+            TotalRuns = summary?.TotalRuns ?? 0,
+            PassedRuns = summary?.PassedRuns ?? 0,
+            FailedRuns = summary?.FailedRuns ?? 0,
+            WarnedRuns = summary?.WarnedRuns ?? 0,
+            ErrorRuns = summary?.ErrorRuns ?? 0,
+            LastRunAt = summary?.LastRunAt is null ? null : ToIsoString(summary.LastRunAt.Value),
         });
     }
 

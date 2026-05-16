@@ -29,11 +29,11 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
         try
         {
             var root = OdcsYamlJsonConverter.ConvertToJsonElement(odcsYaml);
-            var errors = _schema.Value.Validate(root.GetRawText());
-
-            return errors
+            var errors = _schema.Value.Validate(root.GetRawText())
                 .Select(MapError)
-                .ToArray();
+                .Concat(ValidateServerUris(root));
+
+            return errors.ToArray();
         }
         catch (Exception ex)
         {
@@ -60,6 +60,69 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
     {
         var path = NormalizePath(error);
         return new OdcsValidationError(path, error.ToString());
+    }
+
+    private static IEnumerable<OdcsValidationError> ValidateServerUris(System.Text.Json.JsonElement root)
+    {
+        if (!root.TryGetProperty("servers", out var servers) || servers.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var index = 0;
+        foreach (var server in servers.EnumerateArray())
+        {
+            foreach (var propertyName in new[] { "host", "path", "location" })
+            {
+                if (!server.TryGetProperty(propertyName, out var property) || property.ValueKind != System.Text.Json.JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var value = property.GetString();
+                if (IsUnsafeHttpUri(value))
+                {
+                    yield return new OdcsValidationError(
+                        $"$.servers[{index}].{propertyName}",
+                        "HTTP(S) server endpoints must not target localhost, link-local, or private network addresses.");
+                }
+            }
+
+            index++;
+        }
+    }
+
+    private static bool IsUnsafeHttpUri(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Uri.TryCreate(value, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (uri.Scheme is not ("http" or "https"))
+        {
+            return false;
+        }
+
+        var host = uri.Host.TrimEnd('.');
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("169.254.169.254", StringComparison.OrdinalIgnoreCase) ||
+            host.StartsWith("127.", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (System.Net.IPAddress.TryParse(host, out var address))
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes.Length == 4 &&
+                (bytes[0] == 10 ||
+                 (bytes[0] == 172 && bytes[1] is >= 16 and <= 31) ||
+                 (bytes[0] == 192 && bytes[1] == 168) ||
+                 (bytes[0] == 169 && bytes[1] == 254));
+        }
+
+        return false;
     }
 
     private static string NormalizePath(ValidationError error)

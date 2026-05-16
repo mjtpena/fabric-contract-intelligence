@@ -20,7 +20,12 @@ public sealed class LlmProviderTests
                     "content": "  generated yaml  "
                   }
                 }
-              ]
+              ],
+              "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 20,
+                "total_tokens": 30
+              }
             }
             """),
         });
@@ -39,7 +44,10 @@ public sealed class LlmProviderTests
 
         var result = await provider.CompleteAsync("system prompt", "user input");
 
-        result.Should().Be("generated yaml");
+        result.Should().NotBeNull();
+        result!.Content.Should().Be("generated yaml");
+        result.ModelUsed.Should().Be("gpt-4o");
+        result.Usage.Should().Be(new LlmUsage(10, 20, 30));
         handler.Requests.Should().ContainSingle();
         var request = handler.Requests[0];
         request.RequestUri!.ToString().Should().Be("https://azure-openai.example/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21");
@@ -47,6 +55,7 @@ public sealed class LlmProviderTests
         var body = await request.Content!.ReadAsStringAsync();
         body.Should().Contain("system prompt");
         body.Should().Contain("user input");
+        body.Should().Contain("\"max_tokens\":2048");
     }
 
     [Fact]
@@ -93,7 +102,11 @@ public sealed class LlmProviderTests
                 {
                   "text": "  remediation advice  "
                 }
-              ]
+              ],
+              "usage": {
+                "input_tokens": 7,
+                "output_tokens": 11
+              }
             }
             """),
         });
@@ -111,7 +124,10 @@ public sealed class LlmProviderTests
 
         var result = await provider.CompleteAsync("system prompt", "user input");
 
-        result.Should().Be("remediation advice");
+        result.Should().NotBeNull();
+        result!.Content.Should().Be("remediation advice");
+        result.ModelUsed.Should().Be("claude-sonnet");
+        result.Usage.Should().Be(new LlmUsage(7, 11, 18));
         handler.Requests.Should().ContainSingle();
         var request = handler.Requests[0];
         request.RequestUri!.ToString().Should().Be("https://anthropic.example/v1/messages");

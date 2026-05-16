@@ -8,6 +8,36 @@ namespace Orqentis.Tests.Orqentis.Engine.Tests.Odcs;
 public sealed class OdcsContractParserTests
 {
     [Fact]
+    public void Parse_YamlAtOneMegabyteLimit_ReturnsFailure()
+    {
+        // Arrange
+        var parser = new OdcsContractParser(NullLogger<OdcsContractParser>.Instance);
+        var yaml = new string('a', 1_048_576);
+
+        // Act
+        var parsed = parser.Parse(yaml);
+
+        // Assert
+        parsed.IsSuccess.Should().BeFalse();
+        parsed.Error.Should().Contain("smaller than 1 MB");
+    }
+
+    [Fact]
+    public void Parse_StructureDepthExceedsLimit_ReturnsFailure()
+    {
+        // Arrange
+        var parser = new OdcsContractParser(NullLogger<OdcsContractParser>.Instance);
+        var yaml = string.Join(Environment.NewLine, Enumerable.Range(0, 31).Select(i => $"{new string(' ', i * 2)}level{i}:")) + Environment.NewLine + new string(' ', 62) + "value: leaf";
+
+        // Act
+        var parsed = parser.Parse(yaml);
+
+        // Assert
+        parsed.IsSuccess.Should().BeFalse();
+        parsed.Error.Should().Contain("structure depth");
+    }
+
+    [Fact]
     public void ParseAndSerialize_HealthcareContract_RoundTripsWithoutInformationLoss()
     {
         // Arrange

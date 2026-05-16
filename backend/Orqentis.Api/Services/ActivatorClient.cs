@@ -21,7 +21,7 @@ public sealed class ActivatorClient : IActivatorClient
                 MaxRetryAttempts = 3,
                 Delay = TimeSpan.FromSeconds(1),
                 BackoffType = Polly.DelayBackoffType.Exponential,
-                UseJitter = false,
+                UseJitter = true,
                 ShouldHandle = new PredicateBuilder()
                     .Handle<HttpRequestException>()
                     .Handle<TaskCanceledException>(),

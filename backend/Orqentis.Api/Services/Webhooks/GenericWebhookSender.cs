@@ -1,3 +1,5 @@
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
@@ -5,18 +7,44 @@ namespace Orqentis.Api.Services.Webhooks;
 
 public sealed class GenericWebhookSender : IGenericWebhookSender
 {
-    private readonly HttpClient _httpClient;
+    private readonly WebhookUrlValidator _urlValidator;
 
-    public GenericWebhookSender(HttpClient httpClient)
+    public GenericWebhookSender(HttpClient _, WebhookUrlValidator urlValidator)
     {
-        _httpClient = httpClient;
+        _urlValidator = urlValidator;
     }
 
     public async Task SendAsync(string url, object payload, CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        var validatedUrl = await _urlValidator.ValidateAsync(url, ct).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, validatedUrl.Uri);
         request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+        using var handler = CreatePinnedHandler(validatedUrl);
+        using var httpClient = new HttpClient(handler, disposeHandler: true);
+        using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
+
+    private static SocketsHttpHandler CreatePinnedHandler(WebhookUrlValidationResult validatedUrl) =>
+        new()
+        {
+            ConnectCallback = async (context, ct) =>
+            {
+                var socket = new Socket(validatedUrl.PinnedAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                try
+                {
+                    await socket.ConnectAsync(validatedUrl.PinnedAddress, context.DnsEndPoint.Port, ct).ConfigureAwait(false);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            },
+            SslOptions = new SslClientAuthenticationOptions
+            {
+                TargetHost = validatedUrl.Uri.IdnHost,
+            },
+        };
 }

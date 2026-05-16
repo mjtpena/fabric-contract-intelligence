@@ -40,6 +40,36 @@ public sealed class DeltaLogReaderTests
     }
 
     [Fact]
+    public async Task ReadAsync_LastCheckpointPresent_SkipsEarlierJsonVersions()
+    {
+        // Arrange
+        using var server = WireMockServer.Start();
+        var versionOne = File.ReadAllText(FixturePath.FromTestProject("Fixtures", "delta", "02-add-column", "_delta_log", "00000000000000000001.json"));
+        server
+            .Given(Request.Create().WithPath("/checkpoint/_delta_log/_last_checkpoint").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBody("{\"version\":0}"));
+        server
+            .Given(Request.Create().WithPath("/checkpoint/_delta_log/00000000000000000000.json").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(500));
+        server
+            .Given(Request.Create().WithPath("/checkpoint/_delta_log/00000000000000000001.json").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBody(versionOne));
+
+        var reader = new DeltaLogReader(
+            new HttpClient(),
+            new SchemaExtractor(),
+            NullLogger<DeltaLogReader>.Instance);
+
+        // Act
+        var result = await reader.ReadAsync($"{server.Urls[0].TrimEnd('/')}/checkpoint/", "fixture-token");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Version.Should().Be(1);
+        server.LogEntries.Should().NotContain(entry => entry.RequestMessage.Path == "/checkpoint/_delta_log/00000000000000000000.json");
+    }
+
+    [Fact]
     public async Task ReadAsync_UnreachableAbfssHost_ReturnsFailure()
     {
         // Arrange

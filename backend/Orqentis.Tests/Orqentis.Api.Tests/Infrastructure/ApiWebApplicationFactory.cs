@@ -171,7 +171,7 @@ internal sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSche
         var claims = new[]
         {
             new Claim("tid", tenantId),
-            new Claim("oid", "test-user-object-id"),
+            new Claim("oid", TestIdentifiers.UserObjectId.ToString()),
             new Claim("preferred_username", "test.user@example.com"),
             new Claim("workspace_id", workspaceId),
         };

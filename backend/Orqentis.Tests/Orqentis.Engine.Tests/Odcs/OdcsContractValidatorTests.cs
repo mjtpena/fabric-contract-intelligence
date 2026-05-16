@@ -37,4 +37,24 @@ public sealed class OdcsContractValidatorTests
         // Assert
         errors.Should().Contain(static error => error.JsonPath == "$.apiVersion");
     }
+
+    [Fact]
+    public void Validate_MetadataServiceHttpPath_ReturnsSsrfError()
+    {
+        // Arrange
+        var validator = new OdcsContractValidator(NullLogger<OdcsContractValidator>.Instance);
+        var yaml = File.ReadAllText(FixturePath.FromTestProject("..", "..", "contracts", "examples", "healthcare.contract.yaml"));
+        var invalidYaml = yaml.Replace(
+            "abfss://clinical@onelake.dfs.fabric.microsoft.com/ClinicalLakehouse.Lakehouse/Tables/patient_encounters",
+            "http://169.254.169.254/latest/meta-data",
+            StringComparison.Ordinal);
+
+        // Act
+        var errors = validator.Validate(invalidYaml);
+
+        // Assert
+        errors.Should().Contain(error =>
+            error.JsonPath == "$.servers[0].location" &&
+            error.Message.Contains("private network", StringComparison.OrdinalIgnoreCase));
+    }
 }
