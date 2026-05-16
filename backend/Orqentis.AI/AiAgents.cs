@@ -43,6 +43,7 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         var llmResult = await _llmRouter.CompleteAsync("ContractSuggestion", prompt, userInput, ct).ConfigureAwait(false);
 
         var candidateYaml = StripCodeFences(llmResult?.Content);
+        candidateYaml = SanitizeOdcsYaml(candidateYaml);
         if (!string.IsNullOrWhiteSpace(candidateYaml))
         {
             var validationErrors = _validator.Validate(candidateYaml);
@@ -147,6 +148,47 @@ public sealed class ContractSuggestionAgent : IContractSuggestionAgent
         builder.AppendLine("      maxAgeHours: 24");
         builder.AppendLine("      severity: warning");
         return builder.ToString();
+    }
+
+    private static readonly string[] _disallowedTopLevelKeys = ["quality", "freshness", "sla", "slas", "schedule"];
+
+    /// <summary>Strips top-level keys that aren't permitted at the ODCS v3.1.0 contract root,
+    /// guarding against LLMs that hallucinate fields outside the schema. Line-based to avoid
+    /// pulling in another YAML serializer just for this hot path.</summary>
+    internal static string? SanitizeOdcsYaml(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+        var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var output = new StringBuilder(content.Length);
+        var skipping = false;
+        foreach (var line in lines)
+        {
+            if (line.Length == 0 || char.IsWhiteSpace(line[0]) || line.StartsWith('#') || line.StartsWith('-'))
+            {
+                if (skipping)
+                {
+                    continue;
+                }
+                output.AppendLine(line);
+                continue;
+            }
+            var colonIdx = line.IndexOf(':');
+            if (colonIdx > 0)
+            {
+                var key = line[..colonIdx].Trim();
+                if (Array.IndexOf(_disallowedTopLevelKeys, key) >= 0)
+                {
+                    skipping = true;
+                    continue;
+                }
+            }
+            skipping = false;
+            output.AppendLine(line);
+        }
+        return output.ToString();
     }
 
     private static string? StripCodeFences(string? content)

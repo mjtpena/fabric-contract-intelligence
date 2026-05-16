@@ -71,6 +71,45 @@ public sealed class AiAgentsTests
             because: $"fallback must produce schema-valid ODCS for source type '{sourceType}'");
     }
 
+    [Theory]
+    [InlineData("quality:\n  rules:\n    - name: x\n      threshold: 0\n")]
+    [InlineData("freshness:\n  maxAgeHours: 24\n")]
+    [InlineData("sla:\n  uptime: 0.99\n")]
+    public void SanitizeOdcsYaml_RemovesDisallowedTopLevelKeys(string injected)
+    {
+        var input = "apiVersion: v3.1.0\nkind: DataContract\nid: x\nname: \"y\"\nversion: 0.1.0\nstatus: draft\n" + injected + "schema:\n  - name: \"y\"\n";
+        var cleaned = ContractSuggestionAgent.SanitizeOdcsYaml(input);
+        cleaned.Should().NotContain("freshness:");
+        cleaned.Should().NotContain("quality:");
+        cleaned.Should().NotContain("sla:");
+        cleaned.Should().Contain("apiVersion: v3.1.0");
+        cleaned.Should().Contain("schema:");
+    }
+
+    [Fact]
+    public async Task ContractSuggestionAgent_StripsDisallowedKeys_FromLlmOutput()
+    {
+        var validator = new OdcsContractValidator(NullLogger<OdcsContractValidator>.Instance);
+        var llmYaml = "```yaml\napiVersion: v3.1.0\nkind: DataContract\nid: urn:orqentis:orqentis:CONTRACT_ID\nname: \"t\"\nversion: 0.1.0\nstatus: draft\nfreshness:\n  maxAgeHours: 24\nquality:\n  - rule: nullRate\n    threshold: 0\nservers:\n  - server: fabric\n    type: azure\n    location: \"abfss://x@y/z\"\n    format: delta\nschema:\n  - name: \"t\"\n    properties:\n      - name: \"id\"\n        logicalType: string\n```";
+        var agent = new ContractSuggestionAgent(
+            new StubLlmRouter(new LlmResult(llmYaml, "gpt-4o")),
+            new StubPromptLoader("p"),
+            validator,
+            Options.Create(new AiOptions()),
+            NullLogger<ContractSuggestionAgent>.Instance);
+
+        var suggestion = await agent.SuggestAsync(new TableProfile
+        {
+            TableName = "t",
+            AbfssUri = "abfss://x@y/z",
+            Columns = [new TableProfileColumn("id", "string", false, 1, 0)],
+            SampleRows = [],
+        });
+
+        suggestion.ModelUsed.Should().Be("gpt-4o", because: "sanitized LLM yaml should validate");
+        validator.Validate(suggestion.OdcsYaml).Should().BeEmpty();
+    }
+
     [Fact]
     public async Task BreachImpactScorer_ReturnsNull_WhenProviderPayloadIsInvalid()
     {

@@ -15,8 +15,17 @@ Rules:
 5. Suggest unique: true only when distinct count == row count.
 6. Generate quality rules sparingly: nullRate threshold 0.0 for required columns;
    uniqueness 1.0 for primary keys; regex only when the sample data clearly fits a pattern
-   (e.g. email, ISO dates).
-7. Set freshness.maxAgeHours to 24 unless the profile metadata suggests otherwise.
+   (e.g. email, ISO dates). **Quality rules MUST be nested inside `schema[].quality` (for
+   table-level rules) or `schema[].properties[].quality` (for column-level rules). Do NOT
+   emit a top-level `quality:` field — it is not allowed by the schema.**
+7. Encode freshness as a `customProperties` entry, NOT a top-level `freshness:` field
+   (top-level `freshness` is rejected by the validator). Example:
+     customProperties:
+       - property: orqentisFreshness
+         value:
+           maxAgeHours: 24
+           severity: warning
+   Default maxAgeHours to 24 unless the profile metadata suggests otherwise.
 8. Mark obvious PII columns (email, phone, ssn, mrn, dob) with pii: true.
 9. Set status: draft. Do not invent a tenant identifier — use the placeholder
    urn:orqentis:orqentis:CONTRACT_ID for the id field.
