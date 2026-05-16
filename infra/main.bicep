@@ -151,14 +151,6 @@ module api 'modules/app-service.bicep' = {
     environment: environment
     location: location
     appServicePlanId: appPlan.outputs.planId
-    keyVaultUri: keyVaultUri
-    appInsightsConnectionStringSecretUri: '${keyVaultUri}secrets/${appInsightsConnectionStringSecretName}'
-    pgConnectionStringSecretUri: '${keyVaultUri}secrets/${postgresConnectionStringSecretName}'
-    azureAdClientSecretSecretUri: '${keyVaultUri}secrets/${azureAdClientSecretSecretName}'
-    azureAdTenantId: azureAdTenantId
-    azureAdClientId: azureAdClientId
-    azureAdAudience: empty(azureAdAudience) ? 'api://${azureAdClientId}' : azureAdAudience
-    openAiEndpoint: openai.outputs.endpoint
     tags: tags
   }
 }
@@ -181,6 +173,27 @@ module keyvault 'modules/keyvault.bicep' = {
     appInsightsConnectionString: observability.outputs.appInsightsConnectionString
     tags: tags
   }
+}
+
+// Apply app settings AFTER Key Vault is provisioned so that
+// @Microsoft.KeyVault(SecretUri=...) references resolve on first start.
+module apiSettings 'modules/app-service-settings.bicep' = {
+  name: 'api-settings'
+  params: {
+    appServiceName: api.outputs.appName
+    environment: environment
+    keyVaultUri: keyVaultUri
+    appInsightsConnectionStringSecretUri: '${keyVaultUri}secrets/${appInsightsConnectionStringSecretName}'
+    pgConnectionStringSecretUri: '${keyVaultUri}secrets/${postgresConnectionStringSecretName}'
+    azureAdClientSecretSecretUri: '${keyVaultUri}secrets/${azureAdClientSecretSecretName}'
+    azureAdTenantId: azureAdTenantId
+    azureAdClientId: azureAdClientId
+    azureAdAudience: empty(azureAdAudience) ? 'api://${azureAdClientId}' : azureAdAudience
+    openAiEndpoint: openai.outputs.endpoint
+  }
+  dependsOn: [
+    keyvault
+  ]
 }
 
 module autoscale 'modules/app-service-autoscale.bicep' = if (enableAutoscale) {
