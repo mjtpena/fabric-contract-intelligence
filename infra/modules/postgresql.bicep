@@ -1,3 +1,6 @@
+// PostgreSQL Flexible Server for Orqentis metadata.
+// Storage is parameterized because contract/run metadata grows gradually with tenant adoption;
+// launch defaults are 128 GiB production and 32 GiB staging, with explicit increases after usage telemetry.
 param namePrefix string
 param environment string
 param location string
@@ -6,6 +9,14 @@ param adminUsername string
 
 @secure()
 param adminPassword string
+
+@description('PostgreSQL high availability mode. ZoneRedundant roughly doubles DB compute cost (~$450-700/mo on D4ds_v5) and should be enabled only when the production SLA requires 99.99% DB availability.')
+@allowed(['Disabled', 'SameZone', 'ZoneRedundant'])
+param highAvailabilityMode string = 'Disabled'
+
+@description('Provisioned PostgreSQL storage in GiB.')
+@minValue(32)
+param storageSizeGB int = 128
 
 param tags object
 
@@ -21,12 +32,12 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     version: '16'
     administratorLogin: adminUsername
     administratorLoginPassword: adminPassword
-    storage: { storageSizeGB: environment == 'production' ? 256 : 64 }
+    storage: { storageSizeGB: storageSizeGB }
     backup: {
       backupRetentionDays: environment == 'production' ? 30 : 7
       geoRedundantBackup: environment == 'production' ? 'Enabled' : 'Disabled'
     }
-    highAvailability: { mode: environment == 'production' ? 'ZoneRedundant' : 'Disabled' }
+    highAvailability: { mode: highAvailabilityMode }
   }
 }
 
@@ -43,5 +54,6 @@ resource allowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@202
 }
 
 output serverId string = server.id
+output serverName string = server.name
 output fqdn string = server.properties.fullyQualifiedDomainName
 output databaseName string = db.name

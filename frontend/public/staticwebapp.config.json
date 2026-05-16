@@ -18,9 +18,11 @@
   "globalHeaders": {
     "Access-Control-Allow-Headers": "*",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Origin": "*",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data:; frame-ancestors https://app.fabric.microsoft.com https://*.powerbi.com;",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "ALLOW-FROM https://app.fabric.microsoft.com"
+    "Access-Control-Allow-Origin": "https://*.fabric.microsoft.com, https://*.powerbi.com",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data:; frame-ancestors https://app.fabric.microsoft.com https://*.fabric.microsoft.com https://*.powerbi.com https://*.office.com https://*.office365.com;",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=(), interest-cohort=()",
+    "X-Content-Type-Options": "nosniff"
   }
 }
