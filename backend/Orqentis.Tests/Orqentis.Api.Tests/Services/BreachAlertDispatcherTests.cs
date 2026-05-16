@@ -1,5 +1,3 @@
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orqentis.Api.Services;
 using Orqentis.Api.Services.Webhooks;
@@ -56,7 +54,6 @@ public sealed class BreachAlertDispatcherTests
             activator ?? new StubActivatorClient(),
             generic ?? new StubGenericWebhookSender(),
             slack ?? new StubSlackWebhookSender(),
-            new TelemetryClient(TelemetryConfiguration.CreateDefault()),
             NullLogger<BreachAlertDispatcher>.Instance);
 
     private static ActivatorTriggerContext CreateContext() =>

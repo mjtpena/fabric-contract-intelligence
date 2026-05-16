@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.ApplicationInsights;
 using Orqentis.Api.Services.Webhooks;
 
 namespace Orqentis.Api.Services;
@@ -9,20 +8,17 @@ public sealed class BreachAlertDispatcher : IBreachAlertDispatcher
     private readonly IActivatorClient _activatorClient;
     private readonly IGenericWebhookSender _genericWebhookSender;
     private readonly ISlackWebhookSender _slackWebhookSender;
-    private readonly TelemetryClient _telemetryClient;
     private readonly ILogger<BreachAlertDispatcher> _logger;
 
     public BreachAlertDispatcher(
         IActivatorClient activatorClient,
         IGenericWebhookSender genericWebhookSender,
         ISlackWebhookSender slackWebhookSender,
-        TelemetryClient telemetryClient,
         ILogger<BreachAlertDispatcher> logger)
     {
         _activatorClient = activatorClient;
         _genericWebhookSender = genericWebhookSender;
         _slackWebhookSender = slackWebhookSender;
-        _telemetryClient = telemetryClient;
         _logger = logger;
     }
 
@@ -75,12 +71,13 @@ public sealed class BreachAlertDispatcher : IBreachAlertDispatcher
         }
         catch (Exception ex)
         {
-            _telemetryClient.TrackEvent("Orqentis_Activator_Drop", new Dictionary<string, string>
-            {
-                ["reason"] = ex.Message,
-                ["route"] = request.Policy.ActionType,
-            });
-            _logger.LogWarning(ex, "AlertDispatch-Dropped PolicyId={PolicyId} ContractId={ContractId}", request.Policy.PolicyId, request.Policy.ContractId);
+            _logger.LogWarning(
+                ex,
+                "AlertDispatch-Dropped PolicyId={PolicyId} ContractId={ContractId} Reason={Reason} Route={Route}",
+                request.Policy.PolicyId,
+                request.Policy.ContractId,
+                ex.Message,
+                request.Policy.ActionType);
             return new AlertDispatchResult(false, "drop");
         }
     }
