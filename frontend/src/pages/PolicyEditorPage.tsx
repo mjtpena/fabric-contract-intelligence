@@ -7,6 +7,7 @@ import {
   BreadcrumbItem,
   Button,
   Caption1,
+  Card,
   Checkbox,
   Dropdown,
   Field,
@@ -14,6 +15,7 @@ import {
   Option,
   Tab,
   TabList,
+  Text,
   Title2,
   makeStyles,
   tokens,
@@ -40,6 +42,18 @@ const useStyles = makeStyles({
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
+  },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
+  },
+  reviewList: {
+    display: 'grid',
+    gap: tokens.spacingVerticalM,
+    margin: 0,
+  },
+  mutedValue: {
+    color: tokens.colorNeutralForeground3,
   },
 });
 
@@ -196,6 +210,8 @@ export function PolicyEditorPage() {
     && Boolean(contractId)
     && cronRegex.test(cronExpression.trim())
     && (actionType !== 'webhook' || isHttpsUrl(webhookUrl));
+  const selectedContractName = contracts.find((contract) => contract.id === contractId)?.name;
+  const notSet = <Text className={styles.mutedValue}>Not set</Text>;
 
   return (
     <section className={styles.root}>
@@ -210,7 +226,7 @@ export function PolicyEditorPage() {
       </Breadcrumb>
 
       <Title2>Policy editor wizard</Title2>
-      <Caption1>Configure schedule, alert behavior, routing, then review and save.</Caption1>
+      <Caption1 className={styles.subtitle}>Schedule enforcement, choose alerts, and route breaches without leaving Fabric.</Caption1>
 
       <Body1 aria-current="step">Step {step + 1} of 4 · {stepLabels[step]}</Body1>
 
@@ -313,9 +329,33 @@ export function PolicyEditorPage() {
       ) : null}
 
       {step === 3 ? (
-        <Body1>
-          Contract {contractId || '(none)'} | Cron {cronExpression} | Alert on warn {String(alertOnWarn)} | Route {actionType}
-        </Body1>
+        <Card>
+          <dl className={styles.reviewList}>
+            <Field label={<Text size={300}>Trigger</Text>}>
+              <Text weight="semibold">{alertOnWarn ? 'Failed or warned runs' : 'Failed runs only'}</Text>
+            </Field>
+            <Field label={<Text size={300}>Schedule</Text>}>
+              <Text weight="semibold">{cronToHuman(cronExpression)} · {cronExpression}</Text>
+            </Field>
+            <Field label={<Text size={300}>Action</Text>}>
+              <Text weight="semibold">
+                {actionType === 'notify' ? 'Notify Activator rule' : `Send ${provider} webhook`}
+              </Text>
+            </Field>
+            <Field label={<Text size={300}>Webhook URL</Text>}>
+              {webhookUrl ? <Text weight="semibold">{webhookUrl}</Text> : notSet}
+            </Field>
+            <Field label={<Text size={300}>Headers</Text>}>
+              {actionType === 'webhook' ? <Text weight="semibold">Managed by destination</Text> : notSet}
+            </Field>
+            <Field label={<Text size={300}>Active</Text>}>
+              <Text weight="semibold">Enabled</Text>
+            </Field>
+            <Field label={<Text size={300}>Contract</Text>}>
+              {selectedContractName ? <Text weight="semibold">{selectedContractName}</Text> : notSet}
+            </Field>
+          </dl>
+        </Card>
       ) : null}
 
       <div className={styles.actions}>
@@ -384,3 +424,5 @@ function parsePersistedPolicyState(raw: string): PersistedPolicyState | null {
     return null;
   }
 }
+
+export default PolicyEditorPage;

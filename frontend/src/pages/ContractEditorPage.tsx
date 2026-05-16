@@ -18,6 +18,7 @@ import {
   synchronizeDraftYaml,
 } from '@/api/contractClient';
 import { createAiClient } from '@/api/aiClient';
+import { createOpsClient } from '@/api/opsClient';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { NewContractTypeSelector } from '@/components/ContractEditor/NewContractTypeSelector';
 import { ValidationPanel } from '@/components/ContractEditor/ValidationPanel';
@@ -319,6 +320,7 @@ function EditorWorkspace({
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isImproving, setIsImproving] = useState(false);
+  const [tier, setTier] = useState<string>('community');
   const [useCrossWorkspaceTarget, setUseCrossWorkspaceTarget] = useState(() =>
     Boolean(draft?.targetWorkspaceId && draft.targetWorkspaceId.trim().length > 0),
   );
@@ -333,6 +335,22 @@ function EditorWorkspace({
       }),
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
+  const opsClient = useMemo(
+    () =>
+      createOpsClient({
+        baseUrl: sdk.apiBaseUrl,
+        correlationId: sdk.correlationId,
+        getAccessToken: sdk.getAccessToken,
+        workspaceId: sdk.workspaceId,
+      }),
+    [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
+  );
+
+  useEffect(() => {
+    void opsClient.listWorkspaces()
+      .then((workspaces) => setTier(workspaces[0]?.tier ?? 'community'))
+      .catch(() => setTier('community'));
+  }, [opsClient]);
 
   useEffect(() => {
     if (draft) {
@@ -451,8 +469,10 @@ function EditorWorkspace({
     }
   }, [actions, draft?.id, isRunning, navigateToRun, sdk]);
 
+  const isAiImproveAvailable = tier.toLowerCase() === 'enterprise';
+
   const handleAiImprove = useCallback(async () => {
-    if (!draft || isImproving) {
+    if (!draft || isImproving || !isAiImproveAvailable) {
       return;
     }
 
@@ -460,35 +480,37 @@ function EditorWorkspace({
     try {
       const result = await aiClient.improveContract({ odcsYaml: draft.odcsYaml });
       onChangeDraft({ ...draft, odcsYaml: result.odcsYaml });
-      await sdk.notifySuccess(
-        'Contract improved',
-        `AI enriched the contract using ${result.modelUsed} in ${result.latencyMs}ms.`,
-      );
+      console.debug('AI improvement applied', {
+        latencyMs: result.latencyMs,
+        modelUsed: result.modelUsed,
+      });
+      await sdk.notifySuccess('Improvement applied', 'Review the updated contract before saving.');
     } catch (improveError) {
       const message = improveError instanceof Error ? improveError.message : 'AI improvement failed.';
       await sdk.notifyError('AI Improve failed', message);
     } finally {
       setIsImproving(false);
     }
-  }, [aiClient, draft, isImproving, onChangeDraft, sdk]);
+  }, [aiClient, draft, isAiImproveAvailable, isImproving, onChangeDraft, sdk]);
 
   const additionalToolbars = useMemo<RibbonToolbar[]>(
     () => [
       {
         actions: [
           {
-            disabled: !draft || isImproving,
+            disabled: !draft || isImproving || !isAiImproveAvailable,
             icon: isImproving ? <Spinner size="tiny" /> : <SparkleRegular />,
             key: 'ai-improve',
-            label: isImproving ? 'Improving…' : 'AI Improve (Enterprise)',
+            label: isImproving ? 'Improving…' : 'AI Improve',
             onClick: handleAiImprove,
+            tooltip: isAiImproveAvailable ? 'AI Improve' : 'Available on Enterprise',
           },
         ],
         key: 'ai-improve',
         label: 'AI Improve',
       },
     ],
-    [draft, handleAiImprove, isImproving],
+    [draft, handleAiImprove, isAiImproveAvailable, isImproving],
   );
 
   const homeToolbarActions = useMemo(
@@ -530,7 +552,7 @@ function EditorWorkspace({
       additionalToolbars={additionalToolbars}
       homeToolbarActions={homeToolbarActions}
       statusSlot={draft ? <StatusBadge status={draft.status} /> : null}
-      subtitle={draft?.targetTablePath ?? contract?.targetTablePath ?? 'Create and validate an ODCS contract draft.'}
+      subtitle={draft?.targetTablePath ?? contract?.targetTablePath ?? 'Edit YAML directly and validate as you type.'}
       title={draft?.name || contract?.name || 'New contract'}
     >
       {loading ? <Spinner label="Loading editor…" /> : null}
@@ -937,3 +959,5 @@ function normalizePersistedDraft(value: unknown): ContractDraft | null {
 // ─── Lakehouse Picker ──────────────────────────────────────────────────────────
 
 // Pickers are shared components defined in @/components/FabricPickers
+
+export default ContractEditorPage;

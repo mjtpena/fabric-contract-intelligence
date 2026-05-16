@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
-      sourcemap: true,
+      sourcemap: mode === 'production' ? false : true,
       target: 'es2022',
     },
     test: {
@@ -87,6 +87,8 @@ export default defineConfig(({ mode }) => {
         // @/monaco/setup uses ?worker imports that can't run in JSDOM; stub out the whole module.
         // Must come BEFORE the generic '@' alias so the longer path wins.
         { find: /^@\/monaco\/setup/, replacement: path.resolve(__dirname, './src/test/mocks/monaco-setup.ts') },
+        // Monaco editor API import used by loader.config({ monaco }) — redirect to a shape-compatible stub.
+        { find: /^monaco-editor\/esm\/vs\/editor\/editor\.api(\.js)?$/, replacement: path.resolve(__dirname, './src/test/mocks/monaco-editor.ts') },
         // monaco-editor sub-path imports (e.g. esm/vs/.../editor.worker) — redirect to empty stub.
         // The ?worker Vite query is stripped before alias matching.
         { find: /^monaco-editor\//, replacement: path.resolve(__dirname, './src/test/mocks/empty-module.ts') },

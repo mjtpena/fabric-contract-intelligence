@@ -1,6 +1,5 @@
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Body1,
   Breadcrumb,
   BreadcrumbButton,
   BreadcrumbDivider,
@@ -15,6 +14,9 @@ import {
   DataGridRow,
   Dropdown,
   Field,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
   Option,
   Spinner,
   Title2,
@@ -25,8 +27,10 @@ import {
 import { AlertOffRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { createOpsClient } from '@/api/opsClient';
+import { EmptyState } from '@/components/EmptyState';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
+import { formatDateTime } from '@/lib/formatDate';
 import type { ReportAuditRow } from '@/models/ops';
 
 const useStyles = makeStyles({
@@ -46,20 +50,9 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
     gap: tokens.spacingHorizontalL,
   },
-  emptyState: {
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: tokens.spacingHorizontalXXL,
-    backgroundColor: tokens.colorNeutralBackground2,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: tokens.spacingVerticalM,
-    textAlign: 'center',
-  },
-  emptyIcon: {
+  subtitle: {
     color: tokens.colorNeutralForeground3,
-    fontSize: '40px',
+    marginTop: tokens.spacingVerticalXS,
   },
 });
 
@@ -69,6 +62,7 @@ export function AlertsDashboardPage() {
   const sdk = useFabricSdk();
   const [rows, setRows] = useState<ReportAuditRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('all');
 
   const opsClient = useMemo(
@@ -82,13 +76,23 @@ export function AlertsDashboardPage() {
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
 
-  useEffect(() => {
+  const loadAlerts = useCallback(() => {
     setLoading(true);
+    setError(null);
     void opsClient.listAuditRows()
-      .then(setRows)
-      .catch(() => setRows([]))
+      .then((nextRows) => {
+        setRows(nextRows);
+      })
+      .catch((listError) => {
+        setRows([]);
+        setError(listError instanceof Error ? listError.message : 'Unable to load alerts.');
+      })
       .finally(() => setLoading(false));
   }, [opsClient]);
+
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
 
   const filtered = rows.filter((row) => status === 'all' || row.status === status);
 
@@ -111,12 +115,12 @@ export function AlertsDashboardPage() {
       createTableColumn<ReportAuditRow>({
         columnId: 'score',
         renderHeaderCell: () => 'Breach score',
-        renderCell: (row) => row.breachScore != null ? row.breachScore.toFixed(2) : 'n/a',
+        renderCell: (row) => row.breachScore != null ? row.breachScore.toFixed(2) : '—',
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'triggeredAt',
         renderHeaderCell: () => 'Triggered',
-        renderCell: (row) => row.triggeredAt ? formatDate(row.triggeredAt) : '—',
+        renderCell: (row) => formatDateTime(row.triggeredAt),
       }),
       createTableColumn<ReportAuditRow>({
         columnId: 'actions',
@@ -150,7 +154,7 @@ export function AlertsDashboardPage() {
 
       <div className={styles.header}>
         <Title2>Alerts dashboard</Title2>
-        <Caption1>Audit log of all enforcement runs and their breach scores.</Caption1>
+        <Caption1 className={styles.subtitle}>Spot breached contracts and open the exact run that needs attention.</Caption1>
       </div>
 
       <div className={styles.filters}>
@@ -171,11 +175,21 @@ export function AlertsDashboardPage() {
 
       {loading ? (
         <Spinner label="Loading alerts…" />
+      ) : error ? (
+        <MessageBar intent="error">
+          <MessageBarBody>{error}</MessageBarBody>
+          <MessageBarActions>
+            <Button appearance="secondary" size="small" onClick={loadAlerts}>
+              Retry
+            </Button>
+          </MessageBarActions>
+        </MessageBar>
       ) : filtered.length === 0 ? (
-        <div className={styles.emptyState}>
-          <AlertOffRegular className={styles.emptyIcon} />
-          <Body1>No alerts matched the selected filters.</Body1>
-        </div>
+        <EmptyState
+          description="Adjust the filter or run a contract to create alert history."
+          icon={<AlertOffRegular />}
+          title="No alerts matched"
+        />
       ) : (
         <DataGrid items={filtered} columns={columns}>
           <DataGridHeader>
@@ -204,12 +218,4 @@ export function AlertsDashboardPage() {
   );
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(d);
-}
+export default AlertsDashboardPage;

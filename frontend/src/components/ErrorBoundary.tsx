@@ -23,7 +23,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[Orqentis] Unhandled render error:', error.message, info.componentStack);
+    console.error('[Orqentis] Unhandled render error:', error, info.componentStack);
   }
 
   render() {
@@ -44,16 +44,22 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           <pre style={{ fontSize: '13px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {this.state.error.message}
           </pre>
-          <pre
-            style={{
-              fontSize: '11px',
-              color: '#888',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {this.state.error.stack}
-          </pre>
+          {import.meta.env.PROD ? null : (
+            <pre
+              style={{
+                fontSize: '11px',
+                color: '#888',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {this.state.error.stack}
+            </pre>
+          )}
+          <details hidden>
+            <summary>Error details</summary>
+            <pre>{this.state.error.stack}</pre>
+          </details>
         </div>
       );
     }

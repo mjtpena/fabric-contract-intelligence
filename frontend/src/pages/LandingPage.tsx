@@ -912,7 +912,7 @@ export function LandingPage() {
             bullets={[
               'Reads live Delta metadata from OneLake via OBO token',
               'Generates schema, freshness, and quality rule sections',
-              'Fallback to Claude 3.7 Sonnet on OpenAI timeout',
+              'Fallback templates keep authoring responsive during provider timeouts',
               '15-second SLA with retry/backoff — never blocks the UI',
             ]}
             imgSrc="/images/screenshots/ai-suggest-workflow.png"
@@ -985,7 +985,7 @@ export function LandingPage() {
                 {
                   icon: <SparkleRegular />,
                   title: 'AI with guaranteed fallback',
-                  desc: 'All LLM calls carry a 15-second CancellationToken. 3-attempt Polly retry with exponential backoff. Primary: GPT-4o. Fallback: Claude 3.7 Sonnet.',
+                  desc: 'All LLM calls use a 15-second timeout, retry safely, and fall back to a deterministic template when providers are unavailable.',
                 },
                 {
                   icon: <DatabaseLinkRegular />,

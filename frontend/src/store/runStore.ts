@@ -4,6 +4,7 @@ import type { RunDetail, RunSummary } from '@/models/enforcement';
 
 interface LoadOptions {
   background?: boolean;
+  suppressError?: boolean;
 }
 
 interface RunStoreState {
@@ -15,6 +16,7 @@ interface RunStoreState {
   clearError: () => void;
   loadRun: (client: RunClient, runId: string, options?: LoadOptions) => Promise<RunDetail | null>;
   loadRuns: (client: RunClient, contractId: string, options?: LoadOptions) => Promise<RunSummary[]>;
+  setError: (message: string) => void;
 }
 
 export const useRunStore = create<RunStoreState>((set) => ({
@@ -32,6 +34,9 @@ export const useRunStore = create<RunStoreState>((set) => ({
   },
   clearError: () => {
     set({ error: null });
+  },
+  setError: (message) => {
+    set({ error: message });
   },
   loadRun: async (client, runId, options) => {
     if (!options?.background) {
@@ -53,7 +58,7 @@ export const useRunStore = create<RunStoreState>((set) => ({
       return currentRun;
     } catch (error) {
       set((state) => ({
-        error: error instanceof Error ? error.message : 'Unable to load the enforcement run.',
+        error: options?.suppressError ? state.error : error instanceof Error ? error.message : 'Unable to load the enforcement run.',
         loading: options?.background ? state.loading : false,
       }));
 
@@ -80,7 +85,7 @@ export const useRunStore = create<RunStoreState>((set) => ({
       return runs;
     } catch (error) {
       set((state) => ({
-        error: error instanceof Error ? error.message : 'Unable to load enforcement runs.',
+        error: options?.suppressError ? state.error : error instanceof Error ? error.message : 'Unable to load enforcement runs.',
         loading: options?.background ? state.loading : false,
       }));
 

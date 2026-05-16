@@ -19,6 +19,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
+import { EmptyState } from '@/components/EmptyState';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { NaturalLanguageQueryResponse } from '@/models/Ai';
 
@@ -33,6 +34,10 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXS,
+  },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
   },
   searchRow: {
     display: 'flex',
@@ -67,6 +72,11 @@ const useStyles = makeStyles({
   },
 });
 
+function isFallbackModel(modelUsed: string | null | undefined) {
+  const normalized = modelUsed?.toLowerCase() ?? '';
+  return normalized.includes('heuristic') || normalized.includes('fallback') || normalized.includes('template');
+}
+
 export function NLQueryPage() {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -97,6 +107,8 @@ export function NLQueryPage() {
       const response = await aiClient.queryContracts({ query });
       setResult(response);
       setLiveMessage(`Found ${response.matches.length} matches.`);
+      console.debug('Natural language query complete', { modelUsed: response.modelUsed });
+      await sdk.notifySuccess('Query complete', 'Review the matching contracts below.');
     } catch (error) {
       setResult(null);
       const message = error instanceof Error ? error.message : 'Failed to run contract query.';
@@ -120,7 +132,7 @@ export function NLQueryPage() {
 
       <div className={styles.header}>
         <Title2>AI Contract Query</Title2>
-        <Body1>Ask questions in plain English to locate relevant contracts and explanations.</Body1>
+        <Caption1 className={styles.subtitle}>Ask in plain English and jump to the contracts that answer it.</Caption1>
       </div>
 
       <div
@@ -160,11 +172,15 @@ export function NLQueryPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
             <SparkleRegular />
             <Subtitle2>{result.explanation ?? 'No explanation returned.'}</Subtitle2>
+            {isFallbackModel(result.modelUsed) ? <Badge appearance="outline">Heuristic result</Badge> : null}
           </div>
-          <Caption1>Model: {result.modelUsed ?? 'unknown'}</Caption1>
 
           {(result.matches ?? []).length === 0 ? (
-            <Body1>No matching contracts found.</Body1>
+            <EmptyState
+              description="Try a broader question or create contracts with richer names and descriptions."
+              icon={<SearchRegular />}
+              title="No results found"
+            />
           ) : (
             (result.matches ?? []).map((match) => (
               <div key={match.contractId} className={styles.matchCard}>
@@ -188,3 +204,5 @@ export function NLQueryPage() {
     </section>
   );
 }
+
+export default NLQueryPage;

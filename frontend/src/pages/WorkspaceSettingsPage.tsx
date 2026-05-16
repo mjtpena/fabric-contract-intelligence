@@ -50,6 +50,10 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalL,
     gridTemplateColumns: 'repeat(auto-fit, minmax(18rem, 1fr))',
   },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
+  },
   card: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
@@ -177,8 +181,8 @@ export function WorkspaceSettingsPage() {
     <section className={styles.root}>
       <div>
         <Title2>Workspace settings</Title2>
-        <Caption1>
-          Manage workspace tiering, API access, Activator routing, and optional catalog connectivity.
+        <Caption1 className={styles.subtitle}>
+          Configure workspace access, policy routing, and catalog integrations.
         </Caption1>
       </div>
 
@@ -188,10 +192,10 @@ export function WorkspaceSettingsPage() {
           <div className={styles.cardHeader}>
             <div>
               <Caption1>Current tier</Caption1>
-              <div className={styles.value}>{sdk.isHosted ? 'Community' : 'Local preview'}</div>
+              <div className={styles.value}>{sdk.isHosted ? 'Community' : 'Developer'}</div>
             </div>
             <Badge appearance="filled" color="informative" shape="rounded">
-              Manual upgrade
+              {sdk.isHosted ? 'Manual upgrade' : 'Local preview'}
             </Badge>
           </div>
           <Body1>
@@ -384,3 +388,5 @@ export function WorkspaceSettingsPage() {
     </section>
   );
 }
+
+export default WorkspaceSettingsPage;

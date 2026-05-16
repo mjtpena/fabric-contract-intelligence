@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   NotificationToastDuration,
   NotificationType,
@@ -37,10 +37,11 @@ let initializationPromise: Promise<FabricSdkRuntime> | null = null;
 const ItemDefinitionPath = 'orqentis/item-definition.json';
 
 export function useFabricSdk() {
-  const correlationId = useAppStore((state) => state.correlationId);
+  const correlationIdInStore = useAppStore((state) => state.correlationId);
   const setCorrelationId = useAppStore((state) => state.setCorrelationId);
   const workspaceIdInStore = useAppStore((state) => state.workspaceId);
   const setWorkspaceId = useAppStore((state) => state.setWorkspaceId);
+  const [correlationId] = useState(() => correlationIdInStore ?? createCorrelationId());
   const [state, setState] = useState<FabricSdkState>(() => ({
     isHosted: false,
     isReady: false,
@@ -48,11 +49,16 @@ export function useFabricSdk() {
     workspaceId: workspaceIdInStore ?? '',
   }));
 
+  const stateRef = useRef(state);
+  const workspaceIdRef = useRef(workspaceIdInStore ?? state.workspaceId);
+  stateRef.current = state;
+  workspaceIdRef.current = workspaceIdInStore ?? state.workspaceId;
+
   useEffect(() => {
-    if (!correlationId) {
-      setCorrelationId(createCorrelationId());
+    if (correlationIdInStore !== correlationId) {
+      setCorrelationId(correlationId);
     }
-  }, [correlationId, setCorrelationId]);
+  }, [correlationId, correlationIdInStore, setCorrelationId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,80 +94,111 @@ export function useFabricSdk() {
     };
   }, [setWorkspaceId]);
 
+  const getAccessToken = useCallback(async () => {
+    const client = getWorkloadClient();
+    if (!client || !stateRef.current.isHosted) {
+      return '';
+    }
+
+    try {
+      const result = await client.auth.acquireFrontendAccessToken({
+        scopes: getBackendApiScopes(),
+      });
+      return result.token;
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const getFabricApiToken = useCallback(async () => {
+    const client = getWorkloadClient();
+    if (!client || !stateRef.current.isHosted) {
+      return '';
+    }
+
+    try {
+      const result = await client.auth.acquireFrontendAccessToken({
+        scopes: ['https://api.fabric.microsoft.com/.default'],
+      });
+      return result.token;
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const notifyError = useCallback(
+    (title: string, message?: string) => openNotification(title, message, NotificationType.Error),
+    [],
+  );
+  const notifyInfo = useCallback(
+    (title: string, message?: string) => openNotification(title, message, NotificationType.Info),
+    [],
+  );
+  const notifySuccess = useCallback(
+    (title: string, message?: string) => openNotification(title, message, NotificationType.Success),
+    [],
+  );
+  const openRoute = useCallback(
+    (path: string, mode: WorkloadOpenMode = 'replaceAll') => openWorkloadRoute(path, mode, stateRef.current.isHosted),
+    [],
+  );
+  const loadItemDefinition = useCallback(async (fabricItemId: string) => {
+    if (!stateRef.current.isHosted || !fabricItemId) {
+      return null;
+    }
+
+    return readItemDefinition(fabricItemId);
+  }, []);
+  const loadItemMetadata = useCallback(async (fabricItemId: string) => {
+    if (!stateRef.current.isHosted || !fabricItemId) {
+      return null;
+    }
+
+    return readItemMetadata(fabricItemId);
+  }, []);
+  const saveItemDefinition = useCallback(async (fabricItemId: string, definition: string) => {
+    if (!stateRef.current.isHosted || !fabricItemId) {
+      return;
+    }
+
+    await persistItemDefinition(fabricItemId, definition);
+  }, []);
+
   return useMemo(
     () => ({
       apiBaseUrl: import.meta.env.VITE_ORQENTIS_API_BASE_URL ?? '',
-      correlationId: correlationId ?? '',
-      getAccessToken: async () => {
-        const client = getWorkloadClient();
-        if (!client || !state.isHosted) {
-          return '';
-        }
-
-        try {
-          const result = await client.auth.acquireFrontendAccessToken({
-            scopes: getBackendApiScopes(),
-          });
-          return result.token;
-        } catch {
-          return '';
-        }
-      },
-      /** Token scoped to api.fabric.microsoft.com — use for Fabric REST API calls (list lakehouses, tables, etc.). */
-      getFabricApiToken: async () => {
-        const client = getWorkloadClient();
-        if (!client || !state.isHosted) {
-          return '';
-        }
-
-        try {
-          const result = await client.auth.acquireFrontendAccessToken({
-            scopes: ['https://api.fabric.microsoft.com/.default'],
-          });
-          return result.token;
-        } catch {
-          return '';
-        }
-      },
+      correlationId,
+      getAccessToken,
+      getFabricApiToken,
       isHosted: state.isHosted,
       isReady: state.isReady,
-      notifyError: (title: string, message?: string) =>
-        openNotification(title, message, NotificationType.Error),
-      notifyInfo: (title: string, message?: string) =>
-        openNotification(title, message, NotificationType.Info),
-      notifySuccess: (title: string, message?: string) =>
-        openNotification(title, message, NotificationType.Success),
-      /** Open a workload route through Fabric page navigation; returns false outside the Fabric host. */
-      openWorkloadRoute: (path: string, mode: WorkloadOpenMode = 'replaceAll') =>
-        openWorkloadRoute(path, mode, state.isHosted),
-      /** Load item definition using the Fabric objectId from the route param. */
-      loadItemDefinition: async (fabricItemId: string) => {
-        if (!state.isHosted || !fabricItemId) {
-          return null;
-        }
-
-        return readItemDefinition(fabricItemId);
-      },
-      /** Load Fabric item metadata such as display name for item-context restoration. */
-      loadItemMetadata: async (fabricItemId: string) => {
-        if (!state.isHosted || !fabricItemId) {
-          return null;
-        }
-
-        return readItemMetadata(fabricItemId);
-      },
-      /** Persist item definition using the Fabric objectId from the route param. */
-      saveItemDefinition: async (fabricItemId: string, definition: string) => {
-        if (!state.isHosted || !fabricItemId) {
-          return;
-        }
-
-        await persistItemDefinition(fabricItemId, definition);
-      },
+      loadItemDefinition,
+      loadItemMetadata,
+      notifyError,
+      notifyInfo,
+      notifySuccess,
+      openWorkloadRoute: openRoute,
+      saveItemDefinition,
       themeMode: state.themeMode,
-      workspaceId: workspaceIdInStore ?? state.workspaceId,
+      workspaceId: workspaceIdRef.current,
     }),
-    [correlationId, state.isHosted, state.isReady, state.themeMode, state.workspaceId, workspaceIdInStore],
+    [
+      correlationId,
+      getAccessToken,
+      getFabricApiToken,
+      loadItemDefinition,
+      loadItemMetadata,
+      notifyError,
+      notifyInfo,
+      notifySuccess,
+      openRoute,
+      saveItemDefinition,
+      state.isHosted,
+      state.isReady,
+      state.themeMode,
+      workspaceIdInStore,
+      state.workspaceId,
+    ],
   );
 }
 

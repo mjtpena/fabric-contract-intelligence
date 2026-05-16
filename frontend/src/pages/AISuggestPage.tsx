@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  Body1,
+  Badge,
   Breadcrumb,
   BreadcrumbButton,
   BreadcrumbDivider,
@@ -18,6 +18,7 @@ import {
 import { SparkleRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
+import { EmptyState } from '@/components/EmptyState';
 import {
   FabricTargetItemPicker,
   TablePicker,
@@ -41,6 +42,10 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalXS,
   },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
+  },
   grid: {
     display: 'grid',
     gap: tokens.spacingHorizontalL,
@@ -54,6 +59,11 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  resultHeader: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
   },
   editor: {
     height: '28rem',
@@ -77,6 +87,7 @@ export function AISuggestPage() {
   const [targetItemId, setTargetItemId] = useState('');
   const [targetTablePath, setTargetTablePath] = useState('');
   const [description, setDescription] = useState('');
+  const [isHeuristicResult, setIsHeuristicResult] = useState(false);
 
   const tableName = targetTablePath.split('/').at(-1) ?? '';
 
@@ -117,10 +128,15 @@ export function AISuggestPage() {
         sampleRows: [],
       });
       setYaml(response.odcsYaml);
+      setIsHeuristicResult(isFallbackModel(response.modelUsed));
+      console.debug('AI suggestion generated', {
+        latencyMs: response.latencyMs,
+        modelUsed: response.modelUsed,
+      });
       if (!name) {
         setName(tableName || 'Generated Contract');
       }
-      await sdk.notifySuccess('AI suggestion ready', `${response.modelUsed} returned a draft in ${response.latencyMs} ms.`);
+      await sdk.notifySuccess('Suggestion generated', 'Review the draft before saving.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate contract draft.';
       await sdk.notifyError('AI suggestion failed', message);
@@ -177,7 +193,7 @@ export function AISuggestPage() {
 
       <div className={styles.header}>
         <Title2>AI Contract Suggest</Title2>
-        <Body1>Generate an ODCS contract from a Fabric data product, refine in Monaco, then save.</Body1>
+        <Caption1 className={styles.subtitle}>Describe a Fabric target and get a draft contract to refine.</Caption1>
       </div>
 
       <div className={styles.grid}>
@@ -258,21 +274,44 @@ export function AISuggestPage() {
         {loading ? <Spinner size="tiny" /> : null}
       </div>
 
-      {yaml || !targetTablePath ? (
-        <div className={styles.editor}>
-          <MonacoYamlEditor
-            value={yaml || (targetTablePath ? '' : '# Select a Fabric target above, then click Generate draft')}
-            onChange={setYaml}
-            themeMode={sdk.themeMode}
-          />
-        </div>
+      {yaml ? (
+        <>
+          <div className={styles.resultHeader}>
+            <Caption1>Draft ready for review</Caption1>
+            {isHeuristicResult ? <Badge appearance="outline">Heuristic result</Badge> : null}
+          </div>
+          <div className={styles.editor}>
+            <MonacoYamlEditor
+              value={yaml}
+              onChange={setYaml}
+              themeMode={sdk.themeMode}
+            />
+          </div>
+        </>
+      ) : null}
+
+      {!yaml && targetTablePath && !loading ? (
+        <EmptyState
+          description="Generate a draft, then edit the YAML before saving it as a contract."
+          icon={<SparkleRegular />}
+          title="No suggestion yet"
+        />
       ) : null}
 
       {!targetTablePath ? (
-        <Caption1>Select a Fabric target above to enable AI contract generation.</Caption1>
+        <EmptyState
+          description="Choose a Fabric target and object to enable AI contract generation."
+          icon={<SparkleRegular />}
+          title="Select a target first"
+        />
       ) : null}
     </section>
   );
+}
+
+function isFallbackModel(modelUsed: string | null | undefined) {
+  const normalized = modelUsed?.toLowerCase() ?? '';
+  return normalized.includes('heuristic') || normalized.includes('fallback') || normalized.includes('template');
 }
 
 function getDefaultTargetPath(targetType: ContractTargetType) {
@@ -305,3 +344,5 @@ function getTargetPathHint(targetType: ContractTargetType) {
       return 'The ABFSS path is auto-filled when you pick a table.';
   }
 }
+
+export default AISuggestPage;

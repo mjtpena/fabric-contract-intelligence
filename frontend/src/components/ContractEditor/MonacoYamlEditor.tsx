@@ -1,5 +1,5 @@
 import Editor, { loader, type OnMount } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { makeStyles, tokens } from '@fluentui/react-components';
 import { ensureMonacoYamlSetup } from '@/monaco/setup';
 

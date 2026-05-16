@@ -87,7 +87,14 @@ export function initialize(params: InitParams): Promise<void> {
   });
 
   return new Promise<void>((resolve) => {
-    ReactDOM.createRoot(document.getElementById('root')!).render(
+    const root = document.getElementById('root');
+    if (!root) {
+      console.error('[Orqentis] Unable to mount UI: #root was not found.');
+      resolve();
+      return;
+    }
+
+    ReactDOM.createRoot(root).render(
       <React.StrictMode>
         <ErrorBoundary>
           <AppShell />

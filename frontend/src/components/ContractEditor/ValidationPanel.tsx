@@ -19,7 +19,7 @@ import type {
   ContractValidationResult,
   SchemaPreviewField,
 } from '@/models/Contract';
-import { createContractClient } from '@/api/contractClient';
+import { validateContractYaml } from '@/api/contractClient';
 
 interface ValidationPanelProps {
   /** Async callback that fetches live schema fields from the target Fabric table. */
@@ -88,15 +88,10 @@ const schemaColumns = [
   }),
 ];
 
-const fallbackValidator = createContractClient({
-  baseUrl: '',
-  getAccessToken: async () => '',
-}).validate;
-
 export function ValidationPanel({
   getLivePreview,
   onValidationChange,
-  validateYaml = fallbackValidator,
+  validateYaml = validateContractYaml,
   yaml,
 }: ValidationPanelProps) {
   const styles = useStyles();

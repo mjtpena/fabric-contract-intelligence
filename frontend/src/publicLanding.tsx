@@ -7,7 +7,13 @@ import { LandingPage } from './pages/LandingPage';
 import './index.css';
 
 export function bootstrapPublicLanding(): void {
-  ReactDOM.createRoot(document.getElementById('root')!).render(
+  const root = document.getElementById('root');
+  if (!root) {
+    console.error('[Orqentis] Unable to mount public landing: #root was not found.');
+    return;
+  }
+
+  ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <ErrorBoundary>
         <FluentProvider theme={webLightTheme}>

@@ -90,28 +90,28 @@ export function NavShell() {
             }}
           >
             <NavSectionHeader>Contracts</NavSectionHeader>
-            <NavItem icon={<DocumentBulletListRegular />} value="/contracts">
-              Library
+            <NavItem icon={<DocumentBulletListRegular fontSize={20} />} value="/contracts">
+              Contracts
             </NavItem>
-            <NavItem icon={<HistoryRegular />} value="/contracts/runs">
-              Run history
+            <NavItem icon={<HistoryRegular fontSize={20} />} value="/contracts/runs">
+              Runs
             </NavItem>
-            <NavItem icon={<SparkleRegular />} value="/contracts/ai-suggest">
-              AI Generate
-            </NavItem>
-            <NavItem icon={<SearchRegular />} value="/contracts/ai-query">
-              AI Query
-            </NavItem>
-            <NavItem icon={<ShieldCheckmarkRegular />} value="/contracts/policies">
+            <NavItem icon={<ShieldCheckmarkRegular fontSize={20} />} value="/contracts/policies">
               Policies
+            </NavItem>
+            <NavItem icon={<SparkleRegular fontSize={20} />} value="/contracts/ai-suggest">
+              AI Suggest
+            </NavItem>
+            <NavItem icon={<SearchRegular fontSize={20} />} value="/contracts/ai-query">
+              Ask in English
             </NavItem>
             <NavDivider />
             <NavSectionHeader>Monitoring</NavSectionHeader>
-            <NavItem icon={<AlertRegular />} value="/contracts/alerts">
+            <NavItem icon={<AlertRegular fontSize={20} />} value="/contracts/alerts">
               Alerts
             </NavItem>
             <NavDivider />
-            <NavItem icon={<SettingsRegular />} value="/workspace/settings">
+            <NavItem icon={<SettingsRegular fontSize={20} />} value="/workspace/settings">
               Settings
             </NavItem>
           </Nav>

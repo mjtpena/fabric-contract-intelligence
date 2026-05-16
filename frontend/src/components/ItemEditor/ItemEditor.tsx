@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import {
-  Body1,
   Caption1,
   Tooltip,
   Toolbar,
@@ -16,6 +15,7 @@ export interface RibbonAction {
   key: string;
   label: string;
   onClick: () => void | Promise<void>;
+  tooltip?: string;
 }
 
 export interface RibbonToolbar {
@@ -58,6 +58,10 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
     lineHeight: tokens.lineHeightHero800,
   },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
+    marginTop: tokens.spacingVerticalXS,
+  },
   toolbarRow: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -91,7 +95,7 @@ export function ItemEditor({
       <div className={styles.titleRow}>
         <div className={styles.titleBlock}>
           <div className={styles.title}>{title}</div>
-          {subtitle ? <Body1>{subtitle}</Body1> : null}
+          {subtitle ? <Caption1 className={styles.subtitle}>{subtitle}</Caption1> : null}
         </div>
         {statusSlot}
       </div>
@@ -119,7 +123,7 @@ function RibbonToolbarGroup({ actions, label }: RibbonToolbarGroupProps) {
       <Caption1>{label}</Caption1>
       <Toolbar aria-label={label}>
         {actions.map((action) => (
-          <Tooltip key={action.key} content={action.label} relationship="label">
+          <Tooltip key={action.key} content={action.tooltip ?? action.label} relationship="label">
             <ToolbarButton
               appearance={action.appearance === 'primary' ? 'primary' : 'subtle'}
               disabled={action.disabled}
