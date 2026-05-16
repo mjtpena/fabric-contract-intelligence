@@ -18,7 +18,7 @@ jobs:
     name: Production Bicep what-if
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
