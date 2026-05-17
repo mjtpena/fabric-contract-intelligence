@@ -34,6 +34,21 @@ interface FabricItemMetadata {
 /** Resolved once per page lifetime — reset is not needed because the client never changes. */
 let initializationPromise: Promise<FabricSdkRuntime> | null = null;
 
+/**
+ * Process-wide correlation id. Generated exactly once per page load so that every
+ * useFabricSdk() consumer sees the same value. Previously each hook instance kept its
+ * own useState-seeded id and pushed it into the store via effect, which caused two
+ * sibling consumers (AppShell + per-route element in App.tsx) to ping-pong setState
+ * forever and crash with React #185 ("Maximum update depth exceeded").
+ */
+let processCorrelationId: string | null = null;
+function getProcessCorrelationId(): string {
+  if (!processCorrelationId) {
+    processCorrelationId = createCorrelationId();
+  }
+  return processCorrelationId;
+}
+
 const ItemDefinitionPath = 'orqentis/item-definition.json';
 
 export function useFabricSdk() {
@@ -41,7 +56,7 @@ export function useFabricSdk() {
   const setCorrelationId = useAppStore((state) => state.setCorrelationId);
   const workspaceIdInStore = useAppStore((state) => state.workspaceId);
   const setWorkspaceId = useAppStore((state) => state.setWorkspaceId);
-  const [correlationId] = useState(() => correlationIdInStore ?? createCorrelationId());
+  const correlationId = correlationIdInStore ?? getProcessCorrelationId();
   const [state, setState] = useState<FabricSdkState>(() => ({
     isHosted: false,
     isReady: false,
@@ -55,7 +70,7 @@ export function useFabricSdk() {
   workspaceIdRef.current = workspaceIdInStore ?? state.workspaceId;
 
   useEffect(() => {
-    if (correlationIdInStore !== correlationId) {
+    if (!correlationIdInStore) {
       setCorrelationId(correlationId);
     }
   }, [correlationId, correlationIdInStore, setCorrelationId]);
