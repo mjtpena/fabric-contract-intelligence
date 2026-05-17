@@ -19,6 +19,12 @@ function extractWorkspaceId(url: string): string | null {
   }
 }
 
+/** Extract an itemId GUID from the workload route path. */
+function extractItemId(path: string): string | null {
+  const m = path.match(/\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  return m ? m[1] : null;
+}
+
 /**
  * UI iframe initialization — called by bootstrap() when Fabric loads this app
  * in "page" or "panel" mode (the visible user-facing iframe).
@@ -46,6 +52,26 @@ export function initialize(params: InitParams): Promise<void> {
 
   if (initialWorkspaceId) {
     useAppStore.getState().setWorkspaceId(initialWorkspaceId);
+  } else {
+    // Fabric does not pass workspaceId on the iframe URL when opening an item
+    // tab. Resolve it via the SDK using the item id from the bootstrap path
+    // (or the current window pathname). This is the authoritative source.
+    const itemId =
+      extractItemId(params.bootstrapPath ?? '') ??
+      extractItemId(window.location.pathname);
+    if (itemId && client.itemCrud?.getItem) {
+      client.itemCrud
+        .getItem({ itemId })
+        .then((res) => {
+          const wsId = res?.item?.workspaceId;
+          if (wsId) {
+            useAppStore.getState().setWorkspaceId(wsId);
+          }
+        })
+        .catch((err) => {
+          console.error('[Orqentis] itemCrud.getItem failed', err);
+        });
+    }
   }
 
   // If Fabric hinted the initial path via bootstrapPath AND the browser URL is

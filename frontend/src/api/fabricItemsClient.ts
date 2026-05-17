@@ -40,8 +40,11 @@ export async function listWorkspaceLakehouses(
   }
 
   try {
-    const response = await fetch(`${baseUrl}/v1/ops/workspaces/${workspaceId}/fabric-items?type=Lakehouse`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await fetch(`${baseUrl}/v1/fabric/${workspaceId}/lakehouses`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Workspace-Id': workspaceId,
+      },
     });
 
     if (!response.ok) {
@@ -73,9 +76,15 @@ export async function listWorkspaceTargetItems(
   }
 
   try {
-    const response = await fetch(`${baseUrl}/v1/ops/workspaces/${workspaceId}/fabric-items?type=${encodeURIComponent(toFabricItemType(targetType))}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      `${baseUrl}/v1/fabric/${workspaceId}/items?targetType=${encodeURIComponent(targetType)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Workspace-Id': workspaceId,
+        },
+      },
+    );
 
     if (!response.ok) {
       return [];
@@ -109,9 +118,12 @@ export async function listLakehouseTables(
 
   try {
     const response = await fetch(
-      `${baseUrl}/v1/ops/lakehouses/${lakehouseId}/tables?workspaceId=${encodeURIComponent(workspaceId)}`,
+      `${baseUrl}/v1/fabric/${workspaceId}/lakehouses/${lakehouseId}/tables`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Workspace-Id': workspaceId,
+        },
       },
     );
 
@@ -122,22 +134,6 @@ export async function listLakehouseTables(
     return normalizeItems(await response.json()) as FabricLakehouseTable[];
   } catch {
     return [];
-  }
-}
-
-function toFabricItemType(targetType: ContractTargetType) {
-  switch (targetType) {
-    case 'warehouse':
-      return 'Warehouse';
-    case 'eventhouse':
-      return 'KQLDatabase';
-    case 'semantic_model':
-      return 'SemanticModel';
-    case 'fabric_sql':
-      return 'SQLDatabase';
-    case 'lakehouse':
-    default:
-      return 'Lakehouse';
   }
 }
 

@@ -1,0 +1,26 @@
+{
+  "name": "fabric-contract-intelligence",
+  "version": "1.0.0",
+  "description": "> **Contract-bound data for every AI agent on Microsoft Fabric.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjtpena/fabric-contract-intelligence.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mjtpena/fabric-contract-intelligence/issues"
+  },
+  "homepage": "https://github.com/mjtpena/fabric-contract-intelligence#readme",
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

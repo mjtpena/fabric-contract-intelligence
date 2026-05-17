@@ -1,0 +1,8 @@
+<step title="Incoming Request" date="2026-05-10T20:29:39.497" instance="6645f5" url="/api/deployments/latest?deployer=OneDeploy&amp;time=2026-05-10_20-29-39Z" method="GET" type="request" pid="831,1,49" Host="orqentis-production-api.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_94116024aec21f88dfe0a9457a34944ec218c2d7e0ba52e56155d0f4056a2a8c_v3.0.8" Authorization="Bea..." Content-Type="application/json; charset=utf-8" Cookie="ARRAffinity=6645f5231a0c7d02b2123a64d4938116e75489df7df76020ebca451c9cc6940d; ARRAffinitySameSite=6645f5231a0c7d02b2123a64d4938116e75489df7df76020ebca451c9cc6940d" Content-Length="0" X-ARR-LOG-ID="b7750dff-f52d-42a4-9dc0-fe2a7d45c926" CLIENT-IP="57.151.129.40:38984" X-SITE-DEPLOYMENT-ID="orqentis-production-api" WAS-DEFAULT-HOSTNAME="orqentis-production-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/latest?deployer=OneDeploy&amp;time=2026-05-10_20-29-39Z" X-Client-IP="57.151.129.40" X-Client-Port="38984" >
+  <step title="DeploymentService.GetResult" date="2026-05-10T20:29:39.506" >
+    <step title="DeploymentService.GetLatestDeployment" date="2026-05-10T20:29:39.509" >
+      <step title="DeploymentManager.GetResults" date="2026-05-10T20:29:39.514" /><!-- duration: 518ms -->
+    </step><!-- duration: 528ms -->
+  </step><!-- duration: 536ms -->
+  <step title="Outgoing response" date="2026-05-10T20:29:40.048" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 4ms -->
+</step><!-- duration: 559ms -->

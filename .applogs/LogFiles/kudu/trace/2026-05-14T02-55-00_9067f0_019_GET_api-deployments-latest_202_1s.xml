@@ -1,0 +1,8 @@
+<step title="Incoming Request" date="2026-05-14T02:55:00.813" instance="9067f0" url="/api/deployments/latest" method="GET" type="request" pid="831,1,18" Accept="*/*" Host="orqentis-production-api.scm.azurewebsites.net" User-Agent="AZURECLI/2.83.0 (MSI)" Accept-Encoding="gzip, deflate" Authorization="Bas..." x-ms-client-request-id="4728402b-4f40-11f1-ab47-e0d55d03d954" X-ARR-LOG-ID="4728402b-4f40-11f1-ab47-e0d55d03d954" CLIENT-IP="144.6.38.19:55074" X-SITE-DEPLOYMENT-ID="orqentis-production-api" WAS-DEFAULT-HOSTNAME="orqentis-production-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/latest" X-Client-IP="144.6.38.19" X-Client-Port="55074" >
+  <step title="DeploymentService.GetResult" date="2026-05-14T02:55:00.820" >
+    <step title="DeploymentService.GetLatestDeployment" date="2026-05-14T02:55:00.822" >
+      <step title="DeploymentManager.GetResults" date="2026-05-14T02:55:00.826" /><!-- duration: 582ms -->
+    </step><!-- duration: 589ms -->
+  </step><!-- duration: 595ms -->
+  <step title="Outgoing response" date="2026-05-14T02:55:01.418" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 3ms -->
+</step><!-- duration: 612ms -->

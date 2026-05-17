@@ -1,0 +1,13 @@
+<step title="Incoming Request" date="2026-05-12T03:34:17.199" instance="9067f0" url="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%2271c9fbee4eac6e6e6dc81db0e026a0d989d09a78%22%2C%22repoName%22%3A%22mjtpena%2Ffabric-contract-intelligence%22%2C%22actor%22%3A%22mjtpena%22%2C%22slotName%22%3A%22production%22%2C%22commitMessage%22%3A%22%22%7D" method="POST" type="request" pid="832,1,85" Host="orqentis-production-api.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_94116024aec21f88dfe0a9457a34944ec218c2d7e0ba52e56155d0f4056a2a8c_v3.0.8" Authorization="Bea..." Content-Type="application/octet-stream" Cookie="ARRAffinity=9067f05c289e204889e0e56780bf0250395169247054f56a8c9aad734c34d345; ARRAffinitySameSite=9067f05c289e204889e0e56780bf0250395169247054f56a8c9aad734c34d345" Transfer-Encoding="chunked" X-ARR-LOG-ID="01c7cf87-f223-4ac6-818b-75cdd19e79d5" CLIENT-IP="52.159.227.196:56260" X-SITE-DEPLOYMENT-ID="orqentis-production-api" WAS-DEFAULT-HOSTNAME="orqentis-production-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%2271c9fbee4eac6e6e6dc81db0e026a0d989d09a78%22%2C%22repoName%22%3A%22mjtpena%2Ffabric-contract-intelligence%22%2C%22actor%22%3A%22mjtpena%22%2C%22slotName%22%3A%22production%22%2C%22commitMessage%22%3A%22%22%7D" X-Client-IP="52.159.227.196" X-Client-Port="56260" >
+  <step title="OneDeploy" date="2026-05-12T03:34:17.207" >
+    <step title="Starting PushDeployAsync" date="2026-05-12T03:34:17.213" /><!-- duration: 4ms -->
+    <step title="Writing artifact to /tmp/zipdeploy/28f38677-8a1d-4ea6-941e-03008f95e9fe.zip" date="2026-05-12T03:34:17.225" >
+      <step title="Writing multipart request body to /tmp/zipdeploy/28f38677-8a1d-4ea6-941e-03008f95e9fe.zip" date="2026-05-12T03:34:17.229" /><!-- duration: 3ms -->
+    </step><!-- duration: 1072ms -->
+    <step title="Start deployment in the background" date="2026-05-12T03:34:18.309" >
+      <step title="Acquiring Deployment Lock" date="2026-05-12T03:34:18.318" /><!-- duration: 3ms -->
+      <step title="Acquired Deployment Lock" date="2026-05-12T03:34:18.357" /><!-- duration: 3ms -->
+    </step><!-- duration: 121ms -->
+  </step><!-- duration: 1226ms -->
+  <step title="Outgoing response" date="2026-05-12T03:34:18.437" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 3ms -->
+</step><!-- duration: 1245ms -->

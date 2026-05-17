@@ -54,7 +54,7 @@ export function createOpsClient(options: OpsClientOptions): OpsClient {
   }
 
   return {
-    listWorkspaces: () => request<WorkspaceSummary[]>('/v1/ops/workspaces'),
+    listWorkspaces: () => request<WorkspaceSummary[]>('/v1/workspaces'),
     listFederatedContracts: (cursor) =>
       request<FederatedContractsResponse>(`/v1/federation/contracts${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
     listActivatorRules: () => request<ActivatorRule[]>('/v1/activator/rules'),

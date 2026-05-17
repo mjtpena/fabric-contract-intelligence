@@ -1,0 +1,16 @@
+<step title="Incoming Request" date="2026-05-16T10:50:17.417" instance="1fcf4b" url="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%22f0941178e91ff6c9442887176c6d75b4cda7433f%22%2C%22repoName%22%3A%22mjtpena%2Ffabric-contract-intelligence%22%2C%22actor%22%3A%22mjtpena%22%2C%22slotName%22%3A%22production%22%2C%22commitMessage%22%3A%22%22%7D" method="POST" type="request" pid="831,1,14" Host="orqentis-production-api.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_94116024aec21f88dfe0a9457a34944ec218c2d7e0ba52e56155d0f4056a2a8c_v3.0.8" Authorization="Bea..." Content-Type="application/octet-stream" Cookie="ARRAffinity=1fcf4b7705946512b26bfdfb44a7a396cb616878ab673e929cb3be5d6f2bdfd5; ARRAffinitySameSite=1fcf4b7705946512b26bfdfb44a7a396cb616878ab673e929cb3be5d6f2bdfd5" Transfer-Encoding="chunked" X-ARR-LOG-ID="f5a83619-bf00-48f0-a4a4-bacd54f72325" CLIENT-IP="172.214.47.41:23618" X-SITE-DEPLOYMENT-ID="orqentis-production-api" WAS-DEFAULT-HOSTNAME="orqentis-production-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%22f0941178e91ff6c9442887176c6d75b4cda7433f%22%2C%22repoName%22%3A%22mjtpena%2Ffabric-contract-intelligence%22%2C%22actor%22%3A%22mjtpena%22%2C%22slotName%22%3A%22production%22%2C%22commitMessage%22%3A%22%22%7D" X-Client-IP="172.214.47.41" X-Client-Port="23618" >
+  <step title="OneDeploy" date="2026-05-16T10:50:17.449" >
+    <step title="None repository commit" date="2026-05-16T10:50:17.459" >
+      <step title="Commit id: b7e56b54-a971-4468-b988-9255e3c49126" date="2026-05-16T10:50:17.463" Message="N/A" AuthorName="N/A" AuthorEmail="N/A" /><!-- duration: 3ms -->
+    </step><!-- duration: 13ms -->
+    <step title="Starting PushDeployAsync" date="2026-05-16T10:50:17.475" /><!-- duration: 3ms -->
+    <step title="Writing artifact to /tmp/zipdeploy/d2a3afbd-f10b-4876-b9ae-0b5a63e5113b.zip" date="2026-05-16T10:50:17.490" >
+      <step title="Writing multipart request body to /tmp/zipdeploy/d2a3afbd-f10b-4876-b9ae-0b5a63e5113b.zip" date="2026-05-16T10:50:17.494" /><!-- duration: 3ms -->
+    </step><!-- duration: 1649ms -->
+    <step title="Start deployment in the background" date="2026-05-16T10:50:19.152" >
+      <step title="Acquiring Deployment Lock" date="2026-05-16T10:50:19.162" /><!-- duration: 3ms -->
+      <step title="Acquired Deployment Lock" date="2026-05-16T10:50:19.202" /><!-- duration: 3ms -->
+    </step><!-- duration: 115ms -->
+  </step><!-- duration: 1824ms -->
+  <step title="Outgoing response" date="2026-05-16T10:50:19.280" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 4ms -->
+</step><!-- duration: 1870ms -->

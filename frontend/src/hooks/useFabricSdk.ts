@@ -120,7 +120,12 @@ export function useFabricSdk() {
         scopes: getBackendApiScopes(),
       });
       return result.token;
-    } catch {
+    } catch (err) {
+      // Surface the failure so a 401 on the backend isn't a silent mystery.
+      // Common causes: scope not exposed, Fabric host app not pre-authorized
+      // on the API app registration, or admin consent missing.
+      // eslint-disable-next-line no-console
+      console.error('[Orqentis] acquireFrontendAccessToken (backend scope) failed:', err);
       return '';
     }
   }, []);
@@ -136,7 +141,9 @@ export function useFabricSdk() {
         scopes: ['https://api.fabric.microsoft.com/.default'],
       });
       return result.token;
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[Orqentis] acquireFrontendAccessToken (Fabric API) failed:', err);
       return '';
     }
   }, []);
