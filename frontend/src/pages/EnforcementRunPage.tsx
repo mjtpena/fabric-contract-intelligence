@@ -21,6 +21,7 @@ import {
   Tab,
   TabList,
   Title2,
+  Title3,
   Tooltip,
   createTableColumn,
   makeStyles,
@@ -55,8 +56,11 @@ const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
+    gap: tokens.spacingVerticalM,
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
+    height: '100%',
+    boxSizing: 'border-box',
+    overflow: 'auto',
   },
   header: {
     display: 'flex',
@@ -833,7 +837,7 @@ function ReportItemDashboard({
     <>
       <div className={styles.header}>
         <div>
-          <Title2>Contract reports</Title2>
+          <Title3 as="h2">Contract reports</Title3>
           <Caption1 className={styles.subtitle}>Open saved enforcement reports and investigate breached contracts.</Caption1>
         </div>
       </div>

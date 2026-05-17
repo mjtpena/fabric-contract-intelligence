@@ -1,4 +1,4 @@
-import { Combobox, Field, Link, MessageBar, MessageBarBody, Option, Spinner } from '@fluentui/react-components';
+import { Combobox, Field, Link, MessageBar, MessageBarBody, Option, Spinner, tokens } from '@fluentui/react-components';
 import { useFabricTargetItems, useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 import type { ContractTargetType } from '@/models/Contract';
 import { contractTargetTypeOptions, getContractTargetTypeLabel } from '@/models/ContractTarget';
@@ -78,8 +78,8 @@ export function FabricTargetItemPicker({
       >
         {items.map((item) => (
           <Option key={item.id} text={item.displayName} value={item.id}>
-            <span style={{ fontWeight: 600 }}>{item.displayName}</span>
-            <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.6 }}>{item.type}</span>
+            <span style={{ fontWeight: tokens.fontWeightSemibold }}>{item.displayName}</span>
+            <span style={{ marginLeft: tokens.spacingHorizontalS, fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>{item.type}</span>
           </Option>
         ))}
       </Combobox>
@@ -175,9 +175,9 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
         >
           {tables.map((table) => (
             <Option key={table.name} text={table.name} value={table.location || table.name}>
-              <span style={{ fontWeight: 600 }}>{table.name}</span>
+              <span style={{ fontWeight: tokens.fontWeightSemibold }}>{table.name}</span>
               {table.type ? (
-                <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.6 }}>{table.type}</span>
+                <span style={{ marginLeft: tokens.spacingHorizontalS, fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>{table.type}</span>
               ) : null}
             </Option>
           ))}

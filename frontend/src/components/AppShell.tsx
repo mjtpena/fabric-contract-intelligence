@@ -29,8 +29,8 @@ const useStyles = makeStyles({
   hostedRoot: {
     height: '100%',
     width: '100%',
-    backgroundColor: tokens.colorNeutralBackground1,
-    overflow: 'auto',
+    backgroundColor: tokens.colorNeutralBackground2,
+    overflow: 'hidden',
   },
 });
 

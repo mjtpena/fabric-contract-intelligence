@@ -8,7 +8,6 @@ interface CreateSaveActionOptions {
 
 export function createSaveAction(options: CreateSaveActionOptions): RibbonAction {
   return {
-    appearance: 'primary',
     disabled: options.disabled,
     icon: <SaveRegular />,
     key: 'save',

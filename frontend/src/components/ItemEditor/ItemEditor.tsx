@@ -4,6 +4,8 @@ import {
   Tooltip,
   Toolbar,
   ToolbarButton,
+  ToolbarDivider,
+  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -57,12 +59,13 @@ const useStyles = makeStyles({
     flex: 1,
   },
   title: {
-    fontSize: tokens.fontSizeBase600,
+    fontSize: tokens.fontSizeBase500,
     fontWeight: tokens.fontWeightSemibold,
-    lineHeight: tokens.lineHeightBase600,
+    lineHeight: tokens.lineHeightBase500,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    margin: 0,
   },
   subtitle: {
     color: tokens.colorNeutralForeground3,
@@ -79,12 +82,6 @@ const useStyles = makeStyles({
     flexWrap: 'wrap',
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     paddingBottom: tokens.spacingVerticalS,
-  },
-  toolbarDivider: {
-    width: '1px',
-    alignSelf: 'stretch',
-    backgroundColor: tokens.colorNeutralStroke2,
-    margin: `0 ${tokens.spacingHorizontalXS}`,
   },
   content: {
     minHeight: 0,
@@ -107,7 +104,7 @@ export function ItemEditor({
     <section className={styles.root}>
       <div className={styles.titleRow}>
         <div className={styles.titleBlock}>
-          <div className={styles.title} title={title}>{title}</div>
+          <Title3 as="h2" className={styles.title} title={title}>{title}</Title3>
           {subtitle ? (
             <Caption1 className={styles.subtitle} title={subtitle}>
               {subtitle}
@@ -135,8 +132,8 @@ export function ItemEditor({
         </Toolbar>
         {additionalToolbars?.map((toolbar) =>
           toolbar.actions.length > 0 ? (
-            <span key={toolbar.key} style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
-              <span className={styles.toolbarDivider} />
+            <span key={toolbar.key} style={{ display: 'flex', alignItems: 'center' }}>
+              <ToolbarDivider />
               <Toolbar aria-label={toolbar.label}>
                 {toolbar.actions.map((action) => (
                   <Tooltip key={action.key} content={action.tooltip ?? action.label} relationship="label">

@@ -10,7 +10,7 @@ import {
   Tab,
   TabList,
   Text,
-  Title2,
+  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -32,12 +32,18 @@ const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
+    gap: tokens.spacingVerticalM,
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
+    height: '100%',
+    boxSizing: 'border-box',
+    overflow: 'auto',
   },
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
+    paddingTop: tokens.spacingVerticalM,
+    marginTop: tokens.spacingVerticalM,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   subtitle: {
     display: 'block',
@@ -206,7 +212,7 @@ export function PolicyEditorPage() {
 
   return (
     <section className={styles.root}>
-      <Title2>Policy editor</Title2>
+      <Title3 as="h2">Policy editor</Title3>
       <Caption1 className={styles.subtitle}>Schedule enforcement, choose alerts, and route breaches without leaving Fabric.</Caption1>
 
       <TabList selectedValue={step} onTabSelect={(_, data) => {

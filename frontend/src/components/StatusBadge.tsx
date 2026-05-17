@@ -10,7 +10,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <Badge
-      appearance="filled"
+      appearance="tint"
       color={getStatusColor(normalizedStatus)}
       shape="rounded"
       size="medium"
