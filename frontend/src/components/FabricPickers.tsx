@@ -191,9 +191,9 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
 
 function PickerWarning({ onRetry }: { onRetry: () => void }) {
   return (
-    <MessageBar intent="warning" layout="multiline">
+    <MessageBar intent="info" layout="multiline">
       <MessageBarBody>
-        Couldn't load items. <Link onClick={onRetry}>Retry</Link>
+        No items available in this workspace (or you don't have permission to list them). Paste the OneLake path manually below, or <Link onClick={onRetry}>retry</Link>.
       </MessageBarBody>
     </MessageBar>
   );

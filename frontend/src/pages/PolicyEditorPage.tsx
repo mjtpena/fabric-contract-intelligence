@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Body1,
-  Breadcrumb,
-  BreadcrumbButton,
-  BreadcrumbDivider,
-  BreadcrumbItem,
   Button,
   Caption1,
   Card,
@@ -45,6 +40,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
   },
   subtitle: {
+    display: 'block',
     color: tokens.colorNeutralForeground3,
     marginTop: tokens.spacingVerticalXS,
   },
@@ -210,20 +206,8 @@ export function PolicyEditorPage() {
 
   return (
     <section className={styles.root}>
-      <Breadcrumb>
-        <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Library</BreadcrumbButton>
-        </BreadcrumbItem>
-        <BreadcrumbDivider />
-        <BreadcrumbItem>
-          <BreadcrumbButton current>Policies</BreadcrumbButton>
-        </BreadcrumbItem>
-      </Breadcrumb>
-
-      <Title2>Policy editor wizard</Title2>
+      <Title2>Policy editor</Title2>
       <Caption1 className={styles.subtitle}>Schedule enforcement, choose alerts, and route breaches without leaving Fabric.</Caption1>
-
-      <Body1 aria-current="step">Step {step + 1} of 4 · {stepLabels[step]}</Body1>
 
       <TabList selectedValue={step} onTabSelect={(_, data) => {
         const nextStep = Number(data.value);

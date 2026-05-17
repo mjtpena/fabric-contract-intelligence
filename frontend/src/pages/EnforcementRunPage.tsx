@@ -76,6 +76,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXS,
   },
   subtitle: {
+    display: 'block',
     color: tokens.colorNeutralForeground3,
     marginTop: tokens.spacingVerticalXS,
   },
