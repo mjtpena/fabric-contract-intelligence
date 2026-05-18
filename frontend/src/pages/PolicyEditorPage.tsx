@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Body1,
   Body1Strong,
-  Button,
   Card,
   Checkbox,
   Dropdown,
@@ -353,30 +352,6 @@ export function PolicyEditorPage() {
         </Card>
       ) : null}
 
-      <div className={styles.actions}>
-        {step > 0 ? (
-          <Button appearance="secondary" onClick={() => setStep((current) => Math.max(current - 1, 0))}>
-            Previous
-          </Button>
-        ) : null}
-        {step < 3 ? (
-          <Button appearance="primary" onClick={goNext}>
-            Next
-          </Button>
-        ) : (
-          <Button appearance="primary" disabled={!canSave || isSaving} onClick={() => { void savePolicy(); }}>
-            {isSaving ? 'Saving…' : 'Save policy'}
-          </Button>
-        )}
-        <Button
-          appearance="secondary"
-          onClick={() => {
-            void openWorkloadRoute(contractId ? `/contracts/${contractId}/edit` : '/contracts');
-          }}
-        >
-          Cancel
-        </Button>
-      </div>
       </div>
     </ItemEditor>
   );

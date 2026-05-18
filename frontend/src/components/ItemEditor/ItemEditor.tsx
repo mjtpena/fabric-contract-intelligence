@@ -7,6 +7,7 @@ import {
   ToolbarDivider,
   Title3,
   makeStyles,
+  mergeClasses,
   tokens,
 } from '@fluentui/react-components';
 
@@ -69,8 +70,10 @@ const useStyles = makeStyles({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    fontFamily: tokens.fontFamilyMonospace,
     fontSize: tokens.fontSizeBase200,
+  },
+  subtitlePath: {
+    fontFamily: tokens.fontFamilyMonospace,
   },
   toolbarRow: {
     display: 'flex',
@@ -107,7 +110,10 @@ export function ItemEditor({
         <div className={styles.titleBlock}>
           <Title3 as="h2" className={styles.title} title={title}>{title}</Title3>
           {subtitle ? (
-            <Caption1 className={styles.subtitle} title={subtitle}>
+            <Caption1
+              className={mergeClasses(styles.subtitle, isPathLike(subtitle) && styles.subtitlePath)}
+              title={subtitle}
+            >
               {subtitle}
             </Caption1>
           ) : null}
@@ -158,4 +164,8 @@ export function ItemEditor({
       <div className={styles.content}>{children}</div>
     </section>
   );
+}
+
+function isPathLike(value: string): boolean {
+  return /^(abfss|fabric|https?|s3|gs|onelake):\/\//i.test(value) || /\/.+\//.test(value);
 }

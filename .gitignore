@@ -89,3 +89,5 @@ publish/
 test-results/
 
 *.csproj.lscache
+
+frontend/snap/

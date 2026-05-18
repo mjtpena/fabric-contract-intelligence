@@ -87,6 +87,9 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
     lineHeight: tokens.lineHeightHero700,
   },
+  inlineBadge: {
+    alignSelf: 'flex-start',
+  },
   rawKeyBox: {
     fontFamily: tokens.fontFamilyMonospace,
     fontSize: tokens.fontSizeBase200,
@@ -262,7 +265,7 @@ export function WorkspaceSettingsPage() {
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Machine-to-machine API key</Caption1>
-              <div className={styles.value}>{keys?.length ?? '—'} active</div>
+              <div className={styles.value}>{keys == null ? 'Loading…' : `${keys.length} active`}</div>
             </div>
             <Key20Regular />
           </div>
@@ -296,7 +299,7 @@ export function WorkspaceSettingsPage() {
             </div>
             <PlugDisconnected20Regular />
           </div>
-          <Badge appearance="tint" color="warning" shape="rounded">
+          <Badge appearance="tint" color="warning" shape="rounded" className={styles.inlineBadge}>
             Not connected
           </Badge>
           <Body1>

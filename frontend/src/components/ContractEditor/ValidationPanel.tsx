@@ -58,6 +58,11 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
   },
+  sectionTitleGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
+  },
   liveTag: {
     color: tokens.colorBrandForeground1,
     fontWeight: tokens.fontWeightSemibold,
@@ -165,8 +170,8 @@ export function ValidationPanel({
   return (
     <aside className={styles.root}>
       <div className={styles.sectionHeader}>
-        <div>
-          <Subtitle2>Validation panel</Subtitle2>
+        <div className={styles.sectionTitleGroup}>
+          <Subtitle2 as="h3">Validation panel</Subtitle2>
           <Caption1>{issueSummary}</Caption1>
         </div>
         <Button
@@ -201,7 +206,7 @@ export function ValidationPanel({
       </section>
 
       <section>
-        <Subtitle2>{schemaLabel}</Subtitle2>
+        <Subtitle2 as="h3">{schemaLabel}</Subtitle2>
         <DataGrid items={displayedSchema} columns={schemaColumns}>
           <DataGridHeader>
             <DataGridRow>

@@ -802,7 +802,7 @@ function ReportItemDashboard({
 
   return (
     <>
-      {auditError ? <Body1>{auditError}</Body1> : null}
+      {auditError ? <ErrorBanner message={auditError} /> : null}
 
       {auditLoading ? (
         <Spinner label="Loading contract reports…" />
