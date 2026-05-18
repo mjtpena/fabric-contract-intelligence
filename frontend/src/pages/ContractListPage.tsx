@@ -496,29 +496,34 @@ export function ContractListPage() {
 
       <div className={styles.surface}>
         {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
-        {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
-        {!error && !loading && !federatedLoading && displayedContracts.length === 0 ? (
+        {!loading && !federatedLoading && displayedContracts.length === 0 ? (
           sdk.isReady ? (
-            <WelcomeHero
-              onStartFromTable={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}
-              onOpenAiSuggest={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}
-              onOpenTemplates={() => setTemplatesOpen(true)}
-            />
+            <>
+              <WelcomeHero
+                onStartFromTable={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}
+                onOpenAiSuggest={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}
+                onOpenTemplates={() => setTemplatesOpen(true)}
+              />
+              {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
+            </>
           ) : (
-            <EmptyState
-              actionIcon={<AddRegular />}
-              actionLabel="Create your first contract"
-              description="A data contract is your promise about what a table contains. Orqentis runs it on every change so dashboards and AI don’t go wrong."
-              hint="Takes about 2 minutes to set up."
-              icon={<DocumentBulletListRegular />}
-              title="No contracts yet — let’s make one"
-              tone="brand"
-              onAction={() => {
-                void openWorkloadRoute('/contracts/editor');
-              }}
-            />
+            <>
+              <EmptyState
+                actionIcon={<AddRegular />}
+                actionLabel="Create your first contract"
+                description="A data contract is your promise about what a table contains. Orqentis runs it on every change so dashboards and AI don’t go wrong."
+                hint="Takes about 2 minutes to set up."
+                icon={<DocumentBulletListRegular />}
+                title="No contracts yet — let’s make one"
+                tone="brand"
+                onAction={() => {
+                  void openWorkloadRoute('/contracts/editor');
+                }}
+              />
+              {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
+            </>
           )
-        ) : null}
+        ) : error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
 
         <TemplateDialog
           open={templatesOpen}

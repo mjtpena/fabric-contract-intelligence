@@ -174,21 +174,26 @@ export function AlertsDashboardPage() {
 
       {loading ? (
         <Spinner label="Loading alerts…" />
-      ) : error ? (
-        <MessageBar intent="error">
-          <MessageBarBody>{error}</MessageBarBody>
-          <MessageBarActions>
-            <Button appearance="secondary" size="small" onClick={loadAlerts}>
-              Retry
-            </Button>
-          </MessageBarActions>
-        </MessageBar>
       ) : filtered.length === 0 ? (
-        <EmptyState
-          description="Adjust the filter or run a contract to create alert history."
-          icon={<AlertOffRegular />}
-          title="No alerts matched"
-        />
+        <>
+          <EmptyState
+            description="When a contract breaches a quality, schema, or freshness rule, you’ll see it here with a one-click jump straight to the failing run. No alerts yet — that’s a good thing."
+            hint="Tip: open a contract and click ‘Run now’ to generate sample alert history."
+            icon={<AlertOffRegular />}
+            title="All clear — no alerts to triage"
+            tone="success"
+          />
+          {error ? (
+            <MessageBar intent="error">
+              <MessageBarBody>{error}</MessageBarBody>
+              <MessageBarActions>
+                <Button appearance="secondary" size="small" onClick={loadAlerts}>
+                  Retry
+                </Button>
+              </MessageBarActions>
+            </MessageBar>
+          ) : null}
+        </>
       ) : (
         <DataGrid items={filtered} columns={columns}>
           <DataGridHeader>

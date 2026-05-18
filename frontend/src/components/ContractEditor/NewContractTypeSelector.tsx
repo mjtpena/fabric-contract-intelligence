@@ -2,9 +2,8 @@ import { useState } from 'react';
 import {
   Body1,
   Button,
-  Caption1,
-  Radio,
   RadioGroup,
+  Radio,
   Subtitle2,
   makeStyles,
   tokens,
@@ -35,17 +34,33 @@ const TYPE_DESCRIPTIONS: Record<ContractTargetType, string> = {
   fabric_sql: 'Tables and views in a Fabric SQL database',
 };
 
+const TYPE_LABELS: Record<ContractTargetType, string> = {
+  lakehouse: 'Lakehouse',
+  warehouse: 'Warehouse',
+  eventhouse: 'Eventhouse',
+  semantic_model: 'Semantic model',
+  fabric_sql: 'SQL database',
+};
+
+const TYPE_TONES: Record<ContractTargetType, { fg: string; bg: string }> = {
+  lakehouse: { fg: tokens.colorBrandForeground1, bg: tokens.colorBrandBackground2 },
+  warehouse: { fg: tokens.colorPaletteCornflowerForeground2, bg: tokens.colorPaletteCornflowerBackground2 },
+  eventhouse: { fg: tokens.colorPalettePeachForeground2, bg: tokens.colorPalettePeachBackground2 },
+  semantic_model: { fg: tokens.colorPaletteGrapeForeground2, bg: tokens.colorPaletteGrapeBackground2 },
+  fabric_sql: { fg: tokens.colorPaletteTealForeground2, bg: tokens.colorPaletteTealBackground2 },
+};
+
 const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
     alignItems: 'flex-start',
-    maxWidth: '45rem',
+    maxWidth: '64rem',
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(13rem, 1fr))',
     gap: tokens.spacingHorizontalM,
     width: '100%',
   },
@@ -53,36 +68,54 @@ const useStyles = makeStyles({
     margin: 0,
   },
   tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: tokens.spacingVerticalXS,
+    position: 'relative',
+    display: 'grid',
+    gridTemplateColumns: '3.5rem 1fr',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
     padding: tokens.spacingHorizontalL,
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: tokens.borderRadiusLarge,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
     cursor: 'pointer',
-    minHeight: '7.5rem',
+    minHeight: '5.5rem',
+    transitionDuration: tokens.durationFast,
+    transitionProperty: 'border-color, box-shadow, transform',
     ':hover': {
-      backgroundColor: tokens.colorNeutralBackground1Hover,
+      border: `1px solid ${tokens.colorBrandStroke1}`,
+      boxShadow: tokens.shadow4,
+      transform: 'translateY(-1px)',
     },
   },
   tileSelected: {
-    border: `1px solid ${tokens.colorBrandStroke1}`,
-    backgroundColor: tokens.colorBrandBackground2,
-    ':hover': {
-      backgroundColor: tokens.colorBrandBackground2Hover,
-    },
+    border: `2px solid ${tokens.colorBrandStroke1}`,
+    boxShadow: tokens.shadow8,
   },
-  tileIcon: {
-    color: tokens.colorBrandForeground1,
-    marginBottom: tokens.spacingVerticalXXS,
+  tileIconWrap: {
+    width: '3.5rem',
+    height: '3.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: tokens.borderRadiusLarge,
+    fontSize: '1.75rem',
+  },
+  tileBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    minWidth: 0,
   },
   tileLabel: {
     fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+    fontSize: tokens.fontSizeBase300,
+    lineHeight: 1.2,
   },
   tileCaption: {
     color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+    lineHeight: 1.35,
   },
   intro: {
     display: 'flex',
@@ -118,22 +151,32 @@ export function NewContractTypeSelector({ onConfirm, onCancel }: NewContractType
         value={selected}
         onChange={(_, data) => setSelected(data.value as ContractTargetType)}
       >
-        {contractTargetTypeOptions.map((option) => (
-          <Radio
-            key={option.value}
-            className={styles.radio}
-            value={option.value}
-            label={(
-              <span className={`${styles.tile} ${selected === option.value ? styles.tileSelected : ''}`}>
-                <span className={styles.tileIcon}>{TYPE_ICONS[option.value]}</span>
-                <Caption1 className={styles.tileLabel}>{option.label}</Caption1>
-                <Caption1 className={styles.tileCaption}>
-                  {TYPE_DESCRIPTIONS[option.value]}
-                </Caption1>
-              </span>
-            )}
-          />
-        ))}
+        {contractTargetTypeOptions.map((option) => {
+          const tone = TYPE_TONES[option.value];
+          return (
+            <Radio
+              key={option.value}
+              className={styles.radio}
+              value={option.value}
+              label={(
+                <span className={`${styles.tile} ${selected === option.value ? styles.tileSelected : ''}`}>
+                  <span
+                    className={styles.tileIconWrap}
+                    style={{ backgroundColor: tone.bg, color: tone.fg }}
+                  >
+                    {TYPE_ICONS[option.value]}
+                  </span>
+                  <span className={styles.tileBody}>
+                    <span className={styles.tileLabel}>{TYPE_LABELS[option.value]}</span>
+                    <span className={styles.tileCaption}>
+                      {TYPE_DESCRIPTIONS[option.value]}
+                    </span>
+                  </span>
+                </span>
+              )}
+            />
+          );
+        })}
       </RadioGroup>
 
       <div className={styles.actions}>

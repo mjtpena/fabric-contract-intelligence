@@ -25,7 +25,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { ArrowClockwiseRegular, ArrowDownloadRegular, ArrowLeftRegular, CopyRegular, LinkRegular, PlayRegular } from '@fluentui/react-icons';
+import { ArrowClockwiseRegular, ArrowDownloadRegular, ArrowLeftRegular, CopyRegular, DocumentBulletListRegular, LinkRegular, PlayRegular } from '@fluentui/react-icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
@@ -808,30 +808,37 @@ function ReportItemDashboard({
 
   return (
     <>
-      {auditError ? <ErrorBanner message={auditError} onRetry={onRetry} /> : null}
-
       {auditLoading ? (
         <Spinner label="Loading contract reports…" />
-      ) : !auditError && rows.length === 0 ? (
-        <EmptyState
-          description="No enforcement reports have been recorded for this workspace yet."
-          title="No reports yet"
-        />
+      ) : rows.length === 0 ? (
+        <>
+          <EmptyState
+            description="Every time Orqentis runs a contract you'll see the result here — pass or fail, breach score, and a one-click jump to drill into the failing rows. Run a contract from the library to see your first report."
+            hint="Reports are kept for 90 days. Export them as CSV for audits."
+            icon={<DocumentBulletListRegular />}
+            title="No reports yet — run a contract to populate this"
+            tone="brand"
+          />
+          {auditError ? <ErrorBanner message={auditError} onRetry={onRetry} /> : null}
+        </>
       ) : rows.length > 0 ? (
-        <DataGrid items={rows} columns={columns}>
-          <DataGridHeader>
-            <DataGridRow>
-              {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
-            </DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<ReportAuditRow>>
-            {({ item, rowId }) => (
-              <DataGridRow<ReportAuditRow> key={rowId}>
-                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+        <>
+          {auditError ? <ErrorBanner message={auditError} onRetry={onRetry} /> : null}
+          <DataGrid items={rows} columns={columns}>
+            <DataGridHeader>
+              <DataGridRow>
+                {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
               </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
+            </DataGridHeader>
+            <DataGridBody<ReportAuditRow>>
+              {({ item, rowId }) => (
+                <DataGridRow<ReportAuditRow> key={rowId}>
+                  {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                </DataGridRow>
+              )}
+            </DataGridBody>
+          </DataGrid>
+        </>
       ) : null}
     </>
   );
