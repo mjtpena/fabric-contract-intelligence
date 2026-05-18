@@ -3,14 +3,12 @@ import {
   Badge,
   Body1,
   Button,
-  Card,
   Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
   DialogSurface,
   DialogTitle,
-  DialogTrigger,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -23,8 +21,6 @@ import {
   Option,
   SearchBox,
   Spinner,
-  Subtitle2,
-  Subtitle2Stronger,
   createTableColumn,
   makeStyles,
   tokens,
@@ -42,6 +38,7 @@ import { FabricLink } from '@/components/FabricLink';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VisuallyHidden } from '@/components/VisuallyHidden';
+import { WelcomeHero } from '@/components/WelcomeHero';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import { aiDescriptionTemplates } from '@/lib/aiTemplates';
@@ -173,6 +170,7 @@ export function ContractListPage() {
 
   const { contracts, error, loading, refresh, runNow } = useContracts(client);
   const [workspaceScope, setWorkspaceScope] = useState<'current' | 'linked'>('current');
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [tier, setTier] = useState<string>('community');
   const [federatedContracts, setFederatedContracts] = useState<ContractSummary[]>([]);
   const [federatedLoading, setFederatedLoading] = useState(false);
@@ -489,7 +487,7 @@ export function ContractListPage() {
   return (
     <ItemEditor
       title="Contract library"
-      subtitle="Author, version, and run data contracts across your workspace."
+      subtitle="Promise what your data should look like, and let Orqentis enforce it."
       homeToolbarActions={homeToolbarActions}
       statusSlot={statusSlot}
     >
@@ -501,39 +499,35 @@ export function ContractListPage() {
         {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
         {!error && !loading && !federatedLoading && displayedContracts.length === 0 ? (
           sdk.isReady ? (
-            <div>
-              <Subtitle2Stronger as="h3">Author your first contract</Subtitle2Stronger>
-              <div className={styles.onboarding}>
-                <Card className={styles.onboardingCard}>
-                  <Subtitle2>From a Fabric table</Subtitle2>
-                  <Body1>Choose a Lakehouse or Warehouse target, then start with picker-driven metadata.</Body1>
-                  <Button appearance="primary" onClick={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}>Start from table</Button>
-                </Card>
-                <Card className={styles.onboardingCard}>
-                  <Subtitle2>From a description (AI)</Subtitle2>
-                  <Body1>Describe the data product and let Orqentis draft the ODCS YAML.</Body1>
-                  <Button onClick={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}>Open AI Suggest</Button>
-                </Card>
-                <Card className={styles.onboardingCard}>
-                  <Subtitle2>From a template</Subtitle2>
-                  <Body1>Pick a ready-made YAML contract and customize it in the editor.</Body1>
-                  <TemplateDialog openTemplate={(yaml) => openTemplate(yaml)} />
-                </Card>
-              </div>
-            </div>
+            <WelcomeHero
+              onStartFromTable={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}
+              onOpenAiSuggest={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}
+              onOpenTemplates={() => setTemplatesOpen(true)}
+            />
           ) : (
             <EmptyState
               actionIcon={<AddRegular />}
-              actionLabel="Create contract"
-              description="Define an ODCS contract to start enforcing data quality at the Delta table layer."
+              actionLabel="Create your first contract"
+              description="A data contract is your promise about what a table contains. Orqentis runs it on every change so dashboards and AI don’t go wrong."
+              hint="Takes about 2 minutes to set up."
               icon={<DocumentBulletListRegular />}
-              title="No contracts yet"
+              title="No contracts yet — let’s make one"
+              tone="brand"
               onAction={() => {
                 void openWorkloadRoute('/contracts/editor');
               }}
             />
           )
         ) : null}
+
+        <TemplateDialog
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          openTemplate={(yaml) => {
+            setTemplatesOpen(false);
+            openTemplate(yaml);
+          }}
+        />
 
         {!loading && !federatedLoading && displayedContracts.length > 0 ? (
           <>
@@ -669,16 +663,21 @@ export function ContractListPage() {
   );
 }
 
-function TemplateDialog({ openTemplate }: { openTemplate: (yaml: string) => void }) {
+function TemplateDialog({
+  open,
+  onOpenChange,
+  openTemplate,
+}: {
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+  openTemplate: (yaml: string) => void;
+}) {
   const styles = useStyles();
   return (
-    <Dialog>
-      <DialogTrigger disableButtonEnhancement>
-        <Button>Browse templates</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
       <DialogSurface>
         <DialogBody>
-          <DialogTitle>Choose contract template</DialogTitle>
+          <DialogTitle>Pick a ready-made template</DialogTitle>
           <DialogContent>
             <div className={styles.templateGrid}>
               {aiDescriptionTemplates.slice(0, 6).map((template) => (
@@ -689,9 +688,7 @@ function TemplateDialog({ openTemplate }: { openTemplate: (yaml: string) => void
             </div>
           </DialogContent>
           <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary">Close</Button>
-            </DialogTrigger>
+            <Button appearance="secondary" onClick={() => onOpenChange(false)}>Close</Button>
           </DialogActions>
         </DialogBody>
       </DialogSurface>
