@@ -17,10 +17,9 @@ import {
   Field,
   Option,
   Spinner,
-  Subtitle1,
+  Subtitle2Stronger,
   Tab,
   TabList,
-  Title2,
   Title3,
   Tooltip,
   createTableColumn,
@@ -499,7 +498,7 @@ export function EnforcementRunPage() {
       <div className={styles.header}>
         <div>
           <div className={styles.titleRow}>
-            <Title2>{contract?.name ?? 'Enforcement run'}</Title2>
+            <Title3>{contract?.name ?? 'Enforcement run'}</Title3>
             <Tooltip content="Copy correlation ID" relationship="label">
               <Button
                 appearance="subtle"
@@ -632,7 +631,7 @@ export function EnforcementRunPage() {
       </div>
 
       <div className={styles.card}>
-        <Subtitle1>Run history</Subtitle1>
+        <Subtitle2Stronger>Run history</Subtitle2Stronger>
         {runs.length === 0 ? (
           <Body1>No persisted runs were returned for this contract.</Body1>
         ) : (

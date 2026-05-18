@@ -19,7 +19,7 @@ import {
   MessageBarBody,
   Option,
   Spinner,
-  Title2,
+  Title3,
   createTableColumn,
   makeStyles,
   tokens,
@@ -153,7 +153,7 @@ export function AlertsDashboardPage() {
       </Breadcrumb>
 
       <div className={styles.header}>
-        <Title2>Alerts dashboard</Title2>
+        <Title3>Alerts dashboard</Title3>
         <Caption1 className={styles.subtitle}>Spot breached contracts and open the exact run that needs attention.</Caption1>
       </div>
 

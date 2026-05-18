@@ -21,8 +21,8 @@ import {
   MenuPopover,
   MenuTrigger,
   Spinner,
-  Subtitle1,
-  Title2,
+  Subtitle2Stronger,
+  Title3,
   Tooltip,
   createTableColumn,
   makeStyles,
@@ -213,7 +213,7 @@ export function ContractDetailPage() {
 
       <div className={styles.header}>
         <div>
-          <Title2>{contract?.name ?? 'Contract detail'}</Title2>
+          <Title3>{contract?.name ?? 'Contract detail'}</Title3>
           <Caption1 className={styles.subtitle}>Review contract metadata and compare immutable versions.</Caption1>
         </div>
         {contract ? (
@@ -256,7 +256,7 @@ export function ContractDetailPage() {
           <div className={styles.card}>
             <div className={styles.lifecycleActions}>
               <div>
-                <Subtitle1>Lifecycle status</Subtitle1>
+                <Subtitle2Stronger>Lifecycle status</Subtitle2Stronger>
                 <Caption1>Draft → Review → Active → Deprecated → Archived</Caption1>
               </div>
               <div style={{ display: 'flex', gap: tokens.spacingHorizontalXS }}>
@@ -305,7 +305,7 @@ export function ContractDetailPage() {
           </div>
 
           <div className={styles.card}>
-            <Subtitle1>Version history</Subtitle1>
+            <Subtitle2Stronger>Version history</Subtitle2Stronger>
             <Body1>Tip: open any run to view a side-by-side schema diff between any two versions.</Body1>
             <DataGrid items={sortedVersions} columns={columns}>
               <DataGridHeader>
@@ -326,7 +326,7 @@ export function ContractDetailPage() {
           </div>
 
           <div className={styles.card}>
-            <Subtitle1>Current YAML</Subtitle1>
+            <Subtitle2Stronger>Current YAML</Subtitle2Stronger>
             <div className={styles.yaml}>
               <MonacoYamlEditor
                 readOnly

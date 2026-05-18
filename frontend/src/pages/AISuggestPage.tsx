@@ -15,7 +15,7 @@ import {
   Input,
   Spinner,
   Textarea,
-  Title2,
+  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -204,7 +204,7 @@ export function AISuggestPage() {
       </Breadcrumb>
 
       <div className={styles.header}>
-        <Title2>AI Contract Suggest</Title2>
+        <Title3>AI Contract Suggest</Title3>
         <Caption1 className={styles.subtitle}>Describe a Fabric target and get a draft contract to refine.</Caption1>
       </div>
 

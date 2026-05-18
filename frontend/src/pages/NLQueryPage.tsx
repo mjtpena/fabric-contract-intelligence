@@ -12,7 +12,7 @@ import {
   Input,
   Spinner,
   Subtitle2,
-  Title2,
+  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -156,7 +156,7 @@ export function NLQueryPage() {
       </Breadcrumb>
 
       <div className={styles.header}>
-        <Title2>AI Contract Query</Title2>
+        <Title3>AI Contract Query</Title3>
         <Caption1 className={styles.subtitle}>Ask in plain English and jump to the contracts that answer it.</Caption1>
       </div>
 

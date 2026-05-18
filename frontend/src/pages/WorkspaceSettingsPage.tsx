@@ -21,7 +21,7 @@ import {
   Input,
   Spinner,
   Subtitle2Stronger,
-  Title2,
+  Title3,
   createTableColumn,
   makeStyles,
   tokens,
@@ -212,7 +212,7 @@ export function WorkspaceSettingsPage() {
   return (
     <section className={styles.root}>
       <header className={styles.header}>
-        <Title2 as="h1">Workspace settings</Title2>
+        <Title3 as="h1">Workspace settings</Title3>
         <Body1 className={styles.subtitle}>
           Configure workspace access, policy routing, and catalog integrations.
         </Body1>
