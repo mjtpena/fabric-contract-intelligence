@@ -9,7 +9,7 @@ param pgAdminUsername = 'orqentisadmin'
 // In CI, this is sourced from a GitHub Actions secret -> Key Vault, then rotated out-of-band after bootstrap.
 param pgAdminPassword = readEnvironmentVariable('PG_ADMIN_PASSWORD', 'CHANGE_ME')
 param highAvailabilityMode = 'Disabled'
-param storageSizeGB = 32
+param storageSizeGB = 64
 param azureAdTenantId = readEnvironmentVariable('AZURE_AD_TENANT_ID', '')
 param azureAdClientId = readEnvironmentVariable('ORQENTIS_APP_CLIENT_ID', '')
 param azureAdClientSecret = readEnvironmentVariable('ORQENTIS_APP_CLIENT_SECRET', '')
