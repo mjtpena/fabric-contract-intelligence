@@ -153,4 +153,53 @@ public sealed class ContractsControllerTests
         missingResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         missingResponse.Headers.Contains("X-Correlation-Id").Should().BeTrue();
     }
+
+    [Fact]
+    public async Task GetHealthAsync_ContractWithoutRuns_ReturnsScoreAndDimensions()
+    {
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateAuthenticatedClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/v1/contracts",
+            new CreateContractRequest
+            {
+                Mode = "direct",
+                Name = "Health Test Contract",
+                Description = "Health endpoint smoke test",
+                OwnerEmail = "owner@example.com",
+                TargetTablePath = "abfss://clinical@onelake.dfs.fabric.microsoft.com/ClinicalLakehouse.Lakehouse/Tables/patient_encounters",
+                TargetLakehouseId = TestIdentifiers.LakehouseId,
+                OdcsYaml = ContractSample.CreateYaml("1.0.0"),
+            });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<ContractDto>();
+        created.Should().NotBeNull();
+
+        var healthResponse = await client.GetAsync($"/v1/contracts/{created!.Id}/health");
+
+        healthResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        healthResponse.Headers.Contains("X-Correlation-Id").Should().BeTrue();
+
+        var health = await healthResponse.Content.ReadFromJsonAsync<ContractHealthDto>();
+        health.Should().NotBeNull();
+        health!.ContractId.Should().Be(created.Id);
+        health.Score.Should().BeInRange(0, 100);
+        health.Grade.Should().BeOneOf("green", "amber", "red");
+        health.Dimensions.Should().NotBeNull();
+        health.LatestRunId.Should().BeNull();
+        health.ComputedAt.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task GetHealthAsync_UnknownContract_ReturnsNotFound()
+    {
+        using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateAuthenticatedClient();
+
+        var response = await client.GetAsync($"/v1/contracts/{Guid.NewGuid()}/health");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

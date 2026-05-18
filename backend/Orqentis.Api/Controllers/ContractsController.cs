@@ -12,6 +12,7 @@ using Orqentis.Engine.Delta;
 using Orqentis.Engine.Evaluation;
 using Orqentis.Engine.Models;
 using Orqentis.Engine.Odcs;
+using Orqentis.Engine.Scoring;
 
 namespace Orqentis.Api.Controllers;
 
@@ -34,6 +35,7 @@ public sealed class ContractsController : ControllerBase
     private readonly IMemoryCache _memoryCache;
     private readonly ISchemaPreviewCacheRegistry _schemaPreviewCacheRegistry;
     private readonly IOutputCacheStore _outputCacheStore;
+    private readonly IContractHealthScorer _healthScorer;
 
     public ContractsController(
         IContractStore contractStore,
@@ -49,7 +51,8 @@ public sealed class ContractsController : ControllerBase
         IFabricSemanticModelSchemaReader semanticModelSchemaReader,
         IMemoryCache memoryCache,
         ISchemaPreviewCacheRegistry schemaPreviewCacheRegistry,
-        IOutputCacheStore outputCacheStore)
+        IOutputCacheStore outputCacheStore,
+        IContractHealthScorer healthScorer)
     {
         _contractStore = contractStore;
         _validator = validator;
@@ -65,6 +68,7 @@ public sealed class ContractsController : ControllerBase
         _memoryCache = memoryCache;
         _schemaPreviewCacheRegistry = schemaPreviewCacheRegistry;
         _outputCacheStore = outputCacheStore;
+        _healthScorer = healthScorer;
     }
 
     /// <summary>Lists contracts for the current tenant workspace.</summary>
@@ -313,6 +317,78 @@ public sealed class ContractsController : ControllerBase
         return contractVersion is null
             ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract version not found.")
             : Ok(MapVersion(contractVersion));
+    }
+
+    /// <summary>
+    /// Computes the Contract Health Score for the contract: a 0-100 composite of seven
+    /// weighted governance signals (Phase 1 Epic 1.4 of files/plan-data-security-for-ai.md).
+    /// </summary>
+    [HttpGet("{id:guid}/health")]
+    [ProducesResponseType(typeof(ContractHealthDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ContractHealthDto>> GetHealthAsync(Guid id, CancellationToken ct)
+    {
+        var contract = await _contractStore.GetAsync(id, ct).ConfigureAwait(false);
+        if (contract is null || contract.CurrentVersionRecord is null)
+        {
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Contract not found.");
+        }
+
+        var parsed = _parser.Parse(contract.CurrentVersionRecord.OdcsYaml);
+        if (!parsed.IsSuccess || parsed.Value is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Contract YAML failed to parse.",
+                detail: parsed.Error);
+        }
+
+        EnforcementResult? latestRun = null;
+        if (contract.LatestRun is not null && !string.IsNullOrWhiteSpace(contract.LatestRun.ResultJson))
+        {
+            try
+            {
+                latestRun = System.Text.Json.JsonSerializer.Deserialize<EnforcementResult>(contract.LatestRun.ResultJson);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Treat unparseable result_json as "no run" rather than 500ing.
+                latestRun = null;
+            }
+        }
+
+        // Context signals are stubbed until persistence lands (Phase 2). The scorer is
+        // pure given these inputs, so the UI can already surface a meaningful number
+        // driven by the enforcement-run signals (~60% of the weight).
+        var context = new ContractHealthContext
+        {
+            SensitivityLabelSynced = false,
+            ApprovalUpToDate = false,
+            LineageRecorded = false,
+            EvidenceCitedRatio = 0.0,
+        };
+
+        var score = _healthScorer.Compute(parsed.Value, latestRun, context);
+
+        return Ok(new ContractHealthDto
+        {
+            ContractId = id,
+            Score = score.Score,
+            Grade = score.Grade.ToString().ToLowerInvariant(),
+            Dimensions = new ContractHealthDimensionsDto
+            {
+                SchemaValidity = score.Dimensions["schemaValidity"],
+                QualityRulePassRate = score.Dimensions["qualityRulePassRate"],
+                FreshnessSlaMet = score.Dimensions["freshnessSlaMet"],
+                SensitivityLabelSet = score.Dimensions["sensitivityLabelSet"],
+                ApprovalUpToDate = score.Dimensions["approvalUpToDate"],
+                LineageCompleteness = score.Dimensions["lineageCompleteness"],
+                EvidenceCitedRatio = score.Dimensions["evidenceCitedRatio"],
+            },
+            LatestRunId = contract.LatestRun?.RunId,
+            LatestRunCompletedAt = contract.LatestRun?.CompletedAt?.ToString("O"),
+            ComputedAt = DateTimeOffset.UtcNow.ToString("O"),
+        });
     }
 
     /// <summary>

@@ -42,6 +42,7 @@ import {
   TargetTypePicker,
 } from '@/components/FabricPickers';
 import { StatusBadge } from '@/components/StatusBadge';
+import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import { decodeUserFromToken } from '@/lib/identity';
@@ -584,7 +585,14 @@ function EditorWorkspace({
     <ItemEditor
       additionalToolbars={additionalToolbars}
       homeToolbarActions={homeToolbarActions}
-      statusSlot={draft ? <StatusBadge status={draft.status} /> : null}
+      statusSlot={
+        draft ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <StatusBadge status={draft.status} />
+            {contract?.id ? <HealthScoreBadge client={client} contractId={contract.id} /> : null}
+          </span>
+        ) : null
+      }
       subtitle={draft?.targetTablePath ?? contract?.targetTablePath ?? 'Edit YAML directly and validate as you type.'}
       title={draft?.name || contract?.name || 'New contract'}
     >

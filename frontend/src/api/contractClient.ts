@@ -14,6 +14,7 @@ import type {
   UpdateContractRequest,
   ValidationIssue,
 } from '@/models/Contract';
+import type { ContractHealthScore } from '@/models/AiContext';
 
 export interface ContractClientOptions {
   baseUrl: string;
@@ -33,6 +34,7 @@ export interface ContractClient {
   runNow: (contractId: string) => Promise<RunAccepted>;
   validate: (yaml: string) => Promise<ContractValidationResult>;
   getLiveSchemaPreview: (request: LivePreviewRequest) => Promise<SchemaPreviewField[]>;
+  getContractHealth: (contractId: string, options?: Pick<RequestInit, 'signal'>) => Promise<ContractHealthScore>;
 }
 
 interface ProblemDetails {
@@ -131,6 +133,8 @@ export function createContractClient(options: ContractClientOptions): ContractCl
       }),
     listVersions: (contractId, requestOptions) =>
       request<ContractVersion[]>(`/v1/contracts/${contractId}/versions`, requestOptions),
+    getContractHealth: (contractId, requestOptions) =>
+      request<ContractHealthScore>(`/v1/contracts/${contractId}/health`, requestOptions),
     runNow: (contractId) =>
       request<RunAccepted>(`/v1/contracts/${contractId}/runs`, {
         body: JSON.stringify({}),
