@@ -49,8 +49,8 @@ const useStyles = makeStyles({
   issue: {
     padding: tokens.spacingHorizontalM,
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorPaletteRedBackground1,
-    border: `1px solid ${tokens.colorPaletteRedBorder1}`,
+    backgroundColor: tokens.colorStatusDangerBackground1,
+    border: `1px solid ${tokens.colorStatusDangerBorder1}`,
   },
   sectionHeader: {
     display: 'flex',

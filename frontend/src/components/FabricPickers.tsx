@@ -1,7 +1,33 @@
-import { Combobox, Field, Link, MessageBar, MessageBarBody, Option, Spinner, tokens } from '@fluentui/react-components';
+import { Combobox, Field, Link, MessageBar, MessageBarBody, Option, Spinner, makeStyles, tokens } from '@fluentui/react-components';
 import { useFabricTargetItems, useLakehouses, useLakehouseTables } from '@/hooks/useFabricItems';
 import type { ContractTargetType } from '@/models/Contract';
 import { contractTargetTypeOptions, getContractTargetTypeLabel } from '@/models/ContractTarget';
+
+const usePickerStyles = makeStyles({
+  optionPrimary: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  optionCaption: {
+    marginLeft: tokens.spacingHorizontalS,
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+});
+
+interface OptionWithCaptionProps {
+  primary: string;
+  caption?: string | null;
+}
+
+function OptionWithCaption({ primary, caption }: OptionWithCaptionProps) {
+  const styles = usePickerStyles();
+  return (
+    <>
+      <span className={styles.optionPrimary}>{primary}</span>
+      {caption ? <span className={styles.optionCaption}>{caption}</span> : null}
+    </>
+  );
+}
 
 // ─── TargetTypePicker ────────────────────────────────────────────────────────
 
@@ -78,8 +104,7 @@ export function FabricTargetItemPicker({
       >
         {items.map((item) => (
           <Option key={item.id} text={item.displayName} value={item.id}>
-            <span style={{ fontWeight: tokens.fontWeightSemibold }}>{item.displayName}</span>
-            <span style={{ marginLeft: tokens.spacingHorizontalS, fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>{item.type}</span>
+            <OptionWithCaption primary={item.displayName} caption={item.type} />
           </Option>
         ))}
       </Combobox>
@@ -175,10 +200,7 @@ export function TablePicker({ apiBaseUrl, getToken, isReady, lakehouseId, onChan
         >
           {tables.map((table) => (
             <Option key={table.name} text={table.name} value={table.location || table.name}>
-              <span style={{ fontWeight: tokens.fontWeightSemibold }}>{table.name}</span>
-              {table.type ? (
-                <span style={{ marginLeft: tokens.spacingHorizontalS, fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>{table.type}</span>
-              ) : null}
+              <OptionWithCaption primary={table.name} caption={table.type} />
             </Option>
           ))}
         </Combobox>

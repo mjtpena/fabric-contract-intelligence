@@ -36,6 +36,7 @@ import { BreachScoreGauge } from '@/components/RunResult/BreachScoreGauge';
 import { RuleResultsTable } from '@/components/RunResult/RuleResultsTable';
 import { SchemaDiffViewer } from '@/components/RunResult/SchemaDiffViewer';
 import { StatusBadge } from '@/components/StatusBadge';
+import { VisuallyHidden } from '@/components/VisuallyHidden';
 import { useContract } from '@/hooks/useContract';
 import { useEnforcementRun } from '@/hooks/useEnforcementRun';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -439,14 +440,7 @@ export function EnforcementRunPage() {
   if ((itemObjectId && !itemDefinitionLoaded) || (loading && !run)) {
     return (
       <section className={styles.root}>
-        <div
-          aria-atomic="true"
-          aria-live="polite"
-          role="status"
-          style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
-        >
-          {liveMessage}
-        </div>
+        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
         <Spinner label="Loading enforcement run…" />
       </section>
     );
@@ -455,14 +449,7 @@ export function EnforcementRunPage() {
   if (!run) {
     return (
       <section className={styles.root}>
-      <div
-        aria-atomic="true"
-        aria-live="polite"
-        role="status"
-        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
-      >
-        {liveMessage}
-      </div>
+        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
         <ReportItemDashboard
           auditError={auditError ?? error}
           auditLoading={auditLoading}
@@ -488,14 +475,7 @@ export function EnforcementRunPage() {
 
   return (
     <section className={styles.root}>
-      <div
-        aria-atomic="true"
-        aria-live="polite"
-        role="status"
-        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
-      >
-        {liveMessage}
-      </div>
+      <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>

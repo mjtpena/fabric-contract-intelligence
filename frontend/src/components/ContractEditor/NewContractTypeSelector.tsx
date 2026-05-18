@@ -39,13 +39,13 @@ const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalXL,
+    gap: tokens.spacingVerticalL,
     alignItems: 'flex-start',
-    maxWidth: '720px',
+    maxWidth: '45rem',
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))',
     gap: tokens.spacingHorizontalM,
     width: '100%',
   },
@@ -59,17 +59,16 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalXS,
     padding: tokens.spacingHorizontalL,
     borderRadius: tokens.borderRadiusMedium,
-    border: `2px solid ${tokens.colorNeutralStroke2}`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
     cursor: 'pointer',
-    transition: 'border 0.1s, background 0.1s',
-    minHeight: '120px',
+    minHeight: '7.5rem',
     ':hover': {
       backgroundColor: tokens.colorNeutralBackground1Hover,
     },
   },
   tileSelected: {
-    border: `2px solid ${tokens.colorBrandBackground}`,
+    border: `1px solid ${tokens.colorBrandStroke1}`,
     backgroundColor: tokens.colorBrandBackground2,
     ':hover': {
       backgroundColor: tokens.colorBrandBackground2Hover,
@@ -78,6 +77,17 @@ const useStyles = makeStyles({
   tileIcon: {
     color: tokens.colorBrandForeground1,
     marginBottom: tokens.spacingVerticalXXS,
+  },
+  tileLabel: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  tileCaption: {
+    color: tokens.colorNeutralForeground3,
+  },
+  intro: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
   },
   actions: {
     display: 'flex',
@@ -96,11 +106,9 @@ export function NewContractTypeSelector({ onConfirm, onCancel }: NewContractType
 
   return (
     <div className={styles.root}>
-      <div>
+      <div className={styles.intro}>
         <Subtitle2>Choose contract target type</Subtitle2>
-        <Body1 block style={{ marginTop: tokens.spacingVerticalXXS }}>
-          Select the type of Fabric data store this contract will govern.
-        </Body1>
+        <Body1>Select the type of Fabric data store this contract will govern.</Body1>
       </div>
 
       <RadioGroup
@@ -118,8 +126,8 @@ export function NewContractTypeSelector({ onConfirm, onCancel }: NewContractType
             label={(
               <span className={`${styles.tile} ${selected === option.value ? styles.tileSelected : ''}`}>
                 <span className={styles.tileIcon}>{TYPE_ICONS[option.value]}</span>
-                <Caption1 style={{ fontWeight: tokens.fontWeightSemibold }}>{option.label}</Caption1>
-                <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                <Caption1 className={styles.tileLabel}>{option.label}</Caption1>
+                <Caption1 className={styles.tileCaption}>
                   {TYPE_DESCRIPTIONS[option.value]}
                 </Caption1>
               </span>

@@ -1,7 +1,5 @@
 import { useMemo } from 'react';
 import {
-  Body1,
-  Caption1,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -12,6 +10,8 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { DocumentBulletListRegular } from '@fluentui/react-icons';
+import { EmptyState } from '@/components/EmptyState';
 import { StatusBadge } from '@/components/StatusBadge';
 import type { RuleResult } from '@/models/enforcement';
 
@@ -21,12 +21,6 @@ interface RuleResultsTableProps {
 }
 
 const useStyles = makeStyles({
-  emptyState: {
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: tokens.spacingHorizontalL,
-    backgroundColor: tokens.colorNeutralBackground2,
-  },
   table: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
@@ -75,10 +69,11 @@ export function RuleResultsTable({ emptyMessage, rules }: RuleResultsTableProps)
 
   if (rules.length === 0) {
     return (
-      <div className={styles.emptyState}>
-        <Caption1>No rule results</Caption1>
-        <Body1>{emptyMessage}</Body1>
-      </div>
+      <EmptyState
+        description={emptyMessage}
+        icon={<DocumentBulletListRegular />}
+        title="No rule results"
+      />
     );
   }
 

@@ -21,6 +21,7 @@ import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { EmptyState } from '@/components/EmptyState';
 import { FabricLink } from '@/components/FabricLink';
+import { VisuallyHidden } from '@/components/VisuallyHidden';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { NaturalLanguageQueryResponse } from '@/models/Ai';
 
@@ -159,14 +160,7 @@ export function NLQueryPage() {
         <Caption1 className={styles.subtitle}>Ask in plain English and jump to the contracts that answer it.</Caption1>
       </div>
 
-      <div
-        aria-atomic="true"
-        aria-live="polite"
-        role="status"
-        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
-      >
-        {liveMessage}
-      </div>
+      <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
       <div className={styles.chips}>
         {suggestedQueries.map((suggestion) => (

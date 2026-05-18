@@ -24,7 +24,7 @@ import {
   SearchBox,
   Spinner,
   Subtitle2,
-  Title2,
+  Title3,
   createTableColumn,
   makeStyles,
   tokens,
@@ -39,6 +39,7 @@ import { createRunClient } from '@/api/runClient';
 import { EmptyState } from '@/components/EmptyState';
 import { FabricLink } from '@/components/FabricLink';
 import { StatusBadge } from '@/components/StatusBadge';
+import { VisuallyHidden } from '@/components/VisuallyHidden';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import { aiDescriptionTemplates } from '@/lib/aiTemplates';
@@ -460,7 +461,7 @@ export function ContractListPage() {
     <section className={styles.root}>
       <div className={styles.header}>
         <div>
-          <Title2>Contract library</Title2>
+          <Title3>Contract library</Title3>
           <Caption1 className={styles.subtitle}>Author, version, and run data contracts across your workspace.</Caption1>
         </div>
         <div className={styles.actions}>
@@ -501,14 +502,7 @@ export function ContractListPage() {
         </div>
       </div>
 
-      <div
-        aria-atomic="true"
-        aria-live="polite"
-        role="status"
-        style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}
-      >
-        {liveMessage}
-      </div>
+      <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
       <div className={styles.surface}>
         {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
@@ -516,7 +510,7 @@ export function ContractListPage() {
         {!loading && !federatedLoading && displayedContracts.length === 0 ? (
           sdk.isReady ? (
             <div>
-              <Title2>Author your first contract</Title2>
+              <Title3 as="h2">Author your first contract</Title3>
               <div className={styles.onboarding}>
                 <Card className={styles.onboardingCard}>
                   <Subtitle2>From a Fabric table</Subtitle2>
