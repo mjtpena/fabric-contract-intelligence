@@ -8,10 +8,10 @@ import {
   BreadcrumbItem,
   Button,
   Caption1,
+  Card,
   Field,
   Input,
   Spinner,
-  Subtitle2,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -50,19 +50,11 @@ const useStyles = makeStyles({
     flex: 1,
   },
   resultCard: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: tokens.spacingHorizontalL,
-    backgroundColor: tokens.colorNeutralBackground1,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
   },
   matchCard: {
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    borderRadius: tokens.borderRadiusSmall,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground2,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXS,
@@ -71,6 +63,15 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+  },
+  resultHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
+  relevance: {
+    marginLeft: 'auto',
+    color: tokens.colorNeutralForeground3,
   },
 });
 
@@ -198,14 +199,6 @@ export function NLQueryPage() {
             }}
           />
         </Field>
-        <Button
-          appearance="primary"
-          disabled={loading || !query.trim()}
-          icon={loading ? <Spinner size="tiny" /> : <SearchRegular />}
-          onClick={() => { void runQuery(); }}
-        >
-          {loading ? 'Searching…' : 'Search'}
-        </Button>
       </div>
 
       {!result && recentQueries.length > 0 ? (
@@ -217,18 +210,15 @@ export function NLQueryPage() {
                 {recent}
               </Button>
             ))}
-            <Button appearance="transparent" size="small" onClick={() => { sessionStorage.removeItem(recentStorageKey); setRecentQueries([]); }}>
-              Clear recent
-            </Button>
           </div>
         </div>
       ) : null}
 
       {result ? (
-        <div className={styles.resultCard}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+        <Card className={styles.resultCard}>
+          <div className={styles.resultHeader}>
             <SparkleRegular />
-            <Subtitle2>{result.explanation ?? 'No explanation returned.'}</Subtitle2>
+            <Body1>{result.explanation ?? 'No explanation returned.'}</Body1>
             {isFallbackModel(result.modelUsed) ? <Badge appearance="outline">Heuristic result</Badge> : null}
           </div>
 
@@ -240,7 +230,7 @@ export function NLQueryPage() {
             />
           ) : (
             (result.matches ?? []).map((match) => (
-              <div key={match.contractId} className={styles.matchCard}>
+              <Card key={match.contractId} className={styles.matchCard} appearance="subtle">
                 <div className={styles.matchHeader}>
                   <FabricLink to={`/contracts/${match.contractId}`}>
                     <strong>{match.name ?? match.contractId}</strong>
@@ -248,15 +238,15 @@ export function NLQueryPage() {
                   <Badge appearance="outline" size="small">
                     v{match.version ?? '—'}
                   </Badge>
-                  <Caption1 style={{ marginLeft: 'auto', opacity: 0.7 }}>
+                  <Caption1 className={styles.relevance}>
                     relevance {(((match.relevanceScore ?? 0) as number) * 100).toFixed(0)}%
                   </Caption1>
                 </div>
                 <Body1>{match.explanation ?? ''}</Body1>
-              </div>
+              </Card>
             ))
           )}
-        </div>
+        </Card>
       ) : null}
       </div>
     </ItemEditor>

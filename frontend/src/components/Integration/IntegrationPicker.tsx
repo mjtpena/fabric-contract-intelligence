@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Button,
   Caption1,
+  Card,
   Dropdown,
   Field,
   Input,
@@ -42,13 +43,9 @@ const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM },
   chips: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS },
   card: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: tokens.spacingHorizontalL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
-    backgroundColor: tokens.colorNeutralBackground1,
   },
   row: { display: 'flex', gap: tokens.spacingHorizontalS, alignItems: 'center', flexWrap: 'wrap' },
   result: { color: tokens.colorNeutralForeground3 },
@@ -100,7 +97,7 @@ export function IntegrationPicker({ client, error, onChange, value }: Integratio
         ))}
       </div>
 
-      <div className={styles.card}>
+      <Card className={styles.card}>
         <Caption1>{selected.description}</Caption1>
         {renderFields(value, update, validation)}
         <div className={styles.row}>
@@ -109,7 +106,7 @@ export function IntegrationPicker({ client, error, onChange, value }: Integratio
           </Button>
           {testResult ? <Caption1 className={styles.result}>{testResult}</Caption1> : null}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

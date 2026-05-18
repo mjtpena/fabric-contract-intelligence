@@ -7,6 +7,7 @@ import {
   BreadcrumbItem,
   Button,
   Caption1,
+  Card,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -24,13 +25,14 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { ArrowClockwiseRegular, ArrowDownload16Regular, ArrowLeftRegular, Copy16Regular, Link16Regular, Play16Regular } from '@fluentui/react-icons';
+import { ArrowClockwiseRegular, ArrowDownloadRegular, ArrowLeftRegular, CopyRegular, LinkRegular, PlayRegular } from '@fluentui/react-icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { BreachScoreGauge } from '@/components/RunResult/BreachScoreGauge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { RuleResultsTable } from '@/components/RunResult/RuleResultsTable';
 import { SchemaDiffViewer } from '@/components/RunResult/SchemaDiffViewer';
@@ -57,7 +59,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
     height: '100%',
     boxSizing: 'border-box',
     overflow: 'auto',
@@ -90,19 +91,11 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'minmax(18rem, 1.4fr) minmax(16rem, 1fr)',
   },
   heroCard: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    padding: tokens.spacingHorizontalXL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
   },
   metricsStrip: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    padding: tokens.spacingHorizontalL,
     display: 'grid',
     gap: tokens.spacingVerticalM,
     gridTemplateColumns: 'repeat(auto-fit, minmax(8rem, 1fr))',
@@ -117,19 +110,11 @@ const useStyles = makeStyles({
     textAlign: 'center',
   },
   card: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    padding: tokens.spacingHorizontalL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
   },
   tabCard: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    padding: tokens.spacingHorizontalL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
@@ -154,8 +139,6 @@ const useStyles = makeStyles({
     paddingLeft: tokens.spacingHorizontalL,
   },
   emptyState: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingHorizontalXXL,
     backgroundColor: tokens.colorNeutralBackground2,
   },
@@ -509,7 +492,7 @@ export function EnforcementRunPage() {
       actions.push({
         key: 'run-again',
         label: 'Run again',
-        icon: <Play16Regular />,
+        icon: <PlayRegular />,
         appearance: 'primary',
         disabled: secondaryActionInFlight,
         onClick: () => {
@@ -526,7 +509,7 @@ export function EnforcementRunPage() {
       actions.push({
         key: 'download',
         label: 'Download',
-        icon: <ArrowDownload16Regular />,
+        icon: <ArrowDownloadRegular />,
         tooltip: 'Download run result JSON',
         disabled: secondaryActionInFlight,
         onClick: () => {
@@ -539,7 +522,7 @@ export function EnforcementRunPage() {
       actions.push({
         key: 'copy-link',
         label: 'Copy link',
-        icon: <Link16Regular />,
+        icon: <LinkRegular />,
         tooltip: 'Copy shareable link',
         disabled: secondaryActionInFlight,
         onClick: () => {
@@ -552,7 +535,7 @@ export function EnforcementRunPage() {
       actions.push({
         key: 'copy-correlation',
         label: 'Copy correlation ID',
-        icon: <Copy16Regular />,
+        icon: <CopyRegular />,
         disabled: secondaryActionInFlight || !run.correlationId,
         onClick: () => {
           void runSecondaryAction(async () => {
@@ -594,15 +577,15 @@ export function EnforcementRunPage() {
         </BreadcrumbItem>
       </Breadcrumb>
 
-      {error ? <Body1>{error}</Body1> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <div className={styles.summary}>
-        <div className={styles.heroCard}>
+        <Card className={styles.heroCard}>
           <BreachScoreGauge score={displayBreachScore} />
           {breachDelta ? <Caption1 className={styles.scoreDelta}>{breachDelta}</Caption1> : null}
-        </div>
+        </Card>
 
-        <div className={styles.metricsStrip}>
+        <Card className={styles.metricsStrip}>
           <div className={styles.metricItem}>
             <Caption1>Status</Caption1>
             <StatusBadge status={run.status} />
@@ -620,13 +603,16 @@ export function EnforcementRunPage() {
             <Caption1>Mode</Caption1>
             <Body1>{formatRunMode(run.triggeredBy)}</Body1>
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className={styles.card}>
+      <Card className={styles.card}>
         <Subtitle2Stronger>Run history</Subtitle2Stronger>
         {runs.length === 0 ? (
-          <Body1>No persisted runs were returned for this contract.</Body1>
+          <EmptyState
+            description="No persisted runs were returned for this contract."
+            title="No runs yet"
+          />
         ) : (
           <DataGrid items={runs} columns={historyColumns}>
             <DataGridHeader>
@@ -645,9 +631,9 @@ export function EnforcementRunPage() {
             </DataGridBody>
           </DataGrid>
         )}
-      </div>
+      </Card>
 
-      <div className={styles.tabCard}>
+      <Card className={styles.tabCard}>
         <TabList
           selectedValue={selectedTab}
           onTabSelect={(_, data) => setSelectedTab(data.value as RunTab)}
@@ -680,7 +666,10 @@ export function EnforcementRunPage() {
               rules={[run.resultJson.freshnessRule]}
             />
           ) : (
-            <Body1>No freshness rule was returned for this run.</Body1>
+            <EmptyState
+              description="No freshness rule was returned for this run."
+              title="No freshness data"
+            />
           )
         ) : null}
 
@@ -724,7 +713,10 @@ export function EnforcementRunPage() {
                 themeMode={sdk.themeMode}
               />
             ) : (
-              <Body1>Select two contract versions to compare their YAML side by side.</Body1>
+              <EmptyState
+                description="Select two contract versions to compare their YAML side by side."
+                title="Choose versions to compare"
+              />
             )}
           </>
         ) : null}
@@ -740,17 +732,20 @@ export function EnforcementRunPage() {
                 ))}
               </ul>
             ) : (
-              <Body1>No remediation is needed for this run.</Body1>
+              <EmptyState
+                description="No remediation is needed for this run."
+                title="All clear"
+              />
             )}
             {run.resultJson.errorMessage ? (
-              <div className={styles.card}>
+              <Card className={styles.card}>
                 <Caption1>Run error</Caption1>
                 <Body1>{run.resultJson.errorMessage}</Body1>
-              </div>
+              </Card>
             ) : null}
           </>
         ) : null}
-      </div>
+      </Card>
       </div>
     </ItemEditor>
   );
@@ -852,7 +847,7 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
     }
 
     return (
-      <div className={styles.card}>
+      <Card className={styles.card}>
         <Caption1>Schema drift from rule results</Caption1>
         <ul className={styles.diffSummaryList}>
           {driftRules.map((rule) => (
@@ -865,21 +860,21 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
             </li>
           ))}
         </ul>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className={styles.inlineGrid}>
-      <div className={styles.card}>
+      <Card className={styles.card}>
         <Caption1>Added columns</Caption1>
         <Body1>{schemaDiff.addedColumns.length > 0 ? schemaDiff.addedColumns.join(', ') : 'None'}</Body1>
-      </div>
-      <div className={styles.card}>
+      </Card>
+      <Card className={styles.card}>
         <Caption1>Removed columns</Caption1>
         <Body1>{schemaDiff.removedColumns.length > 0 ? schemaDiff.removedColumns.join(', ') : 'None'}</Body1>
-      </div>
-      <div className={styles.card}>
+      </Card>
+      <Card className={styles.card}>
         <Caption1>Type changes</Caption1>
         {schemaDiff.typeChanges.length > 0 ? (
           <ul className={styles.diffSummaryList}>
@@ -894,8 +889,8 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
         ) : (
           <Body1>None</Body1>
         )}
-      </div>
-      <div className={styles.card}>
+      </Card>
+      <Card className={styles.card}>
         <Caption1>Nullability / partitions</Caption1>
         {schemaDiff.nullabilityChanges.length > 0 ? (
           <ul className={styles.diffSummaryList}>
@@ -917,7 +912,7 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
             {schemaDiff.partitionChange.actual.join(', ')}]
           </Body1>
         ) : null}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { AlertOffRegular, ArrowSyncRegular } from '@fluentui/react-icons';
+import { AlertOffRegular, ArrowClockwiseRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { createOpsClient } from '@/api/opsClient';
 import { EmptyState } from '@/components/EmptyState';
@@ -133,7 +133,7 @@ export function AlertsDashboardPage() {
     {
       key: 'refresh',
       label: 'Refresh',
-      icon: <ArrowSyncRegular />,
+      icon: <ArrowClockwiseRegular />,
       disabled: loading,
       onClick: () => loadAlerts(),
     },
@@ -148,11 +148,11 @@ export function AlertsDashboardPage() {
       <div className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => navigate('/contracts/alerts')}>Alerts</BreadcrumbButton>
+          <BreadcrumbButton onClick={() => navigate('/contracts')}>Contracts</BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
-          <BreadcrumbButton current>Dashboard</BreadcrumbButton>
+          <BreadcrumbButton current>Alerts</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
 
@@ -160,7 +160,7 @@ export function AlertsDashboardPage() {
         <Field label="Status">
           <Dropdown
             selectedOptions={[status]}
-            value={status === 'all' ? 'All statuses' : status}
+            value={toStatusLabel(status)}
             onOptionSelect={(_, data) => setStatus(data.optionValue ?? 'all')}
           >
             <Option value="all">All statuses</Option>
@@ -216,6 +216,11 @@ export function AlertsDashboardPage() {
       </div>
     </ItemEditor>
   );
+}
+
+function toStatusLabel(status: string) {
+  if (status === 'all') return 'All statuses';
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export default AlertsDashboardPage;

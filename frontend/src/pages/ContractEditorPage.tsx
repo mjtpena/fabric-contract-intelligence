@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Badge,
-  Body1,
   Caption1,
   Button,
   Checkbox,
@@ -41,6 +40,7 @@ import {
   TablePicker,
   TargetTypePicker,
 } from '@/components/FabricPickers';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { StatusBadge } from '@/components/StatusBadge';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { useContract, useContractActions } from '@/hooks/useContract';
@@ -100,7 +100,7 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
-    minHeight: '32px',
+    minHeight: tokens.lineHeightHero700,
   },
   quickRules: {
     display: 'flex',
@@ -108,6 +108,11 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXS,
     flexWrap: 'wrap',
     marginBottom: tokens.spacingVerticalS,
+  },
+  statusSlot: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
   },
 });
 
@@ -587,7 +592,7 @@ function EditorWorkspace({
       homeToolbarActions={homeToolbarActions}
       statusSlot={
         draft ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span className={styles.statusSlot}>
             <StatusBadge status={draft.status} />
             {contract?.id ? <HealthScoreBadge client={client} contractId={contract.id} /> : null}
           </span>
@@ -597,7 +602,7 @@ function EditorWorkspace({
       title={draft?.name || contract?.name || 'New contract'}
     >
       {loading ? <Spinner label="Loading editor…" /> : null}
-      {error ? <Body1>{error}</Body1> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       {view === 'empty' || !draft ? (
         <div className={styles.emptyState}>

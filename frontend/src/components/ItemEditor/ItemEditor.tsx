@@ -49,12 +49,12 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalL,
     alignItems: 'center',
-    minHeight: '32px',
+    minHeight: tokens.lineHeightHero700,
   },
   titleBlock: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: tokens.spacingVerticalXXS,
     minWidth: 0,
     flex: 1,
   },
@@ -79,6 +79,10 @@ const useStyles = makeStyles({
     flexWrap: 'wrap',
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     paddingBottom: tokens.spacingVerticalS,
+  },
+  additionalToolbarGroup: {
+    display: 'flex',
+    alignItems: 'center',
   },
   content: {
     minHeight: 0,
@@ -129,7 +133,7 @@ export function ItemEditor({
         </Toolbar>
         {additionalToolbars?.map((toolbar) =>
           toolbar.actions.length > 0 ? (
-            <span key={toolbar.key} style={{ display: 'flex', alignItems: 'center' }}>
+            <span key={toolbar.key} className={styles.additionalToolbarGroup}>
               <ToolbarDivider />
               <Toolbar aria-label={toolbar.label}>
                 {toolbar.actions.map((action) => (

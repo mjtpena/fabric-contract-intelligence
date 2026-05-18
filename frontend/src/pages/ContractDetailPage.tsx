@@ -8,6 +8,7 @@ import {
   BreadcrumbItem,
   Button,
   Caption1,
+  Card,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -32,6 +33,7 @@ import { EditRegular } from '@fluentui/react-icons';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { ContractClientError, createContractClient } from '@/api/contractClient';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -51,10 +53,6 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))',
   },
   card: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    padding: tokens.spacingHorizontalL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXS,
@@ -78,6 +76,10 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     alignItems: 'center',
     flexWrap: 'wrap',
+  },
+  lifecycleButtons: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalXS,
   },
 });
 
@@ -225,36 +227,36 @@ export function ContractDetailPage() {
       </Breadcrumb>
 
       {loading ? <Spinner label="Loading contract…" /> : null}
-      {error ? <Body1>{error}</Body1> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       {contract ? (
         <>
           <div className={styles.metadata}>
-            <div className={styles.card}>
+            <Card className={styles.card}>
               <Caption1>Status</Caption1>
               <StatusBadge status={contract.status} />
-            </div>
-            <div className={styles.card}>
+            </Card>
+            <Card className={styles.card}>
               <Caption1>Owner</Caption1>
               <Body1>{contract.ownerEmail}</Body1>
-            </div>
-            <div className={styles.card}>
+            </Card>
+            <Card className={styles.card}>
               <Caption1>Target</Caption1>
               <Body1>{contract.targetTablePath}</Body1>
-            </div>
-            <div className={styles.card}>
+            </Card>
+            <Card className={styles.card}>
               <Caption1>Version</Caption1>
               <Body1>{contract.version}</Body1>
-            </div>
+            </Card>
           </div>
 
-          <div className={styles.card}>
+          <Card className={styles.card}>
             <div className={styles.lifecycleActions}>
               <div>
                 <Subtitle2Stronger>Lifecycle status</Subtitle2Stronger>
                 <Caption1>Draft → Review → Active → Deprecated → Archived</Caption1>
               </div>
-              <div style={{ display: 'flex', gap: tokens.spacingHorizontalXS }}>
+              <div className={styles.lifecycleButtons}>
                 <Button
                   appearance="primary"
                   disabled={statusUpdating || !getPrimaryStatusAction(contract.status)}
@@ -297,9 +299,9 @@ export function ContractDetailPage() {
                 />
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className={styles.card}>
+          <Card className={styles.card}>
             <Subtitle2Stronger>Version history</Subtitle2Stronger>
             <Body1>Tip: open any run to view a side-by-side schema diff between any two versions.</Body1>
             <DataGrid items={sortedVersions} columns={columns}>
@@ -318,9 +320,9 @@ export function ContractDetailPage() {
                 )}
               </DataGridBody>
             </DataGrid>
-          </div>
+          </Card>
 
-          <div className={styles.card}>
+          <Card className={styles.card}>
             <Subtitle2Stronger>Current YAML</Subtitle2Stronger>
             <div className={styles.yaml}>
               <MonacoYamlEditor
@@ -330,7 +332,7 @@ export function ContractDetailPage() {
                 onChange={() => undefined}
               />
             </div>
-          </div>
+          </Card>
         </>
       ) : null}
       </div>

@@ -18,11 +18,11 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { SparkleRegular } from '@fluentui/react-icons';
+import { ArrowLeftRegular, SaveRegular, SparkleRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { EmptyState } from '@/components/EmptyState';
-import { ItemEditor } from '@/components/ItemEditor/ItemEditor';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import {
   FabricTargetItemPicker,
   TablePicker,
@@ -185,7 +185,29 @@ export function AISuggestPage() {
     <ItemEditor
       title="AI Contract Suggest"
       subtitle="Describe a Fabric target and get a draft contract to refine."
-      homeToolbarActions={[]}
+      homeToolbarActions={[
+        {
+          key: 'generate',
+          label: loading ? 'Generating…' : 'Generate draft',
+          appearance: 'primary',
+          icon: <SparkleRegular />,
+          disabled: loading || !targetTablePath,
+          onClick: () => { void generate(); },
+        },
+        {
+          key: 'save',
+          label: isSaving ? 'Saving…' : 'Save draft',
+          icon: <SaveRegular />,
+          disabled: loading || isSaving || !yaml.trim(),
+          onClick: () => { void saveDraft(); },
+        },
+        {
+          key: 'back',
+          label: 'Back to contracts',
+          icon: <ArrowLeftRegular />,
+          onClick: () => navigate('/contracts'),
+        },
+      ] satisfies RibbonAction[]}
     >
       <div className={styles.root}>
       <Breadcrumb>
@@ -285,24 +307,6 @@ export function AISuggestPage() {
       </div>
 
       <div className={styles.actions}>
-        <Button
-          appearance="primary"
-          disabled={loading || !targetTablePath}
-          icon={<SparkleRegular />}
-          onClick={() => { void generate(); }}
-        >
-          {loading ? 'Generating…' : 'Generate draft'}
-        </Button>
-        <Button
-          appearance="secondary"
-          disabled={loading || isSaving || !yaml.trim()}
-          onClick={() => { void saveDraft(); }}
-        >
-          {isSaving ? 'Saving…' : 'Save draft'}
-        </Button>
-        <Button appearance="subtle" onClick={() => navigate('/contracts')}>
-          Back to contracts
-        </Button>
         {loading ? <Spinner size="tiny" /> : null}
       </div>
 

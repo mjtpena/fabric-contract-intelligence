@@ -4,6 +4,7 @@ import {
   Body1,
   Button,
   Caption1,
+  Card,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -19,6 +20,8 @@ import {
   DialogTrigger,
   Field,
   Input,
+  MessageBar,
+  MessageBarBody,
   Spinner,
   Subtitle2Stronger,
   createTableColumn,
@@ -29,8 +32,10 @@ import {
 import {
   CopyRegular,
   DeleteRegular,
+  Key20Regular,
   KeyRegular,
-  PlugDisconnectedRegular,
+  PlugDisconnected20Regular,
+  Rocket20Regular,
   RocketRegular,
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
@@ -46,7 +51,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
     boxSizing: 'border-box',
   },
   header: {
@@ -63,13 +67,9 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fit, minmax(18rem, 1fr))',
   },
   card: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
-    padding: tokens.spacingHorizontalL,
   },
   cardHeader: {
     display: 'flex',
@@ -213,6 +213,7 @@ export function WorkspaceSettingsPage() {
     {
       key: 'manage-keys',
       label: 'Manage API keys',
+      appearance: 'primary',
       icon: <KeyRegular />,
       onClick: openDialog,
     },
@@ -233,7 +234,7 @@ export function WorkspaceSettingsPage() {
       <div className={styles.root}>
       <div className={styles.grid}>
         {/* Current tier */}
-        <article className={styles.card}>
+        <Card className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Current tier</Caption1>
@@ -254,46 +255,46 @@ export function WorkspaceSettingsPage() {
           >
             Contact support to upgrade
           </Button>
-        </article>
+        </Card>
 
         {/* M2M API keys */}
-        <article className={styles.card}>
+        <Card className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Machine-to-machine API key</Caption1>
               <div className={styles.value}>{keys?.length ?? '—'} active</div>
             </div>
-            <KeyRegular fontSize={20} />
+            <Key20Regular />
           </div>
           <Body1>
             Generate API keys to call the Orqentis API from notebooks, pipelines, or CI/CD without
             interactive Entra login. Keys are scoped to this workspace.
           </Body1>
-        </article>
+        </Card>
 
         {/* Activator setup */}
-        <article className={styles.card}>
+        <Card className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Activator setup</Caption1>
               <div className={styles.value}>Policy routing</div>
             </div>
-            <RocketRegular fontSize={20} />
+            <Rocket20Regular />
           </div>
           <Body1>
             Configure which Activator rules fire when a contract is breached. Open a Contract Policy
             item to set triggers, actions, and webhook routing.
           </Body1>
-        </article>
+        </Card>
 
         {/* Microsoft Purview */}
-        <article className={styles.card}>
+        <Card className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Microsoft Purview</Caption1>
               <div className={styles.value}>Disconnected</div>
             </div>
-            <PlugDisconnectedRegular fontSize={20} />
+            <PlugDisconnected20Regular />
           </div>
           <Badge appearance="tint" color="warning" shape="rounded">
             Not connected
@@ -308,7 +309,7 @@ export function WorkspaceSettingsPage() {
           >
             Contact support to connect
           </Button>
-        </article>
+        </Card>
       </div>
 
       {/* API key dialog */}
@@ -319,9 +320,9 @@ export function WorkspaceSettingsPage() {
             <DialogContent>
               {newKey && (
                 <div className={styles.newKeyBlock}>
-                  <p className={styles.keyWarning}>
-                    Copy this key now — it will not be shown again.
-                  </p>
+                  <MessageBar intent="warning" role="alert">
+                    <MessageBarBody>Copy this key now — it will not be shown again.</MessageBarBody>
+                  </MessageBar>
                   <div className={styles.rawKeyBox}>{newKey.rawKey}</div>
                   <Button
                     appearance="subtle"

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Body1,
+  Body1Strong,
   Button,
   Card,
   Checkbox,
@@ -8,7 +10,6 @@ import {
   Option,
   Tab,
   TabList,
-  Text,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -201,7 +202,7 @@ export function PolicyEditorPage() {
     && cronRegex.test(cronExpression.trim())
     && (actionType !== 'webhook' || !validateIntegration(integration));
   const selectedContractName = contracts.find((contract) => contract.id === contractId)?.name;
-  const renderNotSet = () => <Text className={styles.mutedValue}>Not set</Text>;
+  const renderNotSet = () => <Body1 className={styles.mutedValue}>Not set</Body1>;
 
   const homeToolbarActions: RibbonAction[] = useMemo(() => {
     const actions: RibbonAction[] = [];
@@ -325,28 +326,28 @@ export function PolicyEditorPage() {
       {step === 3 ? (
         <Card>
           <dl className={styles.reviewList}>
-            <Field label={<Text size={300}>Trigger</Text>}>
-              <Text weight="semibold">{alertOnWarn ? 'Failed or warned runs' : 'Failed runs only'}</Text>
+            <Field label="Trigger">
+              <Body1Strong>{alertOnWarn ? 'Failed or warned runs' : 'Failed runs only'}</Body1Strong>
             </Field>
-            <Field label={<Text size={300}>Schedule</Text>}>
-              <Text weight="semibold">{cronToHuman(cronExpression)} · {cronExpression}</Text>
+            <Field label="Schedule">
+              <Body1Strong>{cronToHuman(cronExpression)} · {cronExpression}</Body1Strong>
             </Field>
-            <Field label={<Text size={300}>Action</Text>}>
-              <Text weight="semibold">
+            <Field label="Action">
+              <Body1Strong>
                 {actionType === 'notify' ? 'Notify Activator rule' : `Send ${integration.webhookType} alert`}
-              </Text>
+              </Body1Strong>
             </Field>
-            <Field label={<Text size={300}>Webhook URL</Text>}>
-              {integration.webhookUrl ? <Text weight="semibold">{integration.webhookType === 'pagerduty' ? 'PagerDuty routing key configured' : integration.webhookUrl}</Text> : renderNotSet()}
+            <Field label="Webhook URL">
+              {integration.webhookUrl ? <Body1Strong>{integration.webhookType === 'pagerduty' ? 'PagerDuty routing key configured' : integration.webhookUrl}</Body1Strong> : renderNotSet()}
             </Field>
-            <Field label={<Text size={300}>Headers</Text>}>
-              {actionType === 'webhook' ? <Text weight="semibold">Managed by destination</Text> : renderNotSet()}
+            <Field label="Headers">
+              {actionType === 'webhook' ? <Body1Strong>Managed by destination</Body1Strong> : renderNotSet()}
             </Field>
-            <Field label={<Text size={300}>Active</Text>}>
-              <Text weight="semibold">Enabled</Text>
+            <Field label="Active">
+              <Body1Strong>Enabled</Body1Strong>
             </Field>
-            <Field label={<Text size={300}>Contract</Text>}>
-              {selectedContractName ? <Text weight="semibold">{selectedContractName}</Text> : renderNotSet()}
+            <Field label="Contract">
+              {selectedContractName ? <Body1Strong>{selectedContractName}</Body1Strong> : renderNotSet()}
             </Field>
           </dl>
         </Card>

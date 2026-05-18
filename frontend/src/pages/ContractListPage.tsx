@@ -24,7 +24,7 @@ import {
   SearchBox,
   Spinner,
   Subtitle2,
-  Title3,
+  Subtitle2Stronger,
   createTableColumn,
   makeStyles,
   tokens,
@@ -37,6 +37,7 @@ import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { FabricLink } from '@/components/FabricLink';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -68,6 +69,10 @@ const useStyles = makeStyles({
   },
   scopeField: {
     minWidth: '16rem',
+  },
+  templateGrid: {
+    display: 'grid',
+    gap: tokens.spacingVerticalS,
   },
   surface: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -493,11 +498,11 @@ export function ContractListPage() {
 
       <div className={styles.surface}>
         {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
-        {error ? <Body1>{error}</Body1> : null}
+        {error ? <ErrorBanner message={error} /> : null}
         {!loading && !federatedLoading && displayedContracts.length === 0 ? (
           sdk.isReady ? (
             <div>
-              <Title3 as="h2">Author your first contract</Title3>
+              <Subtitle2Stronger as="h3">Author your first contract</Subtitle2Stronger>
               <div className={styles.onboarding}>
                 <Card className={styles.onboardingCard}>
                   <Subtitle2>From a Fabric table</Subtitle2>
@@ -665,6 +670,7 @@ export function ContractListPage() {
 }
 
 function TemplateDialog({ openTemplate }: { openTemplate: (yaml: string) => void }) {
+  const styles = useStyles();
   return (
     <Dialog>
       <DialogTrigger disableButtonEnhancement>
@@ -674,7 +680,7 @@ function TemplateDialog({ openTemplate }: { openTemplate: (yaml: string) => void
         <DialogBody>
           <DialogTitle>Choose contract template</DialogTitle>
           <DialogContent>
-            <div style={{ display: 'grid', gap: tokens.spacingVerticalS }}>
+            <div className={styles.templateGrid}>
               {aiDescriptionTemplates.slice(0, 6).map((template) => (
                 <Button key={template.id} appearance="secondary" onClick={() => openTemplate(template.yaml)}>
                   {template.label}
