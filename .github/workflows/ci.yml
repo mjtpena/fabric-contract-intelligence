@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: frontend } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: backend } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -68,7 +68,7 @@ jobs:
     name: Validate sample contracts (ODCS v3.1.0)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install datacontract-cli
@@ -84,7 +84,7 @@ jobs:
     name: Validate Bicep templates
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Bicep CLI
         run: az bicep install
       - name: Lint main.bicep
@@ -94,7 +94,7 @@ jobs:
     name: Public ISV readiness artifacts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate public readiness package
         shell: pwsh
         run: ./scripts/Test-PublicReadiness.ps1
@@ -107,7 +107,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}

@@ -20,7 +20,7 @@ jobs:
     env:
       SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate deployment secrets (production)
         shell: bash
