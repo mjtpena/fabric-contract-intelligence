@@ -20,7 +20,6 @@ import {
   Subtitle2Stronger,
   Tab,
   TabList,
-  Title3,
   createTableColumn,
   makeStyles,
   tokens,
@@ -439,27 +438,35 @@ export function EnforcementRunPage() {
 
   if ((itemObjectId && !itemDefinitionLoaded) || (loading && !run)) {
     return (
-      <section className={styles.root}>
-        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
-        <Spinner label="Loading enforcement run…" />
-      </section>
+      <ItemEditor title="Enforcement run" homeToolbarActions={[]}>
+        <div className={styles.root}>
+          <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
+          <Spinner label="Loading enforcement run…" />
+        </div>
+      </ItemEditor>
     );
   }
 
   if (!run) {
     return (
-      <section className={styles.root}>
-        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
-        <ReportItemDashboard
-          auditError={auditError ?? error}
-          auditLoading={auditLoading}
-          rows={auditRows}
-          styles={styles}
-          onOpenRun={(row) => {
-            void openAuditRow(row);
-          }}
-        />
-      </section>
+      <ItemEditor
+        title="Contract reports"
+        subtitle="Review enforcement history and open the breached runs that need attention."
+        homeToolbarActions={[]}
+      >
+        <div className={styles.root}>
+          <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
+          <ReportItemDashboard
+            auditError={auditError ?? error}
+            auditLoading={auditLoading}
+            rows={auditRows}
+            styles={styles}
+            onOpenRun={(row) => {
+              void openAuditRow(row);
+            }}
+          />
+        </div>
+      </ItemEditor>
     );
   }
 
@@ -761,7 +768,6 @@ function ReportItemDashboard({
   auditError,
   auditLoading,
   rows,
-  styles,
   onOpenRun,
 }: ReportItemDashboardProps) {
   const columns = useMemo(
@@ -801,13 +807,6 @@ function ReportItemDashboard({
 
   return (
     <>
-      <div className={styles.header}>
-        <div>
-          <Title3 as="h2">Contract reports</Title3>
-          <Caption1 className={styles.subtitle}>Open saved enforcement reports and investigate breached contracts.</Caption1>
-        </div>
-      </div>
-
       {auditError ? <Body1>{auditError}</Body1> : null}
 
       {auditLoading ? (

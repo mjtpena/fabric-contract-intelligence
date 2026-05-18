@@ -87,7 +87,7 @@ const useStyles = makeStyles({
     alignItems: 'flex-start',
     justifyContent: 'center',
     height: '100%',
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingHorizontalXXL,
     backgroundColor: tokens.colorNeutralBackground2,
