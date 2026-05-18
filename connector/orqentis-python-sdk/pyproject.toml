@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orqentis"
+version = "0.1.0"
+description = "Orqentis ODCS contract read-gate decorator for Microsoft Fabric notebooks."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Orqentis", email = "hello@orqentis.dev" }
+]
+keywords = ["odcs", "fabric", "microsoft-fabric", "data-contracts", "delta", "data-security-for-ai"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/mjtpena/fabric-contract-intelligence"
+Repository = "https://github.com/mjtpena/fabric-contract-intelligence"
+
+[tool.setuptools.packages.find]
+include = ["orqentis*"]
+exclude = ["tests*"]

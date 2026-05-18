@@ -1,0 +1,27 @@
+{
+  "name": "Orqentis Contract Gate",
+  "type": "WebActivity",
+  "description": "Calls GET /v1/contracts/{id} and fails the pipeline run if the contract is in a blocking state. Phase 1 Epic 1.2.",
+  "typeProperties": {
+    "url": "@concat(pipeline().globalParameters.orqentisBaseUrl, '/v1/contracts/', pipeline().parameters.contractId)",
+    "method": "GET",
+    "headers": {
+      "X-Api-Key": "@pipeline().globalParameters.orqentisApiKey",
+      "X-Correlation-Id": "@pipeline().RunId",
+      "Accept": "application/json"
+    },
+    "disableCertValidation": false
+  },
+  "policy": {
+    "timeout": "0.00:00:30",
+    "retry": 2,
+    "retryIntervalInSeconds": 10,
+    "secureInput": false,
+    "secureOutput": false
+  },
+  "_orqentisGateAssertion": {
+    "description": "Add an 'If Condition' activity downstream with this expression to block on violation:",
+    "expression": "@or(equals(toLower(activity('Orqentis Contract Gate').output.status), 'violated'), equals(toLower(coalesce(activity('Orqentis Contract Gate').output.lastRunStatus, '')), 'failed'))",
+    "trueBranch": "Fail activity with message: Orqentis contract is in a blocking state"
+  }
+}

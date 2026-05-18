@@ -1,0 +1,26 @@
+{
+  "name": "@orqentis/pipeline-activity",
+  "version": "0.1.0",
+  "description": "Orqentis contract write-gate for Microsoft Fabric Pipelines (Web Activity recipe) and any CI/CD runner (Node CLI).",
+  "license": "MIT",
+  "bin": {
+    "orqentis-gate": "./bin/orqentis-gate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "web-activity.json",
+    "README.md"
+  ],
+  "keywords": [
+    "orqentis",
+    "fabric",
+    "microsoft-fabric",
+    "odcs",
+    "data-contracts",
+    "pipeline",
+    "ci-cd"
+  ]
+}
