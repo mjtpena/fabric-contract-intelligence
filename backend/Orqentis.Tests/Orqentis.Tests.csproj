@@ -28,5 +28,8 @@
     <PackageReference Include="WireMock.Net" Version="1.6.7" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="Bogus" Version="35.6.1" />
+    <!-- Override transitive vulnerability GHSA-4cv2-4hjh-77rx (CVE-2024-51417) -->
+    <!-- Pulled in via WireMock.Net -> Handlebars.Net.Helpers.DynamicLinq -->
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.0.2" />
   </ItemGroup>
 </Project>
