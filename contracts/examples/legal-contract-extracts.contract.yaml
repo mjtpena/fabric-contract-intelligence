@@ -1,0 +1,127 @@
+apiVersion: v3.1.0
+kind: DataContract
+id: urn:orqentis:orqentis:legal:contract_extracts:v1
+name: Legal Contract Extracts AI Use Case
+version: 1.0.0
+status: active
+description:
+  purpose: Governs the contract_extracts Delta table used by the liability summarisation Copilot.
+  usage: Source for the contract-intelligence RAG retriever and Azure OpenAI liability summariser.
+servers:
+  - server: fabric-production
+    type: azure
+    location: abfss://legal@onelake.dfs.fabric.microsoft.com/LegalLakehouse.Lakehouse/Tables/contract_extracts
+    format: delta
+schema:
+  - name: contract_extracts
+    physicalType: table
+    description: Extracted clauses and party metadata from counterparty agreements.
+    properties:
+      - name: extract_id
+        logicalType: string
+        physicalType: STRING
+        required: true
+        unique: true
+        description: Unique extract identifier.
+      - name: contract_id
+        logicalType: string
+        physicalType: STRING
+        required: true
+        description: Source counterparty contract identifier.
+      - name: counterparty_name
+        logicalType: string
+        physicalType: STRING
+        required: true
+        description: Counterparty legal name.
+        customProperties:
+          - property: pii
+            value: true
+      - name: counterparty_email
+        logicalType: string
+        physicalType: STRING
+        required: false
+        description: Counterparty primary contact email.
+        customProperties:
+          - property: pii
+            value: true
+      - name: clause_text
+        logicalType: string
+        physicalType: STRING
+        required: true
+        description: Extracted clause text content.
+      - name: clause_category
+        logicalType: string
+        physicalType: STRING
+        required: true
+        description: Clause taxonomy bucket (e.g. liability, indemnity, termination).
+      - name: liability_cap_amount
+        logicalType: number
+        physicalType: DECIMAL
+        required: false
+        description: Parsed liability cap when present.
+      - name: extracted_at
+        logicalType: timestamp
+        physicalType: TIMESTAMP
+        required: true
+        description: Extraction timestamp in UTC.
+slaProperties:
+  - property: retention
+    value: 2555
+    unit: days
+customProperties:
+  - property: orqentisInfo
+    value:
+      title: Legal Contract Extracts AI Use Case
+      description: Governance contract for the contract-intelligence Copilot pipeline.
+      owner: legal-ops@example.com
+      contact:
+        - name: Legal Data Platform
+          email: legal-platform@example.com
+          role: producer
+        - name: Contract Intelligence Copilot
+          email: contract-copilot@example.com
+          role: consumer
+  - property: orqentisQuality
+    value:
+      - type: nullRate
+        column: extract_id
+        threshold: 0.0
+        severity: error
+      - type: uniqueness
+        column: extract_id
+        threshold: 1.0
+        severity: error
+      - type: nullRate
+        column: clause_text
+        threshold: 0.0
+        severity: error
+  - property: orqentisFreshness
+    value:
+      maxAgeHours: 24
+      severity: warning
+  - property: orqentisAiContext
+    value:
+      useCases:
+        - id: usecase-liability-summariser
+          tier: high-risk
+          jurisdictions:
+            - EU
+            - AU
+            - US
+          regulations:
+            - eu-ai-act-art-10
+            - eu-ai-act-art-13
+            - nist-ai-rmf-govern
+            - gdpr-art-22
+      permittedUses:
+        - rag-retrieval
+        - inference
+      prohibitedUses:
+        - training
+        - synthetic-data-generation
+        - third-party-model-training
+      permittedAgents:
+        - fabric-copilot
+        - orqentis-contract-intelligence-agent
+      retentionForTraining:
+        maxAgeDays: 365

@@ -31,7 +31,8 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
             var root = OdcsYamlJsonConverter.ConvertToJsonElement(odcsYaml);
             var errors = _schema.Value.Validate(root.GetRawText())
                 .Select(MapError)
-                .Concat(ValidateServerUris(root));
+                .Concat(ValidateServerUris(root))
+                .Concat(ValidateAiContext(root));
 
             return errors.ToArray();
         }
@@ -60,6 +61,108 @@ public sealed class OdcsContractValidator : IOdcsContractValidator
     {
         var path = NormalizePath(error);
         return new OdcsValidationError(path, error.ToString());
+    }
+
+    private static readonly HashSet<string> _validAiTiers = new(StringComparer.Ordinal)
+    {
+        "minimal", "limited", "high-risk", "prohibited",
+    };
+
+    private static IEnumerable<OdcsValidationError> ValidateAiContext(System.Text.Json.JsonElement root)
+    {
+        if (!root.TryGetProperty("customProperties", out var custom) || custom.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        System.Text.Json.JsonElement? aiContextValue = null;
+        foreach (var prop in custom.EnumerateArray())
+        {
+            if (prop.TryGetProperty("property", out var name)
+                && name.ValueKind == System.Text.Json.JsonValueKind.String
+                && string.Equals(name.GetString(), "orqentisAiContext", StringComparison.Ordinal)
+                && prop.TryGetProperty("value", out var value))
+            {
+                aiContextValue = value;
+                break;
+            }
+        }
+
+        if (aiContextValue is null || aiContextValue.Value.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            yield break;
+        }
+
+        var ai = aiContextValue.Value;
+
+        if (ai.TryGetProperty("useCases", out var useCases) && useCases.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            var idx = 0;
+            foreach (var useCase in useCases.EnumerateArray())
+            {
+                var basePath = $"$.customProperties[orqentisAiContext].useCases[{idx}]";
+                if (useCase.ValueKind != System.Text.Json.JsonValueKind.Object)
+                {
+                    yield return new OdcsValidationError(basePath, "Use case must be an object.");
+                    idx++;
+                    continue;
+                }
+
+                if (!useCase.TryGetProperty("id", out var id)
+                    || id.ValueKind != System.Text.Json.JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(id.GetString()))
+                {
+                    yield return new OdcsValidationError($"{basePath}.id", "Use case id is required and must be a non-empty string.");
+                }
+
+                if (useCase.TryGetProperty("tier", out var tier)
+                    && tier.ValueKind == System.Text.Json.JsonValueKind.String
+                    && !string.IsNullOrEmpty(tier.GetString())
+                    && !_validAiTiers.Contains(tier.GetString()!))
+                {
+                    yield return new OdcsValidationError(
+                        $"{basePath}.tier",
+                        "tier must be one of: minimal, limited, high-risk, prohibited.");
+                }
+
+                idx++;
+            }
+        }
+
+        var permitted = CollectStringArray(ai, "permittedUses");
+        var prohibited = CollectStringArray(ai, "prohibitedUses");
+        foreach (var conflict in permitted.Intersect(prohibited, StringComparer.Ordinal))
+        {
+            yield return new OdcsValidationError(
+                "$.customProperties[orqentisAiContext]",
+                $"Use '{conflict}' appears in both permittedUses and prohibitedUses.");
+        }
+
+        if (ai.TryGetProperty("retentionForTraining", out var retention)
+            && retention.ValueKind == System.Text.Json.JsonValueKind.Object
+            && retention.TryGetProperty("maxAgeDays", out var maxAge)
+            && maxAge.ValueKind == System.Text.Json.JsonValueKind.Number
+            && maxAge.TryGetInt32(out var days)
+            && days <= 0)
+        {
+            yield return new OdcsValidationError(
+                "$.customProperties[orqentisAiContext].retentionForTraining.maxAgeDays",
+                "maxAgeDays must be a positive integer.");
+        }
+    }
+
+    private static List<string> CollectStringArray(System.Text.Json.JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element) || element.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == System.Text.Json.JsonValueKind.String)
+            .Select(item => item.GetString()!)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
     }
 
     private static IEnumerable<OdcsValidationError> ValidateServerUris(System.Text.Json.JsonElement root)
