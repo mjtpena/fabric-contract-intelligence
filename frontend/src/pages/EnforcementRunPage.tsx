@@ -21,7 +21,6 @@ import {
   Tab,
   TabList,
   Title3,
-  Tooltip,
   createTableColumn,
   makeStyles,
   tokens,
@@ -32,6 +31,8 @@ import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { BreachScoreGauge } from '@/components/RunResult/BreachScoreGauge';
+import { EmptyState } from '@/components/EmptyState';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { RuleResultsTable } from '@/components/RunResult/RuleResultsTable';
 import { SchemaDiffViewer } from '@/components/RunResult/SchemaDiffViewer';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -154,7 +155,7 @@ const useStyles = makeStyles({
     paddingLeft: tokens.spacingHorizontalL,
   },
   emptyState: {
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingHorizontalXXL,
     backgroundColor: tokens.colorNeutralBackground2,
@@ -472,8 +473,99 @@ export function EnforcementRunPage() {
     ? formatBreachDelta(displayBreachScore - previousScore)
     : null;
 
+  const homeToolbarActions: RibbonAction[] = useMemo(() => {
+    const actions: RibbonAction[] = [];
+    if (resolvedContractId) {
+      actions.push({
+        key: 'back',
+        label: 'Back to contract',
+        icon: <ArrowLeftRegular />,
+        onClick: () => { void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`); },
+      });
+    }
+    actions.push({
+      key: 'refresh',
+      label: 'Refresh',
+      icon: <ArrowClockwiseRegular />,
+      onClick: () => { void refresh(); },
+    });
+    if (isPollingPaused) {
+      actions.push({
+        key: 'resume-polling',
+        label: 'Resume polling',
+        icon: <ArrowClockwiseRegular />,
+        appearance: 'primary',
+        onClick: () => { void resumePolling(); },
+      });
+    }
+    if (resolvedContractId) {
+      actions.push({
+        key: 'run-again',
+        label: 'Run again',
+        icon: <Play16Regular />,
+        appearance: 'primary',
+        disabled: secondaryActionInFlight,
+        onClick: () => {
+          void runSecondaryAction(async () => {
+            if (!resolvedContractId) return;
+            const nextRun = await runClient.runNow(resolvedContractId);
+            await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
+            await openWorkloadRoute(buildRunLink(resolvedContractId, nextRun.runId), 'append');
+          });
+        },
+      });
+    }
+    if (run) {
+      actions.push({
+        key: 'download',
+        label: 'Download',
+        icon: <ArrowDownload16Regular />,
+        tooltip: 'Download run result JSON',
+        disabled: secondaryActionInFlight,
+        onClick: () => {
+          void runSecondaryAction(async () => {
+            downloadJson(run, `run-${run.id}.json`);
+            await sdk.notifySuccess('Downloaded', 'Run result JSON download started.');
+          });
+        },
+      });
+      actions.push({
+        key: 'copy-link',
+        label: 'Copy link',
+        icon: <Link16Regular />,
+        tooltip: 'Copy shareable link',
+        disabled: secondaryActionInFlight,
+        onClick: () => {
+          void runSecondaryAction(async () => {
+            await copyText(window.location.href);
+            await sdk.notifySuccess('Copied', 'Shareable link copied to clipboard.');
+          });
+        },
+      });
+      actions.push({
+        key: 'copy-correlation',
+        label: 'Copy correlation ID',
+        icon: <Copy16Regular />,
+        disabled: secondaryActionInFlight || !run.correlationId,
+        onClick: () => {
+          void runSecondaryAction(async () => {
+            await copyText(run.correlationId);
+            await sdk.notifySuccess('Copied', 'Correlation ID copied to clipboard.');
+          });
+        },
+      });
+    }
+    return actions;
+  }, [isPollingPaused, openWorkloadRoute, refresh, resolvedContractId, resumePolling, run, runClient, runSecondaryAction, sdk, secondaryActionInFlight]);
+
   return (
-    <section className={styles.root}>
+    <ItemEditor
+      title={contract?.name ?? 'Enforcement run'}
+      subtitle={contract?.targetTablePath ?? 'Review failed rules and remediation guidance for this run.'}
+      homeToolbarActions={homeToolbarActions}
+      statusSlot={<StatusBadge status={run.status} />}
+    >
+      <div className={styles.root}>
       <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
       <Breadcrumb>
         <BreadcrumbItem>
@@ -494,112 +586,6 @@ export function EnforcementRunPage() {
           <BreadcrumbButton current>Run {run.id.slice(0, 8)}</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
-      <div className={styles.header}>
-        <div>
-          <div className={styles.titleRow}>
-            <Title3>{contract?.name ?? 'Enforcement run'}</Title3>
-            <Tooltip content="Copy correlation ID" relationship="label">
-              <Button
-                appearance="subtle"
-                aria-label="Copy correlation ID"
-                disabled={secondaryActionInFlight || !run.correlationId}
-                icon={<Copy16Regular />}
-                size="small"
-                onClick={() => {
-                  void runSecondaryAction(async () => {
-                    await copyText(run.correlationId);
-                    await sdk.notifySuccess('Copied', 'Correlation ID copied to clipboard.');
-                  });
-                }}
-              />
-            </Tooltip>
-            <Tooltip content="Run this contract again" relationship="label">
-              <Button
-                appearance="subtle"
-                aria-label="Run this contract again"
-                disabled={secondaryActionInFlight || !resolvedContractId}
-                icon={<Play16Regular />}
-                size="small"
-                onClick={() => {
-                  void runSecondaryAction(async () => {
-                    if (!resolvedContractId) return;
-                    const nextRun = await runClient.runNow(resolvedContractId);
-                    await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
-                    await openWorkloadRoute(buildRunLink(resolvedContractId, nextRun.runId), 'append');
-                  });
-                }}
-              />
-            </Tooltip>
-            <Tooltip content="Download run result" relationship="label">
-              <Button
-                appearance="subtle"
-                aria-label="Download run result"
-                disabled={secondaryActionInFlight}
-                icon={<ArrowDownload16Regular />}
-                size="small"
-                onClick={() => {
-                  void runSecondaryAction(async () => {
-                    downloadJson(run, `run-${run.id}.json`);
-                    await sdk.notifySuccess('Downloaded', 'Run result JSON download started.');
-                  });
-                }}
-              />
-            </Tooltip>
-            <Tooltip content="Copy shareable link" relationship="label">
-              <Button
-                appearance="subtle"
-                aria-label="Copy shareable link"
-                disabled={secondaryActionInFlight}
-                icon={<Link16Regular />}
-                size="small"
-                onClick={() => {
-                  void runSecondaryAction(async () => {
-                    await copyText(window.location.href);
-                    await sdk.notifySuccess('Copied', 'Shareable link copied to clipboard.');
-                  });
-                }}
-              />
-            </Tooltip>
-          </div>
-          <Caption1 className={styles.subtitle}>
-            {contract?.targetTablePath ?? 'Review failed rules and remediation guidance for this run.'}
-          </Caption1>
-        </div>
-        <div className={styles.headerActions}>
-          {resolvedContractId ? (
-            <Button
-              appearance="secondary"
-              icon={<ArrowLeftRegular />}
-              onClick={() => {
-                void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`);
-              }}
-            >
-              Back to contract
-            </Button>
-          ) : null}
-          {isPollingPaused ? (
-            <Button
-              appearance="primary"
-              icon={<ArrowClockwiseRegular />}
-              onClick={() => {
-                void resumePolling();
-              }}
-            >
-              Resume polling
-            </Button>
-          ) : null}
-          <Button
-            appearance="secondary"
-            icon={<ArrowClockwiseRegular />}
-            onClick={() => {
-              void refresh();
-            }}
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
 
       {error ? <Body1>{error}</Body1> : null}
 
@@ -758,7 +744,8 @@ export function EnforcementRunPage() {
           </>
         ) : null}
       </div>
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 
@@ -826,9 +813,10 @@ function ReportItemDashboard({
       {auditLoading ? (
         <Spinner label="Loading contract reports…" />
       ) : rows.length === 0 ? (
-        <div className={styles.emptyState}>
-          <Body1>No enforcement reports have been recorded for this workspace yet.</Body1>
-        </div>
+        <EmptyState
+          description="No enforcement reports have been recorded for this workspace yet."
+          title="No reports yet"
+        />
       ) : (
         <DataGrid items={rows} columns={columns}>
           <DataGridHeader>

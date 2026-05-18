@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
-  Caption1,
   Card,
   Checkbox,
   Dropdown,
@@ -10,7 +9,6 @@ import {
   Tab,
   TabList,
   Text,
-  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -19,6 +17,7 @@ import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { RulePicker } from '@/components/Activator/RulePicker';
 import { IntegrationPicker, validateIntegration, type IntegrationValue } from '@/components/Integration/IntegrationPicker';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { ScheduleBuilder } from '@/components/Schedule/ScheduleBuilder';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
@@ -33,7 +32,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
     height: '100%',
     boxSizing: 'border-box',
     overflow: 'auto',
@@ -44,11 +42,6 @@ const useStyles = makeStyles({
     paddingTop: tokens.spacingVerticalM,
     marginTop: tokens.spacingVerticalM,
     borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
-  },
-  subtitle: {
-    display: 'block',
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
   reviewList: {
     display: 'grid',
@@ -210,11 +203,48 @@ export function PolicyEditorPage() {
   const selectedContractName = contracts.find((contract) => contract.id === contractId)?.name;
   const renderNotSet = () => <Text className={styles.mutedValue}>Not set</Text>;
 
-  return (
-    <section className={styles.root}>
-      <Title3 as="h2">Policy editor</Title3>
-      <Caption1 className={styles.subtitle}>Schedule enforcement, choose alerts, and route breaches without leaving Fabric.</Caption1>
+  const homeToolbarActions: RibbonAction[] = useMemo(() => {
+    const actions: RibbonAction[] = [];
+    if (step < 3) {
+      actions.push({
+        key: 'next',
+        label: 'Next',
+        appearance: 'primary',
+        onClick: goNext,
+      });
+    } else {
+      actions.push({
+        key: 'save',
+        label: isSaving ? 'Saving…' : 'Save policy',
+        appearance: 'primary',
+        disabled: !canSave || isSaving,
+        onClick: () => { void savePolicy(); },
+      });
+    }
+    if (step > 0) {
+      actions.push({
+        key: 'previous',
+        label: 'Previous',
+        onClick: () => setStep((current) => Math.max(current - 1, 0)),
+      });
+    }
+    actions.push({
+      key: 'cancel',
+      label: 'Cancel',
+      onClick: () => {
+        void openWorkloadRoute(contractId ? `/contracts/${contractId}/edit` : '/contracts');
+      },
+    });
+    return actions;
+  }, [step, isSaving, canSave, contractId]);
 
+  return (
+    <ItemEditor
+      title="Policy editor"
+      subtitle="Schedule enforcement, choose alerts, and route breaches without leaving Fabric."
+      homeToolbarActions={homeToolbarActions}
+    >
+      <div className={styles.root}>
       <TabList selectedValue={step} onTabSelect={(_, data) => {
         const nextStep = Number(data.value);
         if (Number.isInteger(nextStep) && nextStep <= step) {
@@ -346,7 +376,8 @@ export function PolicyEditorPage() {
           Cancel
         </Button>
       </div>
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

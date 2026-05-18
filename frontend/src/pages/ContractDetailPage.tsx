@@ -22,7 +22,6 @@ import {
   MenuTrigger,
   Spinner,
   Subtitle2Stronger,
-  Title3,
   Tooltip,
   createTableColumn,
   makeStyles,
@@ -32,6 +31,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { EditRegular } from '@fluentui/react-icons';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { ContractClientError, createContractClient } from '@/api/contractClient';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useContract } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -42,18 +42,8 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalL,
-    flexWrap: 'wrap',
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
+    height: '100%',
+    overflow: 'auto',
   },
   metadata: {
     display: 'grid',
@@ -199,8 +189,31 @@ export function ContractDetailPage() {
     [contract?.id, id, openWorkloadRoute, previousVersionByVersion],
   );
 
+  const homeToolbarActions: RibbonAction[] = useMemo(() => [
+    {
+      key: 'back',
+      label: 'Contracts',
+      onClick: () => { void openWorkloadRoute('/contracts'); },
+    },
+    ...(contract ? [{
+      key: 'edit',
+      label: 'Edit contract',
+      icon: <EditRegular />,
+      appearance: 'primary' as const,
+      onClick: () => { void openWorkloadRoute(`/contracts/${contract.id}/edit`); },
+    }] : []),
+  ], [contract, openWorkloadRoute]);
+
+  const statusSlot = contract ? <StatusBadge status={contract.status} /> : null;
+
   return (
-    <section className={styles.root}>
+    <ItemEditor
+      title={contract?.name ?? 'Contract detail'}
+      subtitle={contract?.targetTablePath ?? 'Review contract metadata and compare immutable versions.'}
+      homeToolbarActions={homeToolbarActions}
+      statusSlot={statusSlot}
+    >
+      <div className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>
@@ -210,24 +223,6 @@ export function ContractDetailPage() {
           <BreadcrumbButton current>{contract?.name ?? id ?? 'Contract'}</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
-      <div className={styles.header}>
-        <div>
-          <Title3>{contract?.name ?? 'Contract detail'}</Title3>
-          <Caption1 className={styles.subtitle}>Review contract metadata and compare immutable versions.</Caption1>
-        </div>
-        {contract ? (
-          <Button
-            appearance="primary"
-            icon={<EditRegular />}
-            onClick={() => {
-              void openWorkloadRoute(`/contracts/${contract.id}/edit`);
-            }}
-          >
-            Edit contract
-          </Button>
-        ) : null}
-      </div>
 
       {loading ? <Spinner label="Loading contract…" /> : null}
       {error ? <Body1>{error}</Body1> : null}
@@ -338,7 +333,8 @@ export function ContractDetailPage() {
           </div>
         </>
       ) : null}
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

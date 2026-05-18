@@ -3,7 +3,6 @@ import {
   Badge,
   Body1,
   Button,
-  Caption1,
   Card,
   Dialog,
   DialogActions,
@@ -19,6 +18,7 @@ import {
   DataGridHeaderCell,
   DataGridRow,
   Dropdown,
+  Caption1,
   Field,
   Option,
   SearchBox,
@@ -38,6 +38,7 @@ import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
 import { EmptyState } from '@/components/EmptyState';
 import { FabricLink } from '@/components/FabricLink';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VisuallyHidden } from '@/components/VisuallyHidden';
 import { useContracts } from '@/hooks/useContract';
@@ -62,29 +63,17 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
+    height: '100%',
+    overflow: 'auto',
   },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalL,
-    flexWrap: 'wrap',
-  },
-  actions: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalS,
-    alignItems: 'center',
+  scopeField: {
+    minWidth: '16rem',
   },
   surface: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingHorizontalL,
     backgroundColor: tokens.colorNeutralBackground1,
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
   filters: {
     display: 'grid',
@@ -457,51 +446,49 @@ export function ContractListPage() {
 
 
 
-  return (
-    <section className={styles.root}>
-      <div className={styles.header}>
-        <div>
-          <Title3>Contract library</Title3>
-          <Caption1 className={styles.subtitle}>Author, version, and run data contracts across your workspace.</Caption1>
-        </div>
-        <div className={styles.actions}>
-          {tier.toLowerCase() === 'enterprise' ? (
-            <Field label="Workspace scope">
-              <Dropdown
-                selectedOptions={[workspaceScope]}
-                value={workspaceScope === 'linked' ? 'Current + linked workspaces' : 'Current workspace'}
-                onOptionSelect={(_, data) => setWorkspaceScope((data.optionValue as 'current' | 'linked') ?? 'current')}
-              >
-                <Option value="current">Current workspace</Option>
-                <Option value="linked">Current + linked workspaces</Option>
-              </Dropdown>
-            </Field>
-          ) : null}
-          <Button
-            appearance="secondary"
-            icon={<ArrowClockwiseRegular />}
-            onClick={() => {
-              if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
-                void opsClient.listFederatedContracts().then((response) => setFederatedContracts(response.contracts));
-              } else {
-                void refresh();
-              }
-            }}
-          >
-            Refresh
-          </Button>
-          <Button
-            appearance="primary"
-            icon={<AddRegular />}
-            onClick={() => {
-              void openWorkloadRoute('/contracts/editor');
-            }}
-          >
-            Create contract
-          </Button>
-        </div>
-      </div>
+  const homeToolbarActions: RibbonAction[] = useMemo(() => [
+    {
+      key: 'refresh',
+      label: 'Refresh',
+      icon: <ArrowClockwiseRegular />,
+      onClick: () => {
+        if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+          void opsClient.listFederatedContracts().then((response) => setFederatedContracts(response.contracts));
+        } else {
+          void refresh();
+        }
+      },
+    },
+    {
+      key: 'create',
+      label: 'Create contract',
+      icon: <AddRegular />,
+      appearance: 'primary',
+      onClick: () => { void openWorkloadRoute('/contracts/editor'); },
+    },
+  ], [opsClient, openWorkloadRoute, refresh, tier, workspaceScope]);
 
+  const statusSlot = tier.toLowerCase() === 'enterprise' ? (
+    <Field className={styles.scopeField} label="Workspace scope" orientation="horizontal">
+      <Dropdown
+        selectedOptions={[workspaceScope]}
+        value={workspaceScope === 'linked' ? 'Current + linked workspaces' : 'Current workspace'}
+        onOptionSelect={(_, data) => setWorkspaceScope((data.optionValue as 'current' | 'linked') ?? 'current')}
+      >
+        <Option value="current">Current workspace</Option>
+        <Option value="linked">Current + linked workspaces</Option>
+      </Dropdown>
+    </Field>
+  ) : null;
+
+  return (
+    <ItemEditor
+      title="Contract library"
+      subtitle="Author, version, and run data contracts across your workspace."
+      homeToolbarActions={homeToolbarActions}
+      statusSlot={statusSlot}
+    >
+      <div className={styles.root}>
       <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
       <div className={styles.surface}>
@@ -672,7 +659,8 @@ export function ContractListPage() {
           </>
         ) : null}
       </div>
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

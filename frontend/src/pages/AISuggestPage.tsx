@@ -15,7 +15,6 @@ import {
   Input,
   Spinner,
   Textarea,
-  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -23,6 +22,7 @@ import { SparkleRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { EmptyState } from '@/components/EmptyState';
+import { ItemEditor } from '@/components/ItemEditor/ItemEditor';
 import {
   FabricTargetItemPicker,
   TablePicker,
@@ -40,16 +40,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
   grid: {
     display: 'grid',
@@ -192,7 +182,12 @@ export function AISuggestPage() {
   };
 
   return (
-    <section className={styles.root}>
+    <ItemEditor
+      title="AI Contract Suggest"
+      subtitle="Describe a Fabric target and get a draft contract to refine."
+      homeToolbarActions={[]}
+    >
+      <div className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => navigate('/contracts')}>Library</BreadcrumbButton>
@@ -202,11 +197,6 @@ export function AISuggestPage() {
           <BreadcrumbButton current>AI generate</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
-      <div className={styles.header}>
-        <Title3>AI Contract Suggest</Title3>
-        <Caption1 className={styles.subtitle}>Describe a Fabric target and get a draft contract to refine.</Caption1>
-      </div>
 
       <div className={styles.grid}>
         <TargetTypePicker
@@ -347,7 +337,8 @@ export function AISuggestPage() {
           title="Select a target first"
         />
       ) : null}
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

@@ -5,7 +5,6 @@ import {
   BreadcrumbDivider,
   BreadcrumbItem,
   Button,
-  Caption1,
   DataGrid,
   DataGridBody,
   DataGridCell,
@@ -19,15 +18,15 @@ import {
   MessageBarBody,
   Option,
   Spinner,
-  Title3,
   createTableColumn,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { AlertOffRegular } from '@fluentui/react-icons';
+import { AlertOffRegular, ArrowSyncRegular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { createOpsClient } from '@/api/opsClient';
 import { EmptyState } from '@/components/EmptyState';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import { formatDateTime } from '@/lib/formatDate';
@@ -38,21 +37,11 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
   },
   filters: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
     gap: tokens.spacingHorizontalL,
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
 });
 
@@ -140,8 +129,23 @@ export function AlertsDashboardPage() {
     [openRun],
   );
 
+  const homeToolbarActions: RibbonAction[] = useMemo(() => [
+    {
+      key: 'refresh',
+      label: 'Refresh',
+      icon: <ArrowSyncRegular />,
+      disabled: loading,
+      onClick: () => loadAlerts(),
+    },
+  ], [loadAlerts, loading]);
+
   return (
-    <section className={styles.root}>
+    <ItemEditor
+      title="Alerts dashboard"
+      subtitle="Spot breached contracts and open the exact run that needs attention."
+      homeToolbarActions={homeToolbarActions}
+    >
+      <div className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => navigate('/contracts/alerts')}>Alerts</BreadcrumbButton>
@@ -151,11 +155,6 @@ export function AlertsDashboardPage() {
           <BreadcrumbButton current>Dashboard</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
-      <div className={styles.header}>
-        <Title3>Alerts dashboard</Title3>
-        <Caption1 className={styles.subtitle}>Spot breached contracts and open the exact run that needs attention.</Caption1>
-      </div>
 
       <div className={styles.filters}>
         <Field label="Status">
@@ -214,7 +213,8 @@ export function AlertsDashboardPage() {
           </DataGridBody>
         </DataGrid>
       )}
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

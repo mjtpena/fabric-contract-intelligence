@@ -12,15 +12,15 @@ import {
   Input,
   Spinner,
   Subtitle2,
-  Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
 import { useNavigate } from 'react-router-dom';
-import { SearchRegular, SparkleRegular } from '@fluentui/react-icons';
+import { SearchRegular, SparkleRegular, DeleteRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { EmptyState } from '@/components/EmptyState';
 import { FabricLink } from '@/components/FabricLink';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { VisuallyHidden } from '@/components/VisuallyHidden';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { NaturalLanguageQueryResponse } from '@/models/Ai';
@@ -30,16 +30,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
   searchRow: {
     display: 'flex',
@@ -143,8 +133,38 @@ export function NLQueryPage() {
     }
   };
 
+  const homeToolbarActions: RibbonAction[] = useMemo(() => {
+    const actions: RibbonAction[] = [
+      {
+        key: 'search',
+        label: loading ? 'Searching…' : 'Search',
+        appearance: 'primary',
+        icon: loading ? <Spinner size="tiny" /> : <SearchRegular />,
+        disabled: loading || !query.trim(),
+        onClick: () => { void runQuery(); },
+      },
+    ];
+    if (recentQueries.length > 0) {
+      actions.push({
+        key: 'clear-recent',
+        label: 'Clear recent',
+        icon: <DeleteRegular />,
+        onClick: () => {
+          sessionStorage.removeItem(recentStorageKey);
+          setRecentQueries([]);
+        },
+      });
+    }
+    return actions;
+  }, [loading, query, recentQueries.length]);
+
   return (
-    <section className={styles.root}>
+    <ItemEditor
+      title="AI Contract Query"
+      subtitle="Ask in plain English and jump to the contracts that answer it."
+      homeToolbarActions={homeToolbarActions}
+    >
+      <div className={styles.root}>
       <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbButton onClick={() => navigate('/contracts')}>Library</BreadcrumbButton>
@@ -154,11 +174,6 @@ export function NLQueryPage() {
           <BreadcrumbButton current>AI query</BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
-      <div className={styles.header}>
-        <Title3>AI Contract Query</Title3>
-        <Caption1 className={styles.subtitle}>Ask in plain English and jump to the contracts that answer it.</Caption1>
-      </div>
 
       <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
@@ -243,7 +258,8 @@ export function NLQueryPage() {
           )}
         </div>
       ) : null}
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 

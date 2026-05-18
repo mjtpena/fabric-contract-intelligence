@@ -21,7 +21,6 @@ import {
   Input,
   Spinner,
   Subtitle2Stronger,
-  Title3,
   createTableColumn,
   makeStyles,
   tokens,
@@ -36,6 +35,7 @@ import {
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { createWorkspaceClient } from '@/api/workspaceClient';
+import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { CreateApiKeyResponse, WorkspaceApiKey } from '@/models/Workspace';
 
@@ -209,15 +209,28 @@ export function WorkspaceSettingsPage() {
     [handleRevoke],
   );
 
-  return (
-    <section className={styles.root}>
-      <header className={styles.header}>
-        <Title3 as="h1">Workspace settings</Title3>
-        <Body1 className={styles.subtitle}>
-          Configure workspace access, policy routing, and catalog integrations.
-        </Body1>
-      </header>
+  const homeToolbarActions: RibbonAction[] = useMemo(() => [
+    {
+      key: 'manage-keys',
+      label: 'Manage API keys',
+      icon: <KeyRegular />,
+      onClick: openDialog,
+    },
+    {
+      key: 'open-contracts',
+      label: 'Open contracts & policies',
+      icon: <RocketRegular />,
+      onClick: () => navigate('/contracts'),
+    },
+  ], [navigate, openDialog]);
 
+  return (
+    <ItemEditor
+      title="Workspace settings"
+      subtitle="Configure workspace access, policy routing, and catalog integrations."
+      homeToolbarActions={homeToolbarActions}
+    >
+      <div className={styles.root}>
       <div className={styles.grid}>
         {/* Current tier */}
         <article className={styles.card}>
@@ -256,9 +269,6 @@ export function WorkspaceSettingsPage() {
             Generate API keys to call the Orqentis API from notebooks, pipelines, or CI/CD without
             interactive Entra login. Keys are scoped to this workspace.
           </Body1>
-          <Button appearance="secondary" icon={<KeyRegular />} onClick={openDialog}>
-            Manage API keys
-          </Button>
         </article>
 
         {/* Activator setup */}
@@ -274,13 +284,6 @@ export function WorkspaceSettingsPage() {
             Configure which Activator rules fire when a contract is breached. Open a Contract Policy
             item to set triggers, actions, and webhook routing.
           </Body1>
-          <Button
-            appearance="primary"
-            icon={<RocketRegular />}
-            onClick={() => navigate('/contracts')}
-          >
-            Open contracts &amp; policies
-          </Button>
         </article>
 
         {/* Microsoft Purview */}
@@ -382,7 +385,8 @@ export function WorkspaceSettingsPage() {
           </DialogBody>
         </DialogSurface>
       </Dialog>
-    </section>
+      </div>
+    </ItemEditor>
   );
 }
 
