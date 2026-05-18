@@ -7,8 +7,6 @@ import {
   Dropdown,
   Field,
   Option,
-  Tab,
-  TabList,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -19,6 +17,7 @@ import { RulePicker } from '@/components/Activator/RulePicker';
 import { IntegrationPicker, validateIntegration, type IntegrationValue } from '@/components/Integration/IntegrationPicker';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { ScheduleBuilder } from '@/components/Schedule/ScheduleBuilder';
+import { Stepper } from '@/components/Stepper';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import type { ContractSummary } from '@/models/Contract';
 import type { ActivatorRule } from '@/models/ops';
@@ -246,17 +245,16 @@ export function PolicyEditorPage() {
       homeToolbarActions={homeToolbarActions}
     >
       <div className={styles.root}>
-      <TabList selectedValue={step} onTabSelect={(_, data) => {
-        const nextStep = Number(data.value);
-        if (Number.isInteger(nextStep) && nextStep <= step) {
-          setStep(nextStep);
-        }
-      }}>
-        <Tab value={0}>1. Schedule</Tab>
-        <Tab disabled={step < 1} value={1}>2. Behavior</Tab>
-        <Tab disabled={step < 2} value={2}>3. Routing</Tab>
-        <Tab disabled={step < 3} value={3}>4. Review</Tab>
-      </TabList>
+      <Stepper
+        currentStep={step}
+        onStepSelect={(idx) => setStep(idx)}
+        steps={[
+          { label: 'Schedule', description: 'When to run' },
+          { label: 'Behavior', description: 'When to alert' },
+          { label: 'Routing', description: 'Where to send' },
+          { label: 'Review', description: 'Confirm & save' },
+        ]}
+      />
 
       <Field label="Contract">
         <Dropdown

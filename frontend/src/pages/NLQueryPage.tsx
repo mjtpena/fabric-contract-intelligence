@@ -16,7 +16,7 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useNavigate } from 'react-router-dom';
-import { SearchRegular, SparkleRegular, DeleteRegular } from '@fluentui/react-icons';
+import { SearchRegular, SparkleRegular, DeleteRegular, PeopleRegular, ClockRegular, WarningRegular, ShieldRegular, DatabaseRegular, TopSpeedRegular } from '@fluentui/react-icons';
 import { createAiClient } from '@/api/aiClient';
 import { EmptyState } from '@/components/EmptyState';
 import { FabricLink } from '@/components/FabricLink';
@@ -31,6 +31,40 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
   },
+  searchHero: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+    padding: tokens.spacingVerticalXL,
+    borderRadius: tokens.borderRadiusXLarge,
+    backgroundColor: tokens.colorNeutralBackground1,
+    backgroundImage: `radial-gradient(circle at 0% 0%, ${tokens.colorBrandBackground2} 0%, transparent 55%)`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  heroTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    color: tokens.colorBrandForeground1,
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  heroHeadline: {
+    margin: 0,
+    fontSize: tokens.fontSizeHero700,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+    lineHeight: 1.15,
+  },
+  heroBlurb: {
+    color: tokens.colorNeutralForeground2,
+    maxWidth: '60ch',
+  },
+  heroInput: {
+    fontSize: tokens.fontSizeBase400,
+  },
   searchRow: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
@@ -41,10 +75,63 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     flexWrap: 'wrap',
   },
+  suggestGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(15rem, 1fr))',
+    gap: tokens.spacingHorizontalM,
+  },
+  suggestCard: {
+    display: 'grid',
+    gridTemplateColumns: '2.5rem 1fr',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
+    padding: tokens.spacingHorizontalL,
+    borderRadius: tokens.borderRadiusLarge,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: 'inherit',
+    transitionDuration: tokens.durationFast,
+    transitionProperty: 'border-color, box-shadow, transform',
+    ':hover': {
+      border: `1px solid ${tokens.colorBrandStroke1}`,
+      boxShadow: tokens.shadow4,
+      transform: 'translateY(-1px)',
+    },
+  },
+  suggestIcon: {
+    width: '2.5rem',
+    height: '2.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: tokens.borderRadiusCircular,
+    fontSize: '1.1rem',
+  },
+  suggestLabel: {
+    color: tokens.colorNeutralForeground1,
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase300,
+  },
+  suggestHint: {
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+  },
   recent: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
+    gap: tokens.spacingVerticalS,
+  },
+  sectionHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    color: tokens.colorNeutralForeground2,
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
   },
   inputWrapper: {
     flex: 1,
@@ -76,13 +163,65 @@ const useStyles = makeStyles({
 });
 
 const recentStorageKey = 'orqentis.nlquery.recent';
-const suggestedQueries = [
-  'contracts owned by finance',
-  'failed runs this week',
-  'deprecated contracts with active policies',
-  'contracts touching PII',
-  'tables without contracts',
-  'contracts breaching SLA',
+
+interface SuggestedQuery {
+  query: string;
+  label: string;
+  hint: string;
+  fg: string;
+  bg: string;
+  icon: 'people' | 'clock' | 'warning' | 'shield' | 'database' | 'speed';
+}
+
+const suggestedCards: SuggestedQuery[] = [
+  {
+    query: 'contracts owned by finance',
+    label: 'Find by owner',
+    hint: 'e.g. contracts owned by finance',
+    fg: tokens.colorBrandForeground1,
+    bg: tokens.colorBrandBackground2,
+    icon: 'people',
+  },
+  {
+    query: 'failed runs this week',
+    label: 'Recent failures',
+    hint: 'e.g. failed runs this week',
+    fg: tokens.colorPaletteRedForeground1,
+    bg: tokens.colorPaletteRedBackground2,
+    icon: 'warning',
+  },
+  {
+    query: 'contracts touching PII',
+    label: 'PII & sensitive data',
+    hint: 'e.g. contracts touching PII',
+    fg: tokens.colorPaletteGrapeForeground2,
+    bg: tokens.colorPaletteGrapeBackground2,
+    icon: 'shield',
+  },
+  {
+    query: 'tables without contracts',
+    label: 'Coverage gaps',
+    hint: 'e.g. tables without contracts',
+    fg: tokens.colorPalettePeachForeground2,
+    bg: tokens.colorPalettePeachBackground2,
+    icon: 'database',
+  },
+  {
+    query: 'contracts breaching SLA',
+    label: 'SLA breaches',
+    hint: 'e.g. contracts breaching SLA',
+    fg: tokens.colorPaletteCornflowerForeground2,
+    bg: tokens.colorPaletteCornflowerBackground2,
+    icon: 'speed',
+  },
+  {
+    query: 'deprecated contracts with active policies',
+    label: 'Stale rules',
+    hint: 'e.g. deprecated contracts with active policies',
+    fg: tokens.colorPaletteTealForeground2,
+    bg: tokens.colorPaletteTealBackground2,
+    icon: 'clock',
+  },
 ];
 
 function isFallbackModel(modelUsed: string | null | undefined) {
@@ -179,32 +318,91 @@ export function NLQueryPage() {
 
       <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
-      <div className={styles.chips}>
-        {suggestedQueries.map((suggestion) => (
-          <Button key={suggestion} appearance={result ? 'subtle' : 'secondary'} size="small" onClick={() => { void runQuery(suggestion); }}>
-            {suggestion}
-          </Button>
-        ))}
-      </div>
+      {!result ? (
+        <section className={styles.searchHero} aria-label="Ask in plain English">
+          <span className={styles.heroTitle}>
+            <SparkleRegular />
+            Ask in plain English
+          </span>
+          <h2 className={styles.heroHeadline}>
+            What do you want to know about your contracts?
+          </h2>
+          <Body1 className={styles.heroBlurb}>
+            Orqentis indexes every contract, policy, run and breach. Type a question — owners,
+            failures, sensitive data, SLAs — and we&apos;ll surface the contracts that answer it.
+          </Body1>
+          <Field className={styles.inputWrapper}>
+            <Input
+              size="large"
+              placeholder="e.g. Which contracts touch PII and failed in the last 7 days?"
+              value={query}
+              contentBefore={<SearchRegular />}
+              className={styles.heroInput}
+              onChange={(_, data) => setQuery(data.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading) {
+                  void runQuery();
+                }
+              }}
+            />
+          </Field>
+        </section>
+      ) : (
+        <div className={styles.searchRow}>
+          <Field className={styles.inputWrapper} label="Natural-language query">
+            <Input
+              placeholder="e.g. Find contracts for CO2 emissions by country"
+              value={query}
+              onChange={(_, data) => setQuery(data.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading) {
+                  void runQuery();
+                }
+              }}
+            />
+          </Field>
+        </div>
+      )}
 
-      <div className={styles.searchRow}>
-        <Field className={styles.inputWrapper} label="Natural-language query">
-          <Input
-            placeholder="e.g. Find contracts for CO2 emissions by country"
-            value={query}
-            onChange={(_, data) => setQuery(data.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !loading) {
-                void runQuery();
-              }
-            }}
-          />
-        </Field>
-      </div>
+      {!result ? (
+        <>
+          <span className={styles.sectionHead}>
+            <SparkleRegular />
+            Try one of these
+          </span>
+          <div className={styles.suggestGrid}>
+            {suggestedCards.map((card) => {
+              const Icon =
+                card.icon === 'people' ? PeopleRegular
+                  : card.icon === 'clock' ? ClockRegular
+                  : card.icon === 'warning' ? WarningRegular
+                  : card.icon === 'shield' ? ShieldRegular
+                  : card.icon === 'database' ? DatabaseRegular
+                  : TopSpeedRegular;
+              return (
+                <button
+                  key={card.query}
+                  type="button"
+                  className={styles.suggestCard}
+                  onClick={() => { void runQuery(card.query); }}
+                >
+                  <span className={styles.suggestIcon} style={{ backgroundColor: card.bg, color: card.fg }}>
+                    <Icon />
+                  </span>
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                    <span className={styles.suggestLabel}>{card.label}</span>
+                    <span className={styles.suggestHint}>{card.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
 
       {!result && recentQueries.length > 0 ? (
         <div className={styles.recent}>
-          <Caption1>Recent queries</Caption1>
+          <span className={styles.sectionHead}>Recent queries</span>
           <div className={styles.chips}>
             {recentQueries.map((recent) => (
               <Button key={recent} appearance="subtle" size="small" onClick={() => { void runQuery(recent); }}>

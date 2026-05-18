@@ -56,6 +56,7 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
     alignItems: 'flex-start',
+    width: '100%',
     maxWidth: '64rem',
   },
   grid: {
