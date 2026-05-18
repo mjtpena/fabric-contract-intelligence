@@ -4,6 +4,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Orqentis.Engine.Delta;
 using Orqentis.Engine.Evaluation;
 using Orqentis.Engine.Odcs;
+using Orqentis.Engine.Scoring;
 using Polly;
 
 namespace Orqentis.Engine;
@@ -25,6 +26,7 @@ public static class EngineServiceCollectionExtensions
         services.TryAddSingleton<ISchemaRuleEvaluator, SchemaRuleEvaluator>();
         services.TryAddSingleton<IFreshnessEvaluator, FreshnessEvaluator>();
         services.TryAddSingleton<IQualityRuleEvaluator, QualityRuleEvaluator>();
+        services.TryAddSingleton<IContractHealthScorer, ContractHealthScorer>();
         services.TryAddScoped<IEnforcementOrchestrator, EnforcementOrchestrator>();
         return services;
     }

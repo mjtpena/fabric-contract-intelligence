@@ -1,3 +1,5 @@
+using Orqentis.Engine.Odcs.Extensions;
+
 namespace Orqentis.Engine.Odcs;
 
 /// <summary>
@@ -18,6 +20,12 @@ public sealed record ContractDefinition
     public IReadOnlyList<QualityRule> Quality { get; init; } = [];
     public FreshnessRule? Freshness { get; init; }
     public IReadOnlyList<SlaProperty> Sla { get; init; } = [];
+
+    /// <summary>
+    /// Optional AI governance context. When set, the contract participates in
+    /// Orqentis AI-data security gates (Phase 1 of the data-security-for-AI plan).
+    /// </summary>
+    public AiContextExtension? AiContext { get; init; }
 }
 
 public sealed record ContractInfo

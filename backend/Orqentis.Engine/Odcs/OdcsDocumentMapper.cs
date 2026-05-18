@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Orqentis.Engine.Odcs.Extensions;
 
 namespace Orqentis.Engine.Odcs;
 
@@ -9,6 +10,7 @@ internal static class OdcsDocumentMapper
         var infoElement = TryGetCustomPropertyValue(root, "orqentisInfo");
         var freshnessElement = TryGetCustomPropertyValue(root, "orqentisFreshness");
         var qualityElement = TryGetCustomPropertyValue(root, "orqentisQuality");
+        var aiContextElement = TryGetCustomPropertyValue(root, "orqentisAiContext");
 
         return new ContractDefinition
         {
@@ -24,6 +26,7 @@ internal static class OdcsDocumentMapper
             Quality = MapQuality(qualityElement),
             Freshness = MapFreshness(freshnessElement),
             Sla = MapSla(root),
+            AiContext = MapAiContext(aiContextElement),
         };
     }
 
@@ -172,6 +175,67 @@ internal static class OdcsDocumentMapper
         }).ToArray();
     }
 
+    private static AiContextExtension? MapAiContext(JsonElement? aiContextElement)
+    {
+        if (aiContextElement is not { ValueKind: JsonValueKind.Object } obj)
+        {
+            return null;
+        }
+
+        var useCases = new List<AiUseCaseRef>();
+        if (obj.TryGetProperty("useCases", out var useCasesElement) && useCasesElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var useCase in useCasesElement.EnumerateArray())
+            {
+                var id = GetString(useCase, "id");
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                useCases.Add(new AiUseCaseRef
+                {
+                    Id = id,
+                    Tier = GetString(useCase, "tier"),
+                    Jurisdictions = GetStringArray(useCase, "jurisdictions"),
+                    Regulations = GetStringArray(useCase, "regulations"),
+                });
+            }
+        }
+
+        AiRetentionPolicy? retention = null;
+        if (obj.TryGetProperty("retentionForTraining", out var retentionElement) && retentionElement.ValueKind == JsonValueKind.Object)
+        {
+            retention = new AiRetentionPolicy
+            {
+                MaxAgeDays = GetInt32(retentionElement, "maxAgeDays"),
+            };
+        }
+
+        return new AiContextExtension
+        {
+            UseCases = useCases,
+            PermittedUses = GetStringArray(obj, "permittedUses"),
+            ProhibitedUses = GetStringArray(obj, "prohibitedUses"),
+            PermittedAgents = GetStringArray(obj, "permittedAgents"),
+            RetentionForTraining = retention,
+        };
+    }
+
+    private static IReadOnlyList<string> GetStringArray(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element) || element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()!)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
+    }
+
     private static FreshnessRule? MapFreshness(JsonElement? freshnessElement)
     {
         if (freshnessElement is not { ValueKind: JsonValueKind.Object } freshnessObject)
@@ -301,7 +365,43 @@ internal static class OdcsDocumentMapper
             });
         }
 
+        if (contract.AiContext is not null)
+        {
+            properties.Add(new Dictionary<string, object?>
+            {
+                ["property"] = "orqentisAiContext",
+                ["value"] = BuildAiContextValue(contract.AiContext),
+            });
+        }
+
         return properties.ToArray();
+    }
+
+    private static Dictionary<string, object?> BuildAiContextValue(AiContextExtension aiContext)
+    {
+        var value = new Dictionary<string, object?>
+        {
+            ["useCases"] = aiContext.UseCases.Select(static useCase => new Dictionary<string, object?>
+            {
+                ["id"] = useCase.Id,
+                ["tier"] = useCase.Tier,
+                ["jurisdictions"] = useCase.Jurisdictions.ToArray(),
+                ["regulations"] = useCase.Regulations.ToArray(),
+            }).ToArray(),
+            ["permittedUses"] = aiContext.PermittedUses.ToArray(),
+            ["prohibitedUses"] = aiContext.ProhibitedUses.ToArray(),
+            ["permittedAgents"] = aiContext.PermittedAgents.ToArray(),
+        };
+
+        if (aiContext.RetentionForTraining is not null)
+        {
+            value["retentionForTraining"] = new Dictionary<string, object?>
+            {
+                ["maxAgeDays"] = aiContext.RetentionForTraining.MaxAgeDays,
+            };
+        }
+
+        return value;
     }
 
     private static IReadOnlyList<ContractContact> GetContacts(JsonElement root, string propertyName)
