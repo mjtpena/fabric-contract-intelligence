@@ -498,8 +498,8 @@ export function ContractListPage() {
 
       <div className={styles.surface}>
         {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
-        {error ? <ErrorBanner message={error} /> : null}
-        {!loading && !federatedLoading && displayedContracts.length === 0 ? (
+        {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
+        {!error && !loading && !federatedLoading && displayedContracts.length === 0 ? (
           sdk.isReady ? (
             <div>
               <Subtitle2Stronger as="h3">Author your first contract</Subtitle2Stronger>

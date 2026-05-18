@@ -22,6 +22,8 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Skeleton,
+  SkeletonItem,
   Spinner,
   Subtitle2Stronger,
   createTableColumn,
@@ -86,6 +88,12 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeHero700,
     fontWeight: tokens.fontWeightSemibold,
     lineHeight: tokens.lineHeightHero700,
+  },
+  valueSkeleton: {
+    width: '7rem',
+    height: tokens.lineHeightHero700,
+    display: 'flex',
+    alignItems: 'center',
   },
   inlineBadge: {
     alignSelf: 'flex-start',
@@ -265,7 +273,16 @@ export function WorkspaceSettingsPage() {
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleBlock}>
               <Caption1>Machine-to-machine API key</Caption1>
-              <div className={styles.value}>{keys == null ? 'Loading…' : `${keys.length} active`}</div>
+              {keys == null ? (
+                <Skeleton
+                  aria-label="Loading API key count"
+                  className={styles.valueSkeleton}
+                >
+                  <SkeletonItem size={28} style={{ width: '6rem' }} />
+                </Skeleton>
+              ) : (
+                <div className={styles.value}>{`${keys.length} active`}</div>
+              )}
             </div>
             <Key20Regular />
           </div>

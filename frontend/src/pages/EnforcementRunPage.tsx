@@ -318,15 +318,10 @@ export function EnforcementRunPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemObjectId, sdk.loadItemDefinition]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    if (requestedRunId || !itemDefinitionLoaded) {
-      return;
-    }
-
+  const reloadAudit = useCallback(() => {
     setAuditLoading(true);
     setAuditError(null);
+    let cancelled = false;
     void opsClient.listAuditRows()
       .then((rows) => {
         if (!cancelled) {
@@ -344,11 +339,18 @@ export function EnforcementRunPage() {
           setAuditLoading(false);
         }
       });
-
     return () => {
       cancelled = true;
     };
-  }, [itemDefinitionLoaded, opsClient, requestedRunId]);
+  }, [opsClient]);
+
+  useEffect(() => {
+    if (requestedRunId || !itemDefinitionLoaded) {
+      return;
+    }
+    const cleanup = reloadAudit();
+    return cleanup;
+  }, [itemDefinitionLoaded, requestedRunId, reloadAudit]);
 
   const runSecondaryAction = useCallback(async (action: () => Promise<void>) => {
     setSecondaryActionInFlight(true);
@@ -448,6 +450,7 @@ export function EnforcementRunPage() {
             onOpenRun={(row) => {
               void openAuditRow(row);
             }}
+            onRetry={reloadAudit}
           />
         </div>
       </ItemEditor>
@@ -758,6 +761,7 @@ interface ReportItemDashboardProps {
   rows: ReportAuditRow[];
   styles: ReturnType<typeof useStyles>;
   onOpenRun: (row: ReportAuditRow) => void;
+  onRetry: () => void;
 }
 
 function ReportItemDashboard({
@@ -765,6 +769,7 @@ function ReportItemDashboard({
   auditLoading,
   rows,
   onOpenRun,
+  onRetry,
 }: ReportItemDashboardProps) {
   const columns = useMemo(
     () => [
@@ -803,16 +808,16 @@ function ReportItemDashboard({
 
   return (
     <>
-      {auditError ? <ErrorBanner message={auditError} /> : null}
+      {auditError ? <ErrorBanner message={auditError} onRetry={onRetry} /> : null}
 
       {auditLoading ? (
         <Spinner label="Loading contract reports…" />
-      ) : rows.length === 0 ? (
+      ) : !auditError && rows.length === 0 ? (
         <EmptyState
           description="No enforcement reports have been recorded for this workspace yet."
           title="No reports yet"
         />
-      ) : (
+      ) : rows.length > 0 ? (
         <DataGrid items={rows} columns={columns}>
           <DataGridHeader>
             <DataGridRow>
@@ -827,7 +832,7 @@ function ReportItemDashboard({
             )}
           </DataGridBody>
         </DataGrid>
-      )}
+      ) : null}
     </>
   );
 }
