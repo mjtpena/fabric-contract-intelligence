@@ -51,16 +51,16 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
   },
   tileBrand: {
-    backgroundImage: 'linear-gradient(135deg, #1177D1 0%, #0B5CA8 100%)',
-    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
   },
   tileSuccess: {
-    backgroundImage: 'linear-gradient(135deg, #12B79C 0%, #0F8E7B 100%)',
-    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: tokens.colorPaletteGreenBackground2,
+    color: tokens.colorPaletteGreenForeground1,
   },
   tileWarning: {
-    backgroundImage: 'linear-gradient(135deg, #F2A31B 0%, #C97E0E 100%)',
-    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: tokens.colorPaletteYellowBackground2,
+    color: tokens.colorPaletteDarkOrangeForeground1,
   },
   title: {
     margin: 0,
