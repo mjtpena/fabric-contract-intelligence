@@ -403,6 +403,7 @@ function EditorWorkspace({
 
   useEffect(() => {
     setUseCrossWorkspaceTarget(Boolean(draft?.targetWorkspaceId && draft.targetWorkspaceId.trim().length > 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractId, draft?.id]);
 
   const isCrossWorkspaceTargetInvalid = useCrossWorkspaceTarget

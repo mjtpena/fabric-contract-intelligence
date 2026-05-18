@@ -5,8 +5,8 @@ namespace Orqentis.Api.Services.Webhooks;
 /// <summary>Resolves and validates outbound webhook destinations before any network send.</summary>
 public sealed class WebhookUrlValidator
 {
-    private static readonly string[] BlockedDomains = ["svc.cluster.local", "internal", "local"];
-    private static readonly string[] DefaultAllowedDomains =
+    private static readonly string[] _blockedDomains = ["svc.cluster.local", "internal", "local"];
+    private static readonly string[] _defaultAllowedDomains =
     [
         "*.webhook.office.com",
         "outlook.office.com",
@@ -38,7 +38,7 @@ public sealed class WebhookUrlValidator
         }
 
         var host = uri.IdnHost.ToLowerInvariant();
-        if (BlockedDomains.Any(domain => string.Equals(host, domain, StringComparison.OrdinalIgnoreCase) ||
+        if (_blockedDomains.Any(domain => string.Equals(host, domain, StringComparison.OrdinalIgnoreCase) ||
             host.EndsWith($".{domain}", StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException("Webhook URL host is not allowed.");
@@ -69,7 +69,7 @@ public sealed class WebhookUrlValidator
     }
 
     internal static bool MatchesKnownProvider(string host) =>
-        DefaultAllowedDomains.Any(pattern => MatchesDomainPattern(host, pattern));
+        _defaultAllowedDomains.Any(pattern => MatchesDomainPattern(host, pattern));
 
     private static bool MatchesDomainPattern(string host, string pattern)
     {

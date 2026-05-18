@@ -11,7 +11,7 @@ namespace Orqentis.Api.Middleware;
 /// <summary>Replays recent successful mutating responses when clients retry with the same idempotency key.</summary>
 public sealed class IdempotencyMiddleware
 {
-    private const string HeaderName = "Idempotency-Key";
+    private const string _headerName = "Idempotency-Key";
     private static readonly TimeSpan _ttl = TimeSpan.FromHours(24);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
 
@@ -31,7 +31,7 @@ public sealed class IdempotencyMiddleware
             return;
         }
 
-        if (!context.Request.Headers.TryGetValue(HeaderName, out var rawKey) || string.IsNullOrWhiteSpace(rawKey))
+        if (!context.Request.Headers.TryGetValue(_headerName, out var rawKey) || string.IsNullOrWhiteSpace(rawKey))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await problemDetailsService.WriteAsync(new ProblemDetailsContext

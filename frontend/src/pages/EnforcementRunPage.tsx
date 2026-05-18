@@ -315,6 +315,7 @@ export function EnforcementRunPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemObjectId, sdk.loadItemDefinition]);
 
   useEffect(() => {
@@ -463,7 +464,7 @@ export function EnforcementRunPage() {
     ? formatBreachDelta(displayBreachScore - previousScore)
     : null;
 
-  const homeToolbarActions: RibbonAction[] = useMemo(() => {
+  const homeToolbarActions: RibbonAction[] = (() => {
     const actions: RibbonAction[] = [];
     if (resolvedContractId) {
       actions.push({
@@ -546,7 +547,7 @@ export function EnforcementRunPage() {
       });
     }
     return actions;
-  }, [isPollingPaused, openWorkloadRoute, refresh, resolvedContractId, resumePolling, run, runClient, runSecondaryAction, sdk, secondaryActionInFlight]);
+  })();
 
   return (
     <ItemEditor

@@ -111,6 +111,7 @@ export function IntegrationPicker({ client, error, onChange, value }: Integratio
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function validateIntegration(value: IntegrationValue): string | null {
   if (value.webhookType === 'pagerduty') {
     return /^[a-z0-9]{32}$/i.test(value.webhookUrl) ? null : 'PagerDuty routing key must be 32 alphanumeric characters.';

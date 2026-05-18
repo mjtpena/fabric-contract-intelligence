@@ -31,8 +31,8 @@ public interface ILlmProvider
 
 public sealed class LlmRouter : ILlmRouter
 {
-    private const int MaxTokens = 2048;
-    private const double Temperature = 0.1;
+    private const int _maxTokens = 2048;
+    private const double _temperature = 0.1;
 
     private readonly AiOptions _options;
     private readonly IReadOnlyDictionary<string, ILlmProvider> _providers;
@@ -67,8 +67,8 @@ public sealed class LlmRouter : ILlmRouter
 
     public async Task<LlmResult?> CompleteAsync(string operation, string systemPrompt, string userInput, CancellationToken ct = default)
     {
-        var cacheKey = BuildCacheKey(systemPrompt, userInput, MaxTokens, Temperature);
-        if (Temperature <= 0.3 && _memoryCache.TryGetValue(cacheKey, out LlmResult? cached))
+        var cacheKey = BuildCacheKey(systemPrompt, userInput, _maxTokens, _temperature);
+        if (_temperature <= 0.3 && _memoryCache.TryGetValue(cacheKey, out LlmResult? cached))
         {
             return cached;
         }
@@ -176,8 +176,8 @@ public sealed class LlmRouter : ILlmRouter
 
 internal sealed class AzureOpenAiLlmProvider : ILlmProvider
 {
-    private const int MaxTokens = 2048;
-    private const double Temperature = 0.1;
+    private const int _maxTokens = 2048;
+    private const double _temperature = 0.1;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AiOptions _options;
 
@@ -208,8 +208,8 @@ internal sealed class AzureOpenAiLlmProvider : ILlmProvider
 
         var payload = new
         {
-            temperature = Temperature,
-            max_tokens = MaxTokens,
+            temperature = _temperature,
+            max_tokens = _maxTokens,
             messages = new object[]
             {
                 new { role = "system", content = systemPrompt },

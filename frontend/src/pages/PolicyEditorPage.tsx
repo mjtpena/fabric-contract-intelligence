@@ -236,6 +236,7 @@ export function PolicyEditorPage() {
       },
     });
     return actions;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, isSaving, canSave, contractId]);
 
   return (

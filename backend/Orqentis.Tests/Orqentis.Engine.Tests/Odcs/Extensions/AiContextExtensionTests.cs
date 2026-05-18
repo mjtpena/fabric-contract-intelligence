@@ -7,7 +7,7 @@ namespace Orqentis.Tests.Orqentis.Engine.Tests.Odcs.Extensions;
 
 public sealed class AiContextExtensionTests
 {
-    private const string YamlWithAiContext = """
+    private const string _yamlWithAiContext = """
 apiVersion: v3.1.0
 kind: DataContract
 id: contract-ai-001
@@ -60,7 +60,7 @@ customProperties:
     {
         var parser = new OdcsContractParser(NullLogger<OdcsContractParser>.Instance);
 
-        var parsed = parser.Parse(YamlWithAiContext);
+        var parsed = parser.Parse(_yamlWithAiContext);
 
         parsed.IsSuccess.Should().BeTrue(parsed.Error);
         var ai = parsed.Value!.AiContext;
@@ -80,7 +80,7 @@ customProperties:
     public void Parse_ContractWithoutAiContext_LeavesAiContextNull()
     {
         var parser = new OdcsContractParser(NullLogger<OdcsContractParser>.Instance);
-        var yaml = YamlWithAiContext.Replace("""
+        var yaml = _yamlWithAiContext.Replace("""
   - property: orqentisAiContext
     value:
       useCases:
@@ -115,7 +115,7 @@ customProperties:
         var parser = new OdcsContractParser(NullLogger<OdcsContractParser>.Instance);
         var serializer = new OdcsContractSerializer();
 
-        var parsed = parser.Parse(YamlWithAiContext);
+        var parsed = parser.Parse(_yamlWithAiContext);
         parsed.IsSuccess.Should().BeTrue(parsed.Error);
 
         var roundTrip = parser.Parse(serializer.Serialize(parsed.Value!));

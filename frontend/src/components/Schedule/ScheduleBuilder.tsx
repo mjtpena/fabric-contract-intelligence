@@ -143,6 +143,7 @@ export function ScheduleBuilder({ error, onChange, onCustomEdit, value }: Schedu
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function compileSchedule(
   mode: ScheduleMode,
   values: { minutes: number; hours: number; time: string; days: string[]; custom: string },

@@ -157,6 +157,7 @@ export function NLQueryPage() {
       });
     }
     return actions;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, query, recentQueries.length]);
 
   return (

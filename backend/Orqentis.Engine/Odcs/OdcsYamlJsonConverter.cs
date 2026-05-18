@@ -7,8 +7,8 @@ namespace Orqentis.Engine.Odcs;
 
 internal static class OdcsYamlJsonConverter
 {
-    private const int MaxYamlLength = 1_048_576;
-    private const int MaxStructureDepth = 30;
+    private const int _maxYamlLength = 1_048_576;
+    private const int _maxStructureDepth = 30;
 
     private static readonly IDeserializer _deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -22,7 +22,7 @@ internal static class OdcsYamlJsonConverter
 
     public static JsonElement ConvertToJsonElement(string odcsYaml)
     {
-        if (odcsYaml.Length >= MaxYamlLength)
+        if (odcsYaml.Length >= _maxYamlLength)
         {
             throw new InvalidOperationException("ODCS YAML must be smaller than 1 MB.");
         }
@@ -31,9 +31,9 @@ internal static class OdcsYamlJsonConverter
         var json = _jsonSerializer.Serialize(yamlObject);
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement.Clone();
-        if (GetDepth(root) > MaxStructureDepth)
+        if (GetDepth(root) > _maxStructureDepth)
         {
-            throw new InvalidOperationException($"ODCS YAML structure depth must not exceed {MaxStructureDepth} levels.");
+            throw new InvalidOperationException($"ODCS YAML structure depth must not exceed {_maxStructureDepth} levels.");
         }
 
         return root;

@@ -204,6 +204,7 @@ export function useFabricSdk() {
       themeMode: state.themeMode,
       workspaceId: workspaceIdRef.current,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       correlationId,
       getAccessToken,

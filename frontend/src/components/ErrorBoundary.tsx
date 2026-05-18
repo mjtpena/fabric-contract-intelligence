@@ -63,6 +63,7 @@ const useStyles = makeStyles({
   },
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 function ErrorPanel({ error }: { error: Error }) {
   const styles = useStyles();
   return (
