@@ -152,13 +152,13 @@ jobs:
       - name: Audit npm packages for high or critical vulnerabilities
         run: npm --prefix frontend audit --audit-level=high
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: csharp,javascript-typescript
       - name: Autobuild CodeQL languages
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
       - name: Analyze CodeQL results
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
