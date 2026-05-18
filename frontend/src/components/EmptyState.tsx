@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Body1, Button, Subtitle1, makeStyles, tokens } from '@fluentui/react-components';
+import { Body1, Button, Title3, makeStyles, tokens } from '@fluentui/react-components';
 
 interface EmptyStateProps {
   actionIcon?: ReactNode;
@@ -14,7 +14,6 @@ const useStyles = makeStyles({
   root: {
     alignItems: 'center',
     backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
     display: 'flex',
     flexDirection: 'column',
@@ -24,12 +23,12 @@ const useStyles = makeStyles({
   },
   icon: {
     color: tokens.colorNeutralForeground3,
-    fontSize: '40px',
+    fontSize: tokens.fontSizeHero900,
     lineHeight: 1,
   },
   description: {
     color: tokens.colorNeutralForeground3,
-    maxWidth: '34rem',
+    maxWidth: '36ch',
   },
 });
 
@@ -46,7 +45,7 @@ export function EmptyState({
   return (
     <div className={styles.root}>
       {icon ? <div className={styles.icon}>{icon}</div> : null}
-      <Subtitle1>{title}</Subtitle1>
+      <Title3 as="h3">{title}</Title3>
       <Body1 className={styles.description}>{description}</Body1>
       {actionLabel && onAction ? (
         <Button appearance="primary" icon={actionIcon ? <span>{actionIcon}</span> : undefined} onClick={onAction}>

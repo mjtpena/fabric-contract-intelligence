@@ -4,6 +4,12 @@ import {
   Body1,
   Button,
   Caption1,
+  DataGrid,
+  DataGridBody,
+  DataGridCell,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridRow,
   Dialog,
   DialogActions,
   DialogBody,
@@ -14,15 +20,12 @@ import {
   Field,
   Input,
   Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
+  Subtitle2Stronger,
   Title2,
+  createTableColumn,
   makeStyles,
   tokens,
+  type TableColumnDefinition,
 } from '@fluentui/react-components';
 import {
   CopyRegular,
@@ -43,16 +46,21 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,
+    boxSizing: 'border-box',
+  },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
+  },
+  subtitle: {
+    color: tokens.colorNeutralForeground3,
   },
   grid: {
     display: 'grid',
     gap: tokens.spacingHorizontalL,
     gridTemplateColumns: 'repeat(auto-fit, minmax(18rem, 1fr))',
-  },
-  subtitle: {
-    color: tokens.colorNeutralForeground3,
-    marginTop: tokens.spacingVerticalXS,
   },
   card: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -67,7 +75,12 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  cardTitleBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
   },
   value: {
     fontSize: tokens.fontSizeHero700,
@@ -75,7 +88,7 @@ const useStyles = makeStyles({
     lineHeight: tokens.lineHeightHero700,
   },
   rawKeyBox: {
-    fontFamily: 'monospace',
+    fontFamily: tokens.fontFamilyMonospace,
     fontSize: tokens.fontSizeBase200,
     backgroundColor: tokens.colorNeutralBackground3,
     borderRadius: tokens.borderRadiusMedium,
@@ -83,11 +96,25 @@ const useStyles = makeStyles({
     wordBreak: 'break-all',
   },
   keyWarning: {
-    color: tokens.colorPaletteRedForeground1,
+    color: tokens.colorStatusDangerForeground1,
     fontWeight: tokens.fontWeightSemibold,
+    margin: 0,
   },
-  tableWrap: {
-    overflowX: 'auto',
+  newKeyBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    marginBottom: tokens.spacingVerticalM,
+  },
+  generateButton: {
+    marginTop: tokens.spacingVerticalS,
+    alignSelf: 'flex-start',
+  },
+  dialogSurface: {
+    maxWidth: '38rem',
+  },
+  keyTableWrap: {
+    marginTop: tokens.spacingVerticalL,
   },
 });
 
@@ -177,24 +204,29 @@ export function WorkspaceSettingsPage() {
     }
   }, [sdk]);
 
+  const apiKeyColumns = useMemo(
+    () => makeApiKeyColumns((id) => { void handleRevoke(id); }),
+    [handleRevoke],
+  );
+
   return (
     <section className={styles.root}>
-      <div>
-        <Title2>Workspace settings</Title2>
-        <Caption1 className={styles.subtitle}>
+      <header className={styles.header}>
+        <Title2 as="h1">Workspace settings</Title2>
+        <Body1 className={styles.subtitle}>
           Configure workspace access, policy routing, and catalog integrations.
-        </Caption1>
-      </div>
+        </Body1>
+      </header>
 
       <div className={styles.grid}>
         {/* Current tier */}
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <div>
+            <div className={styles.cardTitleBlock}>
               <Caption1>Current tier</Caption1>
               <div className={styles.value}>{sdk.isHosted ? 'Community' : 'Developer'}</div>
             </div>
-            <Badge appearance="filled" color="informative" shape="rounded">
+            <Badge appearance="tint" color="informative" shape="rounded">
               {sdk.isHosted ? 'Manual upgrade' : 'Local preview'}
             </Badge>
           </div>
@@ -214,11 +246,11 @@ export function WorkspaceSettingsPage() {
         {/* M2M API keys */}
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <div>
+            <div className={styles.cardTitleBlock}>
               <Caption1>Machine-to-machine API key</Caption1>
               <div className={styles.value}>{keys?.length ?? '—'} active</div>
             </div>
-            <KeyRegular />
+            <KeyRegular fontSize={20} />
           </div>
           <Body1>
             Generate API keys to call the Orqentis API from notebooks, pipelines, or CI/CD without
@@ -232,11 +264,11 @@ export function WorkspaceSettingsPage() {
         {/* Activator setup */}
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <div>
+            <div className={styles.cardTitleBlock}>
               <Caption1>Activator setup</Caption1>
               <div className={styles.value}>Policy routing</div>
             </div>
-            <RocketRegular />
+            <RocketRegular fontSize={20} />
           </div>
           <Body1>
             Configure which Activator rules fire when a contract is breached. Open a Contract Policy
@@ -254,13 +286,13 @@ export function WorkspaceSettingsPage() {
         {/* Microsoft Purview */}
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <div>
+            <div className={styles.cardTitleBlock}>
               <Caption1>Microsoft Purview</Caption1>
               <div className={styles.value}>Disconnected</div>
             </div>
-            <PlugDisconnectedRegular />
+            <PlugDisconnectedRegular fontSize={20} />
           </div>
-          <Badge appearance="filled" color="warning" shape="rounded">
+          <Badge appearance="tint" color="warning" shape="rounded">
             Not connected
           </Badge>
           <Body1>
@@ -278,12 +310,12 @@ export function WorkspaceSettingsPage() {
 
       {/* API key dialog */}
       <Dialog open={dialogOpen} onOpenChange={(_, d) => setDialogOpen(d.open)}>
-        <DialogSurface style={{ maxWidth: 600 }}>
+        <DialogSurface className={styles.dialogSurface}>
           <DialogBody>
             <DialogTitle>Manage API keys</DialogTitle>
             <DialogContent>
               {newKey && (
-                <div style={{ marginBottom: tokens.spacingVerticalM }}>
+                <div className={styles.newKeyBlock}>
                   <p className={styles.keyWarning}>
                     Copy this key now — it will not be shown again.
                   </p>
@@ -315,65 +347,30 @@ export function WorkspaceSettingsPage() {
                 icon={isCreating ? <Spinner size="tiny" /> : <KeyRegular />}
                 disabled={isCreating}
                 onClick={handleCreate}
-                style={{ marginTop: tokens.spacingVerticalS }}
+                className={styles.generateButton}
               >
                 {isCreating ? 'Generating…' : 'Generate key'}
               </Button>
 
               {keys && keys.length > 0 && (
-                <div className={styles.tableWrap} style={{ marginTop: tokens.spacingVerticalL }}>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHeaderCell>Name</TableHeaderCell>
-                        <TableHeaderCell>Key hint</TableHeaderCell>
-                        <TableHeaderCell>Created</TableHeaderCell>
-                        <TableHeaderCell />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {keys.map(k => (
-                        <TableRow key={k.id}>
-                          <TableCell>{k.displayName}</TableCell>
-                          <TableCell>
-                            <code>{k.keyHint}</code>
-                          </TableCell>
-                          <TableCell>{new Date(k.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Dialog>
-                              <DialogTrigger disableButtonEnhancement>
-                                <Button
-                                  appearance="subtle"
-                                  icon={<DeleteRegular />}
-                                  aria-label="Revoke"
-                                />
-                              </DialogTrigger>
-                              <DialogSurface>
-                                <DialogBody>
-                                  <DialogTitle>Revoke API key?</DialogTitle>
-                                  <DialogContent>
-                                    This will immediately invalidate the key. Any scripts or pipelines using it will fail. This action cannot be undone.
-                                  </DialogContent>
-                                  <DialogActions>
-                                    <DialogTrigger disableButtonEnhancement>
-                                      <Button appearance="secondary">Cancel</Button>
-                                    </DialogTrigger>
-                                    <Button
-                                      appearance="primary"
-                                      icon={<DeleteRegular />}
-                                      onClick={() => { void handleRevoke(k.id); }}
-                                    >
-                                      Revoke key
-                                    </Button>
-                                  </DialogActions>
-                                </DialogBody>
-                              </DialogSurface>
-                            </Dialog>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className={styles.keyTableWrap}>
+                  <Subtitle2Stronger as="h3">Existing keys</Subtitle2Stronger>
+                  <DataGrid items={keys} columns={apiKeyColumns} getRowId={(k) => k.id}>
+                    <DataGridHeader>
+                      <DataGridRow>
+                        {({ renderHeaderCell }) => (
+                          <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                        )}
+                      </DataGridRow>
+                    </DataGridHeader>
+                    <DataGridBody<WorkspaceApiKey>>
+                      {({ item, rowId }) => (
+                        <DataGridRow<WorkspaceApiKey> key={rowId}>
+                          {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                        </DataGridRow>
+                      )}
+                    </DataGridBody>
+                  </DataGrid>
                 </div>
               )}
             </DialogContent>
@@ -387,6 +384,60 @@ export function WorkspaceSettingsPage() {
       </Dialog>
     </section>
   );
+}
+
+function makeApiKeyColumns(
+  onRevoke: (id: string) => void,
+): TableColumnDefinition<WorkspaceApiKey>[] {
+  return [
+    createTableColumn<WorkspaceApiKey>({
+      columnId: 'name',
+      renderHeaderCell: () => 'Name',
+      renderCell: (k) => k.displayName,
+    }),
+    createTableColumn<WorkspaceApiKey>({
+      columnId: 'keyHint',
+      renderHeaderCell: () => 'Key hint',
+      renderCell: (k) => <code>{k.keyHint}</code>,
+    }),
+    createTableColumn<WorkspaceApiKey>({
+      columnId: 'createdAt',
+      renderHeaderCell: () => 'Created',
+      renderCell: (k) => new Date(k.createdAt).toLocaleDateString(),
+    }),
+    createTableColumn<WorkspaceApiKey>({
+      columnId: 'actions',
+      renderHeaderCell: () => '',
+      renderCell: (k) => (
+        <Dialog>
+          <DialogTrigger disableButtonEnhancement>
+            <Button appearance="subtle" icon={<DeleteRegular />} aria-label={`Revoke ${k.displayName}`} />
+          </DialogTrigger>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>Revoke API key?</DialogTitle>
+              <DialogContent>
+                This will immediately invalidate the key. Any scripts or pipelines using it will
+                fail. This action cannot be undone.
+              </DialogContent>
+              <DialogActions>
+                <DialogTrigger disableButtonEnhancement>
+                  <Button appearance="secondary">Cancel</Button>
+                </DialogTrigger>
+                <Button
+                  appearance="primary"
+                  icon={<DeleteRegular />}
+                  onClick={() => onRevoke(k.id)}
+                >
+                  Revoke key
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
+      ),
+    }),
+  ];
 }
 
 export default WorkspaceSettingsPage;

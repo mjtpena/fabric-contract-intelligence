@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
+  Badge,
   Body1,
   Breadcrumb,
   BreadcrumbButton,
@@ -69,7 +70,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalXS,
   },
   yaml: {
-    height: '32rem',
+    height: 'min(60vh, 32rem)',
     minHeight: '20rem',
   },
   statusFlow: {
@@ -77,18 +78,6 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalXS,
     flexWrap: 'wrap',
-  },
-  statusPill: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusCircular,
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
-    backgroundColor: tokens.colorNeutralBackground2,
-  },
-  currentStatusPill: {
-    border: `1px solid ${tokens.colorBrandStroke1}`,
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground1,
-    fontWeight: tokens.fontWeightSemibold,
   },
   flowConnector: {
     color: tokens.colorNeutralForeground3,
@@ -374,7 +363,9 @@ function StatusFlowStep({
       {isCurrent ? (
         <StatusBadge status={status} />
       ) : (
-        <span className={styles.statusPill}>{toStatusLabel(status)}</span>
+        <Badge appearance="outline" color="subtle" shape="rounded">
+          {toStatusLabel(status)}
+        </Badge>
       )}
     </>
   );

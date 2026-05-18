@@ -42,10 +42,10 @@ const useStyles = makeStyles({
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
   },
   logoMark: {
-    width: '28px',
-    height: '28px',
+    width: '1.75rem',
+    height: '1.75rem',
     borderRadius: tokens.borderRadiusMedium,
-    background: `linear-gradient(135deg, ${tokens.colorBrandBackground} 0%, ${tokens.colorBrandBackgroundPressed} 100%)`,
+    backgroundColor: tokens.colorBrandBackground,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

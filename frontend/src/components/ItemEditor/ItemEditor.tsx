@@ -59,9 +59,6 @@ const useStyles = makeStyles({
     flex: 1,
   },
   title: {
-    fontSize: tokens.fontSizeBase500,
-    fontWeight: tokens.fontWeightSemibold,
-    lineHeight: tokens.lineHeightBase500,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
