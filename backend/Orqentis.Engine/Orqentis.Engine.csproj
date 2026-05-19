@@ -4,7 +4,7 @@
     <AssemblyName>Orqentis.Engine</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="YamlDotNet" Version="16.2.0" />
+    <PackageReference Include="YamlDotNet" Version="17.1.0" />
     <PackageReference Include="NJsonSchema" Version="11.1.0" />
     <PackageReference Include="NJsonSchema.Yaml" Version="11.1.0" />
     <PackageReference Include="Azure.Storage.Files.DataLake" Version="12.21.0" />
