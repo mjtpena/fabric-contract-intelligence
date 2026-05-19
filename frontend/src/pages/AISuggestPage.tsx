@@ -5,10 +5,6 @@ import {
   AccordionItem,
   AccordionPanel,
   Badge,
-  Breadcrumb,
-  BreadcrumbButton,
-  BreadcrumbDivider,
-  BreadcrumbItem,
   Button,
   Caption1,
   Field,
@@ -23,11 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { MonacoYamlEditor } from '@/components/ContractEditor/MonacoYamlEditor';
 import { EmptyState } from '@/components/EmptyState';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
-import {
-  FabricTargetItemPicker,
-  TablePicker,
-  TargetTypePicker,
-} from '@/components/FabricPickers';
+import { FabricTargetItemPicker, TablePicker, TargetTypePicker } from '@/components/FabricPickers';
 import { createAiClient } from '@/api/aiClient';
 import { createContractClient } from '@/api/contractClient';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
@@ -121,7 +113,10 @@ export function AISuggestPage() {
 
   const generate = async () => {
     if (!targetTablePath) {
-      await sdk.notifyInfo('No target selected', 'Select a Fabric target and object before generating.');
+      await sdk.notifyInfo(
+        'No target selected',
+        'Select a Fabric target and object before generating.',
+      );
       return;
     }
 
@@ -185,162 +180,172 @@ export function AISuggestPage() {
     <ItemEditor
       title="AI Contract Suggest"
       subtitle="Describe a Fabric target and get a draft contract to refine."
-      homeToolbarActions={[
-        {
-          key: 'generate',
-          label: loading ? 'Generating…' : 'Generate draft',
-          appearance: 'primary',
-          icon: <SparkleRegular />,
-          disabled: loading || !targetTablePath,
-          onClick: () => { void generate(); },
-        },
-        {
-          key: 'save',
-          label: isSaving ? 'Saving…' : 'Save draft',
-          icon: <SaveRegular />,
-          disabled: loading || isSaving || !yaml.trim(),
-          onClick: () => { void saveDraft(); },
-        },
-        {
-          key: 'back',
-          label: 'Back to contracts',
-          icon: <ArrowLeftRegular />,
-          onClick: () => navigate('/contracts'),
-        },
-      ] satisfies RibbonAction[]}
+      homeToolbarActions={
+        [
+          {
+            key: 'generate',
+            label: loading ? 'Generating…' : 'Generate draft',
+            appearance: 'primary',
+            icon: <SparkleRegular />,
+            disabled: loading || !targetTablePath,
+            onClick: () => {
+              void generate();
+            },
+          },
+          {
+            key: 'save',
+            label: isSaving ? 'Saving…' : 'Save draft',
+            icon: <SaveRegular />,
+            disabled: loading || isSaving || !yaml.trim(),
+            onClick: () => {
+              void saveDraft();
+            },
+          },
+          {
+            key: 'back',
+            label: 'Back to contracts',
+            icon: <ArrowLeftRegular />,
+            onClick: () => navigate('/contracts'),
+          },
+        ] satisfies RibbonAction[]
+      }
     >
       <div className={styles.root}>
-      <Breadcrumb>
-        <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => navigate('/contracts')}>Library</BreadcrumbButton>
-        </BreadcrumbItem>
-        <BreadcrumbDivider />
-        <BreadcrumbItem>
-          <BreadcrumbButton current>AI generate</BreadcrumbButton>
-        </BreadcrumbItem>
-      </Breadcrumb>
-
-      <div className={styles.grid}>
-        <TargetTypePicker
-          value={targetType}
-          onChange={(nextType) => {
-            setTargetType(nextType);
-            setTargetItemId('');
-            setTargetTablePath(getDefaultTargetPath(nextType));
-          }}
-        />
-        <FabricTargetItemPicker
-          apiBaseUrl={sdk.apiBaseUrl}
-          getToken={sdk.getAccessToken}
-          isReady={sdk.isReady}
-          targetType={targetType}
-          value={targetItemId}
-          workspaceId={sdk.workspaceId}
-          onChange={(id) => {
-            setTargetItemId(id);
-            if (targetType === 'lakehouse') {
-              setTargetTablePath('');
-            }
-          }}
-        />
-        {targetType === 'lakehouse' ? (
-          <TablePicker
+        <div className={styles.grid}>
+          <TargetTypePicker
+            value={targetType}
+            onChange={(nextType) => {
+              setTargetType(nextType);
+              setTargetItemId('');
+              setTargetTablePath(getDefaultTargetPath(nextType));
+            }}
+          />
+          <FabricTargetItemPicker
             apiBaseUrl={sdk.apiBaseUrl}
             getToken={sdk.getAccessToken}
             isReady={sdk.isReady}
-            lakehouseId={targetItemId}
-            value={targetTablePath}
+            targetType={targetType}
+            value={targetItemId}
             workspaceId={sdk.workspaceId}
-            onChange={setTargetTablePath}
+            onChange={(id) => {
+              setTargetItemId(id);
+              if (targetType === 'lakehouse') {
+                setTargetTablePath('');
+              }
+            }}
           />
-        ) : (
-          <Field
-            hint={getTargetPathHint(targetType)}
-            label={`${getContractTargetTypeLabel(targetType)} object`}
-          >
-            <Input value={targetTablePath} onChange={(_, data) => setTargetTablePath(data.value)} />
+          {targetType === 'lakehouse' ? (
+            <TablePicker
+              apiBaseUrl={sdk.apiBaseUrl}
+              getToken={sdk.getAccessToken}
+              isReady={sdk.isReady}
+              lakehouseId={targetItemId}
+              value={targetTablePath}
+              workspaceId={sdk.workspaceId}
+              onChange={setTargetTablePath}
+            />
+          ) : (
+            <Field
+              hint={getTargetPathHint(targetType)}
+              label={`${getContractTargetTypeLabel(targetType)} object`}
+            >
+              <Input
+                value={targetTablePath}
+                onChange={(_, data) => setTargetTablePath(data.value)}
+              />
+            </Field>
+          )}
+          <Field label="Contract name">
+            <Input
+              placeholder={tableName ? `e.g. ${tableName} Contract` : 'Auto-filled after generate'}
+              value={name}
+              onChange={(_, data) => setName(data.value)}
+            />
           </Field>
-        )}
-        <Field label="Contract name">
-          <Input
-            placeholder={tableName ? `e.g. ${tableName} Contract` : 'Auto-filled after generate'}
-            value={name}
-            onChange={(_, data) => setName(data.value)}
-          />
-        </Field>
-        <Field label="Owner email">
-          <Input type="email" value={ownerEmail} onChange={(_, data) => setOwnerEmail(data.value)} />
-        </Field>
-        <Field className={styles.fullWidth} label="Description">
-          <div className={styles.chips}>
-            {aiDescriptionTemplates.map((template) => (
+          <Field label="Owner email">
+            <Input
+              type="email"
+              value={ownerEmail}
+              onChange={(_, data) => setOwnerEmail(data.value)}
+            />
+          </Field>
+          <Field className={styles.fullWidth} label="Description">
+            <div className={styles.chips}>
+              {aiDescriptionTemplates.map((template) => (
+                <Button
+                  key={template.id}
+                  appearance={selectedTemplateId === template.id ? 'primary' : 'secondary'}
+                  size="small"
+                  onClick={() => {
+                    setSelectedTemplateId(template.id);
+                    setDescription(template.prompt);
+                  }}
+                >
+                  {template.label}
+                </Button>
+              ))}
               <Button
-                key={template.id}
-                appearance={selectedTemplateId === template.id ? 'primary' : 'secondary'}
+                appearance="subtle"
                 size="small"
                 onClick={() => {
-                  setSelectedTemplateId(template.id);
-                  setDescription(template.prompt);
+                  setSelectedTemplateId(null);
+                  setDescription('');
                 }}
               >
-                {template.label}
+                Clear
               </Button>
-            ))}
-            <Button appearance="subtle" size="small" onClick={() => { setSelectedTemplateId(null); setDescription(''); }}>
-              Clear
-            </Button>
-          </div>
-          <Textarea value={description} onChange={(_, data) => { setDescription(data.value); setSelectedTemplateId(null); }} />
-        </Field>
-      </div>
-
-      <div className={styles.examples}>
-        <Caption1>Here's what a contract for this domain typically captures…</Caption1>
-        <Accordion collapsible multiple>
-          {aiDescriptionTemplates.slice(0, 3).map((template) => (
-            <AccordionItem key={template.id} value={template.id}>
-              <AccordionHeader>{template.label}</AccordionHeader>
-              <AccordionPanel>{template.preview}</AccordionPanel>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-
-      <div className={styles.actions}>
-        {loading ? <Spinner size="tiny" /> : null}
-      </div>
-
-      {yaml ? (
-        <>
-          <div className={styles.resultHeader}>
-            <Caption1>Draft ready for review</Caption1>
-            {isHeuristicResult ? <Badge appearance="outline">Heuristic result</Badge> : null}
-          </div>
-          <div className={styles.editor}>
-            <MonacoYamlEditor
-              value={yaml}
-              onChange={setYaml}
-              themeMode={sdk.themeMode}
+            </div>
+            <Textarea
+              value={description}
+              onChange={(_, data) => {
+                setDescription(data.value);
+                setSelectedTemplateId(null);
+              }}
             />
-          </div>
-        </>
-      ) : null}
+          </Field>
+        </div>
 
-      {!yaml && targetTablePath && !loading ? (
-        <EmptyState
-          description="Generate a draft, then edit the YAML before saving it as a contract."
-          icon={<SparkleRegular />}
-          title="No suggestion yet"
-        />
-      ) : null}
+        <div className={styles.examples}>
+          <Caption1>Here's what a contract for this domain typically captures…</Caption1>
+          <Accordion collapsible multiple>
+            {aiDescriptionTemplates.slice(0, 3).map((template) => (
+              <AccordionItem key={template.id} value={template.id}>
+                <AccordionHeader>{template.label}</AccordionHeader>
+                <AccordionPanel>{template.preview}</AccordionPanel>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
 
-      {!targetTablePath ? (
-        <EmptyState
-          description="Choose a Fabric target and object to enable AI contract generation."
-          icon={<SparkleRegular />}
-          title="Select a target first"
-        />
-      ) : null}
+        <div className={styles.actions}>{loading ? <Spinner size="tiny" /> : null}</div>
+
+        {yaml ? (
+          <>
+            <div className={styles.resultHeader}>
+              <Caption1>Draft ready for review</Caption1>
+              {isHeuristicResult ? <Badge appearance="outline">Heuristic result</Badge> : null}
+            </div>
+            <div className={styles.editor}>
+              <MonacoYamlEditor value={yaml} onChange={setYaml} themeMode={sdk.themeMode} />
+            </div>
+          </>
+        ) : null}
+
+        {!yaml && targetTablePath && !loading ? (
+          <EmptyState
+            description="Generate a draft, then edit the YAML before saving it as a contract."
+            icon={<SparkleRegular />}
+            title="No suggestion yet"
+          />
+        ) : null}
+
+        {!targetTablePath ? (
+          <EmptyState
+            description="Choose a Fabric target and object to enable AI contract generation."
+            icon={<SparkleRegular />}
+            title="Select a target first"
+          />
+        ) : null}
       </div>
     </ItemEditor>
   );
@@ -348,7 +353,11 @@ export function AISuggestPage() {
 
 function isFallbackModel(modelUsed: string | null | undefined) {
   const normalized = modelUsed?.toLowerCase() ?? '';
-  return normalized.includes('heuristic') || normalized.includes('fallback') || normalized.includes('template');
+  return (
+    normalized.includes('heuristic') ||
+    normalized.includes('fallback') ||
+    normalized.includes('template')
+  );
 }
 
 function getDefaultTargetPath(targetType: ContractTargetType) {

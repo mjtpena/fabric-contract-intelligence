@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Body1,
-  Breadcrumb,
-  BreadcrumbButton,
-  BreadcrumbDivider,
-  BreadcrumbItem,
   Button,
   Caption1,
   Card,
@@ -25,7 +21,15 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { ArrowClockwiseRegular, ArrowDownloadRegular, ArrowLeftRegular, CopyRegular, DocumentBulletListRegular, LinkRegular, PlayRegular } from '@fluentui/react-icons';
+import {
+  ArrowClockwiseRegular,
+  ArrowDownloadRegular,
+  ArrowLeftRegular,
+  CopyRegular,
+  DocumentBulletListRegular,
+  LinkRegular,
+  PlayRegular,
+} from '@fluentui/react-icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
@@ -153,7 +157,9 @@ export function EnforcementRunPage() {
   const [selectedTab, setSelectedTab] = useState<RunTab>('schema-rules');
   const [leftVersionId, setLeftVersionId] = useState<string>('');
   const [rightVersionId, setRightVersionId] = useState<string>('');
-  const [persistedReportState, setPersistedReportState] = useState<PersistedReportState | null>(null);
+  const [persistedReportState, setPersistedReportState] = useState<PersistedReportState | null>(
+    null,
+  );
   const [itemDefinitionLoaded, setItemDefinitionLoaded] = useState(false);
   const [auditRows, setAuditRows] = useState<ReportAuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -161,8 +167,10 @@ export function EnforcementRunPage() {
   const [liveMessage, setLiveMessage] = useState('');
   const [secondaryActionInFlight, setSecondaryActionInFlight] = useState(false);
 
-  const requestedContractId = routeContractId ?? searchParams.get('contractId') ?? persistedReportState?.contractId ?? null;
-  const requestedRunId = routeRunId ?? searchParams.get('runId') ?? persistedReportState?.runId ?? null;
+  const requestedContractId =
+    routeContractId ?? searchParams.get('contractId') ?? persistedReportState?.contractId ?? null;
+  const requestedRunId =
+    routeRunId ?? searchParams.get('runId') ?? persistedReportState?.runId ?? null;
   const compareRequested = searchParams.get('compare') === '1';
   const requestedLeftVersion = searchParams.get('left');
   const requestedRightVersion = searchParams.get('right');
@@ -200,25 +208,32 @@ export function EnforcementRunPage() {
     [sdk.apiBaseUrl, sdk.correlationId, sdk.getAccessToken, sdk.workspaceId],
   );
 
-  const { clearError = noop, error, isPollingPaused, loading, refresh, resumePolling, run, runs } = useEnforcementRun(
-    runClient,
-    requestedContractId,
-    requestedRunId,
-  );
+  const {
+    clearError = noop,
+    error,
+    isPollingPaused,
+    loading,
+    refresh,
+    resumePolling,
+    run,
+    runs,
+  } = useEnforcementRun(runClient, requestedContractId, requestedRunId);
   const resolvedContractId = requestedContractId ?? run?.contractId ?? null;
   const { contract, versions } = useContract(contractClient, resolvedContractId);
 
-  const openWorkloadRoute = useCallback(async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
-    if (!(await sdk.openWorkloadRoute(path, mode))) {
-      navigate(path);
-    }
-  }, [navigate, sdk]);
+  const openWorkloadRoute = useCallback(
+    async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+      if (!(await sdk.openWorkloadRoute(path, mode))) {
+        navigate(path);
+      }
+    },
+    [navigate, sdk],
+  );
 
   const sortedVersions = useMemo(
     () =>
       [...versions].sort(
-        (left, right) =>
-          new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+        (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
       ),
     [versions],
   );
@@ -278,8 +293,10 @@ export function EnforcementRunPage() {
     }
   }, [run]);
 
-  const selectedLeftVersion = sortedVersions.find((version) => version.id === leftVersionId) ?? null;
-  const selectedRightVersion = sortedVersions.find((version) => version.id === rightVersionId) ?? null;
+  const selectedLeftVersion =
+    sortedVersions.find((version) => version.id === leftVersionId) ?? null;
+  const selectedRightVersion =
+    sortedVersions.find((version) => version.id === rightVersionId) ?? null;
   const versionLookup = useMemo(
     () => new Map(versions.map((version) => [version.id, version.version])),
     [versions],
@@ -294,7 +311,8 @@ export function EnforcementRunPage() {
     }
 
     setItemDefinitionLoaded(false);
-    void sdk.loadItemDefinition(itemObjectId)
+    void sdk
+      .loadItemDefinition(itemObjectId)
       .then((persisted) => {
         if (cancelled) {
           return;
@@ -322,7 +340,8 @@ export function EnforcementRunPage() {
     setAuditLoading(true);
     setAuditError(null);
     let cancelled = false;
-    void opsClient.listAuditRows()
+    void opsClient
+      .listAuditRows()
       .then((rows) => {
         if (!cancelled) {
           setAuditRows(rows);
@@ -331,7 +350,11 @@ export function EnforcementRunPage() {
       .catch((auditListError) => {
         if (!cancelled) {
           setAuditRows([]);
-          setAuditError(auditListError instanceof Error ? auditListError.message : 'Unable to load report audit rows.');
+          setAuditError(
+            auditListError instanceof Error
+              ? auditListError.message
+              : 'Unable to load report audit rows.',
+          );
         }
       })
       .finally(() => {
@@ -352,17 +375,23 @@ export function EnforcementRunPage() {
     return cleanup;
   }, [itemDefinitionLoaded, requestedRunId, reloadAudit]);
 
-  const runSecondaryAction = useCallback(async (action: () => Promise<void>) => {
-    setSecondaryActionInFlight(true);
-    try {
-      await action();
-    } catch (actionError) {
-      const message = actionError instanceof Error ? actionError.message : 'The run action could not be completed.';
-      await sdk.notifyError('Run action failed', message);
-    } finally {
-      setSecondaryActionInFlight(false);
-    }
-  }, [sdk]);
+  const runSecondaryAction = useCallback(
+    async (action: () => Promise<void>) => {
+      setSecondaryActionInFlight(true);
+      try {
+        await action();
+      } catch (actionError) {
+        const message =
+          actionError instanceof Error
+            ? actionError.message
+            : 'The run action could not be completed.';
+        await sdk.notifyError('Run action failed', message);
+      } finally {
+        setSecondaryActionInFlight(false);
+      }
+    },
+    [sdk],
+  );
 
   const copyText = useCallback(async (value: string) => {
     await navigator.clipboard.writeText(value);
@@ -378,7 +407,10 @@ export function EnforcementRunPage() {
       try {
         await sdk.saveItemDefinition(itemObjectId, JSON.stringify(persistedState));
       } catch {
-        await sdk.notifyInfo('Report item not synced', 'The run can be opened, but Fabric item metadata could not be updated.');
+        await sdk.notifyInfo(
+          'Report item not synced',
+          'The run can be opened, but Fabric item metadata could not be updated.',
+        );
       }
     }
 
@@ -460,12 +492,19 @@ export function EnforcementRunPage() {
   const remediationSuggestions = resolveRemediationSuggestions(run);
   const displayBreachScore = resolveDisplayBreachScore(run);
   const previousRun = runs
-    .filter((candidate) => candidate.id !== run.id && new Date(candidate.triggeredAt).getTime() <= new Date(run.triggeredAt).getTime())
-    .sort((left, right) => new Date(right.triggeredAt).getTime() - new Date(left.triggeredAt).getTime())[0];
+    .filter(
+      (candidate) =>
+        candidate.id !== run.id &&
+        new Date(candidate.triggeredAt).getTime() <= new Date(run.triggeredAt).getTime(),
+    )
+    .sort(
+      (left, right) => new Date(right.triggeredAt).getTime() - new Date(left.triggeredAt).getTime(),
+    )[0];
   const previousScore = resolveSummaryBreachScore(previousRun);
-  const breachDelta = displayBreachScore != null && previousScore != null
-    ? formatBreachDelta(displayBreachScore - previousScore)
-    : null;
+  const breachDelta =
+    displayBreachScore != null && previousScore != null
+      ? formatBreachDelta(displayBreachScore - previousScore)
+      : null;
 
   const homeToolbarActions: RibbonAction[] = (() => {
     const actions: RibbonAction[] = [];
@@ -474,14 +513,18 @@ export function EnforcementRunPage() {
         key: 'back',
         label: 'Back to contract',
         icon: <ArrowLeftRegular />,
-        onClick: () => { void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`); },
+        onClick: () => {
+          void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`);
+        },
       });
     }
     actions.push({
       key: 'refresh',
       label: 'Refresh',
       icon: <ArrowClockwiseRegular />,
-      onClick: () => { void refresh(); },
+      onClick: () => {
+        void refresh();
+      },
     });
     if (isPollingPaused) {
       actions.push({
@@ -489,7 +532,9 @@ export function EnforcementRunPage() {
         label: 'Resume polling',
         icon: <ArrowClockwiseRegular />,
         appearance: 'primary',
-        onClick: () => { void resumePolling(); },
+        onClick: () => {
+          void resumePolling();
+        },
       });
     }
     if (resolvedContractId) {
@@ -503,7 +548,10 @@ export function EnforcementRunPage() {
           void runSecondaryAction(async () => {
             if (!resolvedContractId) return;
             const nextRun = await runClient.runNow(resolvedContractId);
-            await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
+            await sdk.notifySuccess(
+              'Run requested',
+              'The enforcement run was queued successfully.',
+            );
             await openWorkloadRoute(buildRunLink(resolvedContractId, nextRun.runId), 'append');
           });
         },
@@ -555,201 +603,187 @@ export function EnforcementRunPage() {
   return (
     <ItemEditor
       title={contract?.name ?? 'Enforcement run'}
-      subtitle={contract?.targetTablePath ?? 'Review failed rules and remediation guidance for this run.'}
+      subtitle={
+        contract?.targetTablePath ?? 'Review failed rules and remediation guidance for this run.'
+      }
       homeToolbarActions={homeToolbarActions}
       statusSlot={<StatusBadge status={run.status} />}
     >
       <div className={styles.root}>
-      <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
-      <Breadcrumb>
-        <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>
-        </BreadcrumbItem>
-        <BreadcrumbDivider />
-        {resolvedContractId && contract ? (
-          <>
-            <BreadcrumbItem>
-              <BreadcrumbButton onClick={() => { void openWorkloadRoute(`/contracts/${resolvedContractId}/edit`); }}>
-                {contract.name}
-              </BreadcrumbButton>
-            </BreadcrumbItem>
-            <BreadcrumbDivider />
-          </>
-        ) : null}
-        <BreadcrumbItem>
-          <BreadcrumbButton current>Run {run.id.slice(0, 8)}</BreadcrumbButton>
-        </BreadcrumbItem>
-      </Breadcrumb>
+        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
-      {error ? <ErrorBanner message={error} /> : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
-      <div className={styles.summary}>
-        <Card className={styles.heroCard}>
-          <BreachScoreGauge score={displayBreachScore} />
-          {breachDelta ? <Caption1 className={styles.scoreDelta}>{breachDelta}</Caption1> : null}
-        </Card>
+        <div className={styles.summary}>
+          <Card className={styles.heroCard}>
+            <BreachScoreGauge score={displayBreachScore} />
+            {breachDelta ? <Caption1 className={styles.scoreDelta}>{breachDelta}</Caption1> : null}
+          </Card>
 
-        <Card className={styles.metricsStrip}>
-          <div className={styles.metricItem}>
-            <Caption1>Status</Caption1>
-            <StatusBadge status={run.status} />
-            <Body1>Overall: {run.resultJson.overallStatus}</Body1>
-          </div>
-          <div className={styles.metricItem}>
-            <Caption1>Started</Caption1>
-            <Body1>{formatDateTime(run.triggeredAt)}</Body1>
-          </div>
-          <div className={styles.metricItem}>
-            <Caption1>Duration</Caption1>
-            <Body1>{formatDuration(run.triggeredAt, run.completedAt)}</Body1>
-          </div>
-          <div className={styles.metricItem}>
-            <Caption1>Mode</Caption1>
-            <Body1>{formatRunMode(run.triggeredBy)}</Body1>
-          </div>
-        </Card>
-      </div>
+          <Card className={styles.metricsStrip}>
+            <div className={styles.metricItem}>
+              <Caption1>Status</Caption1>
+              <StatusBadge status={run.status} />
+              <Body1>Overall: {run.resultJson.overallStatus}</Body1>
+            </div>
+            <div className={styles.metricItem}>
+              <Caption1>Started</Caption1>
+              <Body1>{formatDateTime(run.triggeredAt)}</Body1>
+            </div>
+            <div className={styles.metricItem}>
+              <Caption1>Duration</Caption1>
+              <Body1>{formatDuration(run.triggeredAt, run.completedAt)}</Body1>
+            </div>
+            <div className={styles.metricItem}>
+              <Caption1>Mode</Caption1>
+              <Body1>{formatRunMode(run.triggeredBy)}</Body1>
+            </div>
+          </Card>
+        </div>
 
-      <Card className={styles.card}>
-        <Subtitle2Stronger>Run history</Subtitle2Stronger>
-        {runs.length === 0 ? (
-          <EmptyState
-            description="No persisted runs were returned for this contract."
-            title="No runs yet"
-          />
-        ) : (
-          <DataGrid items={runs} columns={historyColumns}>
-            <DataGridHeader>
-              <DataGridRow>
-                {({ renderHeaderCell }) => (
-                  <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
-                )}
-              </DataGridRow>
-            </DataGridHeader>
-            <DataGridBody<RunSummary>>
-              {({ item, rowId }) => (
-                <DataGridRow<RunSummary> key={rowId}>
-                  {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-                </DataGridRow>
-              )}
-            </DataGridBody>
-          </DataGrid>
-        )}
-      </Card>
-
-      <Card className={styles.tabCard}>
-        <TabList
-          selectedValue={selectedTab}
-          onTabSelect={(_, data) => setSelectedTab(data.value as RunTab)}
-        >
-          <Tab value="schema-rules">Schema Rules</Tab>
-          <Tab value="quality-rules">Quality Rules</Tab>
-          <Tab value="freshness">Freshness</Tab>
-          <Tab value="schema-diff">Schema Diff</Tab>
-          <Tab value="remediation">Remediation</Tab>
-        </TabList>
-
-        {selectedTab === 'schema-rules' ? (
-          <RuleResultsTable
-            emptyMessage="This run did not return schema-rule results."
-            rules={run.resultJson.schemaRules}
-          />
-        ) : null}
-
-        {selectedTab === 'quality-rules' ? (
-          <RuleResultsTable
-            emptyMessage="Quality-rule data will populate once the contract includes quality rules."
-            rules={run.resultJson.qualityRules}
-          />
-        ) : null}
-
-        {selectedTab === 'freshness' ? (
-          run.resultJson.freshnessRule ? (
-            <RuleResultsTable
-              emptyMessage="No freshness rule was configured for this run."
-              rules={[run.resultJson.freshnessRule]}
+        <Card className={styles.card}>
+          <Subtitle2Stronger>Run history</Subtitle2Stronger>
+          {runs.length === 0 ? (
+            <EmptyState
+              description="No persisted runs were returned for this contract."
+              title="No runs yet"
             />
           ) : (
-            <EmptyState
-              description="No freshness rule was returned for this run."
-              title="No freshness data"
+            <DataGrid items={runs} columns={historyColumns}>
+              <DataGridHeader>
+                <DataGridRow>
+                  {({ renderHeaderCell }) => (
+                    <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                  )}
+                </DataGridRow>
+              </DataGridHeader>
+              <DataGridBody<RunSummary>>
+                {({ item, rowId }) => (
+                  <DataGridRow<RunSummary> key={rowId}>
+                    {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                  </DataGridRow>
+                )}
+              </DataGridBody>
+            </DataGrid>
+          )}
+        </Card>
+
+        <Card className={styles.tabCard}>
+          <TabList
+            selectedValue={selectedTab}
+            onTabSelect={(_, data) => setSelectedTab(data.value as RunTab)}
+          >
+            <Tab value="schema-rules">Schema Rules</Tab>
+            <Tab value="quality-rules">Quality Rules</Tab>
+            <Tab value="freshness">Freshness</Tab>
+            <Tab value="schema-diff">Schema Diff</Tab>
+            <Tab value="remediation">Remediation</Tab>
+          </TabList>
+
+          {selectedTab === 'schema-rules' ? (
+            <RuleResultsTable
+              emptyMessage="This run did not return schema-rule results."
+              rules={run.resultJson.schemaRules}
             />
-          )
-        ) : null}
+          ) : null}
 
-        {selectedTab === 'schema-diff' ? (
-          <>
-            <div className={styles.inlineGrid}>
-              <Field label="Compare left version">
-                <Dropdown
-                  selectedOptions={selectedLeftVersion ? [selectedLeftVersion.id] : []}
-                  value={selectedLeftVersion?.version ?? 'Select version'}
-                  onOptionSelect={(_, data) => setLeftVersionId(data.optionValue ?? '')}
-                >
-                  {sortedVersions.map((version) => (
-                    <Option key={version.id} value={version.id}>
-                      {version.version}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-              <Field label="Compare right version">
-                <Dropdown
-                  selectedOptions={selectedRightVersion ? [selectedRightVersion.id] : []}
-                  value={selectedRightVersion?.version ?? 'Select version'}
-                  onOptionSelect={(_, data) => setRightVersionId(data.optionValue ?? '')}
-                >
-                  {sortedVersions.map((version) => (
-                    <Option key={version.id} value={version.id}>
-                      {version.version}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-            </div>
+          {selectedTab === 'quality-rules' ? (
+            <RuleResultsTable
+              emptyMessage="Quality-rule data will populate once the contract includes quality rules."
+              rules={run.resultJson.qualityRules}
+            />
+          ) : null}
 
-            <SchemaDiffSummary schemaDiff={run.resultJson.schemaDiff} schemaRules={run.resultJson.schemaRules} />
-
-            {selectedLeftVersion && selectedRightVersion ? (
-              <SchemaDiffViewer
-                modifiedYaml={selectedRightVersion?.odcsYaml ?? ''}
-                originalYaml={selectedLeftVersion?.odcsYaml ?? ''}
-                themeMode={sdk.themeMode}
+          {selectedTab === 'freshness' ? (
+            run.resultJson.freshnessRule ? (
+              <RuleResultsTable
+                emptyMessage="No freshness rule was configured for this run."
+                rules={[run.resultJson.freshnessRule]}
               />
             ) : (
               <EmptyState
-                description="Select two contract versions to compare their YAML side by side."
-                title="Choose versions to compare"
+                description="No freshness rule was returned for this run."
+                title="No freshness data"
               />
-            )}
-          </>
-        ) : null}
+            )
+          ) : null}
 
-        {selectedTab === 'remediation' ? (
-          <>
-            {remediationSuggestions.length > 0 ? (
-              <ul className={styles.checklist}>
-                {remediationSuggestions.map((suggestion, index) => (
-                  <li key={`${suggestion}-${index}`}>
-                    <Body1>{suggestion}</Body1>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState
-                description="No remediation is needed for this run."
-                title="All clear"
+          {selectedTab === 'schema-diff' ? (
+            <>
+              <div className={styles.inlineGrid}>
+                <Field label="Compare left version">
+                  <Dropdown
+                    selectedOptions={selectedLeftVersion ? [selectedLeftVersion.id] : []}
+                    value={selectedLeftVersion?.version ?? 'Select version'}
+                    onOptionSelect={(_, data) => setLeftVersionId(data.optionValue ?? '')}
+                  >
+                    {sortedVersions.map((version) => (
+                      <Option key={version.id} value={version.id}>
+                        {version.version}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </Field>
+                <Field label="Compare right version">
+                  <Dropdown
+                    selectedOptions={selectedRightVersion ? [selectedRightVersion.id] : []}
+                    value={selectedRightVersion?.version ?? 'Select version'}
+                    onOptionSelect={(_, data) => setRightVersionId(data.optionValue ?? '')}
+                  >
+                    {sortedVersions.map((version) => (
+                      <Option key={version.id} value={version.id}>
+                        {version.version}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </Field>
+              </div>
+
+              <SchemaDiffSummary
+                schemaDiff={run.resultJson.schemaDiff}
+                schemaRules={run.resultJson.schemaRules}
               />
-            )}
-            {run.resultJson.errorMessage ? (
-              <Card className={styles.card}>
-                <Caption1>Run error</Caption1>
-                <Body1>{run.resultJson.errorMessage}</Body1>
-              </Card>
-            ) : null}
-          </>
-        ) : null}
-      </Card>
+
+              {selectedLeftVersion && selectedRightVersion ? (
+                <SchemaDiffViewer
+                  modifiedYaml={selectedRightVersion?.odcsYaml ?? ''}
+                  originalYaml={selectedLeftVersion?.odcsYaml ?? ''}
+                  themeMode={sdk.themeMode}
+                />
+              ) : (
+                <EmptyState
+                  description="Select two contract versions to compare their YAML side by side."
+                  title="Choose versions to compare"
+                />
+              )}
+            </>
+          ) : null}
+
+          {selectedTab === 'remediation' ? (
+            <>
+              {remediationSuggestions.length > 0 ? (
+                <ul className={styles.checklist}>
+                  {remediationSuggestions.map((suggestion, index) => (
+                    <li key={`${suggestion}-${index}`}>
+                      <Body1>{suggestion}</Body1>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState
+                  description="No remediation is needed for this run."
+                  title="All clear"
+                />
+              )}
+              {run.resultJson.errorMessage ? (
+                <Card className={styles.card}>
+                  <Caption1>Run error</Caption1>
+                  <Body1>{run.resultJson.errorMessage}</Body1>
+                </Card>
+              ) : null}
+            </>
+          ) : null}
+        </Card>
       </div>
     </ItemEditor>
   );
@@ -827,7 +861,9 @@ function ReportItemDashboard({
           <DataGrid items={rows} columns={columns}>
             <DataGridHeader>
               <DataGridRow>
-                {({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}
+                {({ renderHeaderCell }) => (
+                  <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                )}
               </DataGridRow>
             </DataGridHeader>
             <DataGridBody<ReportAuditRow>>
@@ -853,7 +889,9 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
   const styles = useStyles();
 
   if (!schemaDiff) {
-    const driftRules = schemaRules.filter((rule) => rule.status === 'failed' || rule.status === 'warned');
+    const driftRules = schemaRules.filter(
+      (rule) => rule.status === 'failed' || rule.status === 'warned',
+    );
 
     if (driftRules.length === 0) {
       return <Body1>No schema drift was detected for this run.</Body1>;
@@ -881,11 +919,15 @@ function SchemaDiffSummary({ schemaDiff, schemaRules }: SchemaDiffSummaryProps) 
     <div className={styles.inlineGrid}>
       <Card className={styles.card}>
         <Caption1>Added columns</Caption1>
-        <Body1>{schemaDiff.addedColumns.length > 0 ? schemaDiff.addedColumns.join(', ') : 'None'}</Body1>
+        <Body1>
+          {schemaDiff.addedColumns.length > 0 ? schemaDiff.addedColumns.join(', ') : 'None'}
+        </Body1>
       </Card>
       <Card className={styles.card}>
         <Caption1>Removed columns</Caption1>
-        <Body1>{schemaDiff.removedColumns.length > 0 ? schemaDiff.removedColumns.join(', ') : 'None'}</Body1>
+        <Body1>
+          {schemaDiff.removedColumns.length > 0 ? schemaDiff.removedColumns.join(', ') : 'None'}
+        </Body1>
       </Card>
       <Card className={styles.card}>
         <Caption1>Type changes</Caption1>
@@ -1070,7 +1112,9 @@ function parsePersistedReportState(raw: string): PersistedReportState | null {
 }
 
 function resolveSummaryBreachScore(run: RunSummary | undefined) {
-  const candidate = run as (RunSummary & { breachScore?: number | null; resultJson?: { breachScore?: number | null } }) | undefined;
+  const candidate = run as
+    | (RunSummary & { breachScore?: number | null; resultJson?: { breachScore?: number | null } })
+    | undefined;
   return candidate?.breachScore ?? candidate?.resultJson?.breachScore ?? null;
 }
 
@@ -1080,9 +1124,7 @@ function formatBreachDelta(delta: number) {
   }
 
   const rounded = Math.abs(Math.round(delta));
-  return delta < 0
-    ? `${rounded}% better than last run`
-    : `${rounded}% worse than last run`;
+  return delta < 0 ? `${rounded}% better than last run` : `${rounded}% worse than last run`;
 }
 
 function formatDuration(start: string, end: string | null) {

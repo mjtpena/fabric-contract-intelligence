@@ -28,7 +28,14 @@ import {
 } from '@fluentui/react-components';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { downloadZip } from 'client-zip';
-import { AddRegular, ArrowClockwiseRegular, ChevronLeftRegular, ChevronRightRegular, DocumentBulletListRegular, PlayRegular } from '@fluentui/react-icons';
+import {
+  AddRegular,
+  ArrowClockwiseRegular,
+  ChevronLeftRegular,
+  ChevronRightRegular,
+  DocumentBulletListRegular,
+  PlayRegular,
+} from '@fluentui/react-icons';
 import { createContractClient } from '@/api/contractClient';
 import { createOpsClient } from '@/api/opsClient';
 import { createRunClient } from '@/api/runClient';
@@ -38,7 +45,6 @@ import { FabricLink } from '@/components/FabricLink';
 import { ItemEditor, type RibbonAction } from '@/components/ItemEditor/ItemEditor';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VisuallyHidden } from '@/components/VisuallyHidden';
-import { WelcomeHero } from '@/components/WelcomeHero';
 import { useContracts } from '@/hooks/useContract';
 import { useFabricSdk } from '@/hooks/useFabricSdk';
 import { aiDescriptionTemplates } from '@/lib/aiTemplates';
@@ -176,9 +182,15 @@ export function ContractListPage() {
   const [federatedLoading, setFederatedLoading] = useState(false);
   const [liveMessage, setLiveMessage] = useState('');
   const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => parseFilter(searchParams.get('status'), statusFilters, 'all'));
-  const [targetFilter, setTargetFilter] = useState<TargetFilter>(() => parseFilter(searchParams.get('target'), targetFilters, 'all'));
-  const [lastRunFilter, setLastRunFilter] = useState<LastRunFilter>(() => parseFilter(searchParams.get('lastRun'), lastRunFilters, 'all'));
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    parseFilter(searchParams.get('status'), statusFilters, 'all'),
+  );
+  const [targetFilter, setTargetFilter] = useState<TargetFilter>(() =>
+    parseFilter(searchParams.get('target'), targetFilters, 'all'),
+  );
+  const [lastRunFilter, setLastRunFilter] = useState<LastRunFilter>(() =>
+    parseFilter(searchParams.get('lastRun'), lastRunFilters, 'all'),
+  );
   const [selectedItems, setSelectedItems] = useState<Set<TableRowId>>(() => new Set());
   const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [isBulkExporting, setIsBulkExporting] = useState(false);
@@ -197,9 +209,12 @@ export function ContractListPage() {
   );
 
   useEffect(() => {
-    void opsClient.listWorkspaces().then((workspaces: WorkspaceSummary[]) => {
-      setTier(workspaces[0]?.tier ?? 'community');
-    }).catch(() => setTier('community'));
+    void opsClient
+      .listWorkspaces()
+      .then((workspaces: WorkspaceSummary[]) => {
+        setTier(workspaces[0]?.tier ?? 'community');
+      })
+      .catch(() => setTier('community'));
   }, [opsClient]);
 
   useEffect(() => {
@@ -217,32 +232,40 @@ export function ContractListPage() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        setDefaultedParam(next, 'q', searchInput.trim(), '');
-        setDefaultedParam(next, 'status', statusFilter, 'all');
-        setDefaultedParam(next, 'target', targetFilter, 'all');
-        setDefaultedParam(next, 'lastRun', lastRunFilter, 'all');
-        next.delete('page');
-        return next;
-      }, { replace: true });
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          setDefaultedParam(next, 'q', searchInput.trim(), '');
+          setDefaultedParam(next, 'status', statusFilter, 'all');
+          setDefaultedParam(next, 'target', targetFilter, 'all');
+          setDefaultedParam(next, 'lastRun', lastRunFilter, 'all');
+          next.delete('page');
+          return next;
+        },
+        { replace: true },
+      );
     }, 200);
 
     return () => window.clearTimeout(timeoutId);
   }, [lastRunFilter, searchInput, setSearchParams, statusFilter, targetFilter]);
 
-  const openWorkloadRoute = useCallback(async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
-    if (!(await sdk.openWorkloadRoute(path, mode))) {
-      navigate(path);
-    }
-  }, [navigate, sdk]);
+  const openWorkloadRoute = useCallback(
+    async (path: string, mode: 'append' | 'replaceAll' = 'replaceAll') => {
+      if (!(await sdk.openWorkloadRoute(path, mode))) {
+        navigate(path);
+      }
+    },
+    [navigate, sdk],
+  );
 
-  const displayedContracts = tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked'
-    ? federatedContracts
-    : contracts;
+  const displayedContracts =
+    tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked'
+      ? federatedContracts
+      : contracts;
 
   const filteredContracts = useMemo(
-    () => filterContracts(displayedContracts, searchInput, statusFilter, targetFilter, lastRunFilter),
+    () =>
+      filterContracts(displayedContracts, searchInput, statusFilter, targetFilter, lastRunFilter),
     [displayedContracts, lastRunFilter, searchInput, statusFilter, targetFilter],
   );
   const pageCount = Math.max(1, Math.ceil(filteredContracts.length / pageSize));
@@ -255,12 +278,18 @@ export function ContractListPage() {
     const selected = new Set(Array.from(selectedItems).map(String));
     return displayedContracts.filter((contract) => selected.has(contract.id));
   }, [displayedContracts, selectedItems]);
-  const filtersAreActive = searchInput.trim().length > 0 || statusFilter !== 'all' || targetFilter !== 'all' || lastRunFilter !== 'all';
+  const filtersAreActive =
+    searchInput.trim().length > 0 ||
+    statusFilter !== 'all' ||
+    targetFilter !== 'all' ||
+    lastRunFilter !== 'all';
   const bulkBusy = isBulkRunning || isBulkExporting;
 
   useEffect(() => {
     if (!loading && !federatedLoading) {
-      setLiveMessage(`Loaded ${filteredContracts.length} of ${displayedContracts.length} contracts.`);
+      setLiveMessage(
+        `Loaded ${filteredContracts.length} of ${displayedContracts.length} contracts.`,
+      );
     }
   }, [displayedContracts.length, federatedLoading, filteredContracts.length, loading]);
 
@@ -278,22 +307,28 @@ export function ContractListPage() {
     }
   }, [currentPage, pageCount, setSearchParams]);
 
-  const handleRunNow = useCallback(async (contractId: string) => {
-    try {
-      const run = await runNow(contractId);
-      await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
-      if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
-        const response = await opsClient.listFederatedContracts();
-        setFederatedContracts(response.contracts);
-      } else {
-        await refresh();
+  const handleRunNow = useCallback(
+    async (contractId: string) => {
+      try {
+        const run = await runNow(contractId);
+        await sdk.notifySuccess('Run requested', 'The enforcement run was queued successfully.');
+        if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+          const response = await opsClient.listFederatedContracts();
+          setFederatedContracts(response.contracts);
+        } else {
+          await refresh();
+        }
+        await openWorkloadRoute(
+          `/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(run.runId)}`,
+          'append',
+        );
+      } catch (runError) {
+        const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
+        await sdk.notifyError('Run failed', message);
       }
-      await openWorkloadRoute(`/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(run.runId)}`, 'append');
-    } catch (runError) {
-      const message = runError instanceof Error ? runError.message : 'Unable to queue the run.';
-      await sdk.notifyError('Run failed', message);
-    }
-  }, [openWorkloadRoute, opsClient, refresh, runNow, sdk, tier, workspaceScope]);
+    },
+    [openWorkloadRoute, opsClient, refresh, runNow, sdk, tier, workspaceScope],
+  );
 
   const handleBulkRun = useCallback(async () => {
     if (selectedContracts.length === 0) {
@@ -302,13 +337,16 @@ export function ContractListPage() {
 
     setIsBulkRunning(true);
     try {
-      const results = await runWithConcurrency(selectedContracts, 3, (contract) => runClient.runNow(contract.id));
+      const results = await runWithConcurrency(selectedContracts, 3, (contract) =>
+        runClient.runNow(contract.id),
+      );
       const started = results.filter((result) => result.status === 'fulfilled').length;
       const failed = results.length - started;
       await sdk.notifySuccess('Bulk runs requested', `Started ${started} runs · ${failed} failed`);
       await refresh();
     } catch (bulkError) {
-      const message = bulkError instanceof Error ? bulkError.message : 'Unable to start selected runs.';
+      const message =
+        bulkError instanceof Error ? bulkError.message : 'Unable to start selected runs.';
       await sdk.notifyError('Bulk run failed', message);
     } finally {
       setIsBulkRunning(false);
@@ -322,347 +360,415 @@ export function ContractListPage() {
 
     setIsBulkExporting(true);
     try {
-      const details = await Promise.all(selectedContracts.map(async (contract) => ({
-        contract,
-        detail: await client.getContract(contract.id),
-      })));
-      const blob = await downloadZip(details.map(({ contract, detail }) => ({
-        input: detail.odcsYaml,
-        name: `${safeFileName(contract.name || contract.id)}.contract.yaml`,
-      }))).blob();
+      const details = await Promise.all(
+        selectedContracts.map(async (contract) => ({
+          contract,
+          detail: await client.getContract(contract.id),
+        })),
+      );
+      const blob = await downloadZip(
+        details.map(({ contract, detail }) => ({
+          input: detail.odcsYaml,
+          name: `${safeFileName(contract.name || contract.id)}.contract.yaml`,
+        })),
+      ).blob();
       triggerDownload(blob, 'contracts-export.zip');
-      await sdk.notifySuccess('Contracts exported', `Exported ${details.length} contract YAML files.`);
+      await sdk.notifySuccess(
+        'Contracts exported',
+        `Exported ${details.length} contract YAML files.`,
+      );
     } catch (exportError) {
-      const message = exportError instanceof Error ? exportError.message : 'Unable to export selected contracts.';
+      const message =
+        exportError instanceof Error ? exportError.message : 'Unable to export selected contracts.';
       await sdk.notifyError('Export failed', message);
     } finally {
       setIsBulkExporting(false);
     }
   }, [client, sdk, selectedContracts]);
 
-  const openTemplate = useCallback((yaml: string) => {
-    sessionStorage.setItem('orqentis.contract.templateYaml', yaml);
-    void openWorkloadRoute('/contracts/editor?template=1');
-  }, [openWorkloadRoute]);
+  const openTemplate = useCallback(
+    (yaml: string) => {
+      sessionStorage.setItem('orqentis.contract.templateYaml', yaml);
+      void openWorkloadRoute('/contracts/editor?template=1');
+    },
+    [openWorkloadRoute],
+  );
 
   const columns = useMemo(
-    () =>
-      [
-        createTableColumn<ContractSummary>({
-          columnId: 'name',
-          compare: (left, right) => left.name.localeCompare(right.name),
-          renderCell: (item) => (
-            <FabricLink className={styles.link} to={`/contracts/${encodeURIComponent(item.id)}`}>
-              {item.name}
+    () => [
+      createTableColumn<ContractSummary>({
+        columnId: 'name',
+        compare: (left, right) => left.name.localeCompare(right.name),
+        renderCell: (item) => (
+          <FabricLink className={styles.link} to={`/contracts/${encodeURIComponent(item.id)}`}>
+            {item.name}
+          </FabricLink>
+        ),
+        renderHeaderCell: () => 'Name',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'owner',
+        compare: (left, right) => getOwner(left).localeCompare(getOwner(right)),
+        renderCell: (item) => getOwner(item) || '—',
+        renderHeaderCell: () => 'Owner',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'targetType',
+        compare: (left, right) => getTargetText(left).localeCompare(getTargetText(right)),
+        renderCell: (item) => getTargetText(item),
+        renderHeaderCell: () => 'Target',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'status',
+        compare: (left, right) => left.status.localeCompare(right.status),
+        renderCell: (item) => <StatusBadge status={item.status} />,
+        renderHeaderCell: () => 'Status',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'lastRunStatus',
+        compare: (left, right) =>
+          (left.lastRunStatus ?? '').localeCompare(right.lastRunStatus ?? ''),
+        renderCell: (item) =>
+          item.lastRunStatus ? <StatusBadge status={item.lastRunStatus} /> : <Body1>—</Body1>,
+        renderHeaderCell: () => 'Last run status',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'breachScore',
+        compare: (left, right) => (getBreachScore(left) ?? -1) - (getBreachScore(right) ?? -1),
+        renderCell: (item) => <BreachScoreBadge score={getBreachScore(item)} />,
+        renderHeaderCell: () => 'Breach score',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'lastRun',
+        compare: (left, right) => getDateTime(left.lastRunAt) - getDateTime(right.lastRunAt),
+        renderCell: (item) => {
+          if (!item.lastRunAt) {
+            return <Body1>—</Body1>;
+          }
+
+          const contractId = item.contractId ?? item.id;
+          const runId = item.lastRunId ?? '';
+          const runPath = `/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(runId)}`;
+
+          return (
+            <FabricLink
+              aria-label={`View last enforcement run for ${item.name}, status ${item.lastRunStatus ?? 'unknown'}`}
+              className={styles.link}
+              mode="append"
+              to={runPath}
+            >
+              {formatRelative(item.lastRunAt)}
             </FabricLink>
-          ),
-          renderHeaderCell: () => 'Name',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'owner',
-          compare: (left, right) => getOwner(left).localeCompare(getOwner(right)),
-          renderCell: (item) => getOwner(item) || '—',
-          renderHeaderCell: () => 'Owner',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'targetType',
-          compare: (left, right) => getTargetText(left).localeCompare(getTargetText(right)),
-          renderCell: (item) => getTargetText(item),
-          renderHeaderCell: () => 'Target',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'status',
-          compare: (left, right) => left.status.localeCompare(right.status),
-          renderCell: (item) => <StatusBadge status={item.status} />,
-          renderHeaderCell: () => 'Status',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'lastRunStatus',
-          compare: (left, right) => (left.lastRunStatus ?? '').localeCompare(right.lastRunStatus ?? ''),
-          renderCell: (item) => (item.lastRunStatus ? <StatusBadge status={item.lastRunStatus} /> : <Body1>—</Body1>),
-          renderHeaderCell: () => 'Last run status',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'breachScore',
-          compare: (left, right) => (getBreachScore(left) ?? -1) - (getBreachScore(right) ?? -1),
-          renderCell: (item) => <BreachScoreBadge score={getBreachScore(item)} />,
-          renderHeaderCell: () => 'Breach score',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'lastRun',
-          compare: (left, right) => getDateTime(left.lastRunAt) - getDateTime(right.lastRunAt),
-          renderCell: (item) => {
-            if (!item.lastRunAt) {
-              return <Body1>—</Body1>;
-            }
-
-            const contractId = item.contractId ?? item.id;
-            const runId = item.lastRunId ?? '';
-            const runPath = `/contracts/runs?contractId=${encodeURIComponent(contractId)}&runId=${encodeURIComponent(runId)}`;
-
-            return (
-              <FabricLink
-                aria-label={`View last enforcement run for ${item.name}, status ${item.lastRunStatus ?? 'unknown'}`}
-                className={styles.link}
-                mode="append"
-                to={runPath}
-              >
-                {formatRelative(item.lastRunAt)}
-              </FabricLink>
-            );
-          },
-          renderHeaderCell: () => 'Last run',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'version',
-          renderCell: (item) => item.version,
-          renderHeaderCell: () => 'Version',
-        }),
-        createTableColumn<ContractSummary>({
-          columnId: 'actions',
-          renderCell: (item) => (
-            <div className={styles.rowActions}>
-              <Button
-                appearance="subtle"
-                onClick={() => {
-                  void openWorkloadRoute(`/contracts/${item.id}/edit`);
-                }}
-              >
-                Open
-              </Button>
-              <Button
-                appearance="subtle"
-                icon={<PlayRegular />}
-                onClick={() => {
-                  void handleRunNow(item.id);
-                }}
-              >
-                Run now
-              </Button>
-            </div>
-          ),
-          renderHeaderCell: () => 'Actions',
-        }),
-      ],
+          );
+        },
+        renderHeaderCell: () => 'Last run',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'version',
+        renderCell: (item) => item.version,
+        renderHeaderCell: () => 'Version',
+      }),
+      createTableColumn<ContractSummary>({
+        columnId: 'actions',
+        renderCell: (item) => (
+          <div className={styles.rowActions}>
+            <Button
+              appearance="subtle"
+              onClick={() => {
+                void openWorkloadRoute(`/contracts/${item.id}/edit`);
+              }}
+            >
+              Open
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<PlayRegular />}
+              onClick={() => {
+                void handleRunNow(item.id);
+              }}
+            >
+              Run now
+            </Button>
+          </div>
+        ),
+        renderHeaderCell: () => 'Actions',
+      }),
+    ],
     [handleRunNow, openWorkloadRoute, styles.link, styles.rowActions],
   );
 
-
-
-  const homeToolbarActions: RibbonAction[] = useMemo(() => [
-    {
-      key: 'refresh',
-      label: 'Refresh',
-      icon: <ArrowClockwiseRegular />,
-      onClick: () => {
-        if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
-          void opsClient.listFederatedContracts().then((response) => setFederatedContracts(response.contracts));
-        } else {
-          void refresh();
-        }
+  const homeToolbarActions: RibbonAction[] = useMemo(
+    () => [
+      {
+        key: 'refresh',
+        label: 'Refresh',
+        icon: <ArrowClockwiseRegular />,
+        onClick: () => {
+          if (tier.toLowerCase() === 'enterprise' && workspaceScope === 'linked') {
+            void opsClient
+              .listFederatedContracts()
+              .then((response) => setFederatedContracts(response.contracts));
+          } else {
+            void refresh();
+          }
+        },
       },
-    },
-    {
-      key: 'create',
-      label: 'Create contract',
-      icon: <AddRegular />,
-      appearance: 'primary',
-      onClick: () => { void openWorkloadRoute('/contracts/editor'); },
-    },
-  ], [opsClient, openWorkloadRoute, refresh, tier, workspaceScope]);
+      {
+        key: 'create',
+        label: 'Create contract',
+        icon: <AddRegular />,
+        appearance: 'primary',
+        onClick: () => {
+          void openWorkloadRoute('/contracts/editor');
+        },
+      },
+    ],
+    [opsClient, openWorkloadRoute, refresh, tier, workspaceScope],
+  );
 
-  const statusSlot = tier.toLowerCase() === 'enterprise' ? (
-    <Field className={styles.scopeField} label="Workspace scope" orientation="horizontal">
-      <Dropdown
-        selectedOptions={[workspaceScope]}
-        value={workspaceScope === 'linked' ? 'Current + linked workspaces' : 'Current workspace'}
-        onOptionSelect={(_, data) => setWorkspaceScope((data.optionValue as 'current' | 'linked') ?? 'current')}
-      >
-        <Option value="current">Current workspace</Option>
-        <Option value="linked">Current + linked workspaces</Option>
-      </Dropdown>
-    </Field>
-  ) : null;
+  const statusSlot =
+    tier.toLowerCase() === 'enterprise' ? (
+      <Field className={styles.scopeField} label="Workspace scope" orientation="horizontal">
+        <Dropdown
+          selectedOptions={[workspaceScope]}
+          value={workspaceScope === 'linked' ? 'Current + linked workspaces' : 'Current workspace'}
+          onOptionSelect={(_, data) =>
+            setWorkspaceScope((data.optionValue as 'current' | 'linked') ?? 'current')
+          }
+        >
+          <Option value="current">Current workspace</Option>
+          <Option value="linked">Current + linked workspaces</Option>
+        </Dropdown>
+      </Field>
+    ) : null;
 
   return (
     <ItemEditor
       title="Contract library"
-      subtitle="Promise what your data should look like, and let Orqentis enforce it."
+      subtitle="Promise what your data should look like — owners, schema, freshness, quality — and let Orqentis enforce it on every change."
       homeToolbarActions={homeToolbarActions}
       statusSlot={statusSlot}
     >
       <div className={styles.root}>
-      <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
+        <VisuallyHidden liveRegion>{liveMessage}</VisuallyHidden>
 
-      <div className={styles.surface}>
-        {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
-        {!loading && !federatedLoading && displayedContracts.length === 0 ? (
-          sdk.isReady ? (
-            <>
-              <WelcomeHero
-                onStartFromTable={() => { void openWorkloadRoute('/contracts/editor?targetType=lakehouse'); }}
-                onOpenAiSuggest={() => { void openWorkloadRoute('/contracts/ai-suggest'); }}
-                onOpenTemplates={() => setTemplatesOpen(true)}
-              />
-              {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
-            </>
-          ) : (
+        <div className={styles.surface}>
+          {loading || federatedLoading ? <Spinner label="Loading contracts…" /> : null}
+          {!loading && !federatedLoading && displayedContracts.length === 0 ? (
             <>
               <EmptyState
                 actionIcon={<AddRegular />}
                 actionLabel="Create your first contract"
-                description="A data contract is your promise about what a table contains. Orqentis runs it on every change so dashboards and AI don’t go wrong."
-                hint="Takes about 2 minutes to set up."
+                description="A data contract is your promise about what a table contains — owners, schema, freshness, quality. Orqentis enforces it on every change so dashboards and AI don’t go wrong."
+                hint="Takes about 2 minutes. Start from a table, a template, or let AI draft one for you."
                 icon={<DocumentBulletListRegular />}
                 title="No contracts yet — let’s make one"
                 tone="brand"
+                secondaryActionLabel="Browse industry templates"
+                onSecondaryAction={() => setTemplatesOpen(true)}
                 onAction={() => {
                   void openWorkloadRoute('/contracts/editor');
                 }}
               />
-              {error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
-            </>
-          )
-        ) : error ? <ErrorBanner message={error} onRetry={() => { void refresh(); }} /> : null}
-
-        <TemplateDialog
-          open={templatesOpen}
-          onOpenChange={setTemplatesOpen}
-          openTemplate={(yaml) => {
-            setTemplatesOpen(false);
-            openTemplate(yaml);
-          }}
-        />
-
-        {!loading && !federatedLoading && displayedContracts.length > 0 ? (
-          <>
-            <div className={styles.filters}>
-              <Field label="Search contracts">
-                <SearchBox
-                  aria-label="Search contracts"
-                  placeholder="Search name, owner, target, or id"
-                  value={searchInput}
-                  onChange={(_, data) => setSearchInput(data.value)}
+              {error ? (
+                <ErrorBanner
+                  message={error}
+                  onRetry={() => {
+                    void refresh();
+                  }}
                 />
-              </Field>
-              <Field label="Status">
-                <Dropdown
-                  selectedOptions={[statusFilter]}
-                  value={toFilterLabel(statusFilter)}
-                  onOptionSelect={(_, data) => setStatusFilter(parseFilter(data.optionValue, statusFilters, 'all'))}
-                >
-                  <Option value="all">All statuses</Option>
-                  <Option value="active">Active</Option>
-                  <Option value="draft">Draft</Option>
-                  <Option value="deprecated">Deprecated</Option>
-                </Dropdown>
-              </Field>
-              <Field label="Target type">
-                <Dropdown
-                  selectedOptions={[targetFilter]}
-                  value={targetFilter === 'delta' ? 'Delta' : 'All targets'}
-                  onOptionSelect={(_, data) => setTargetFilter(parseFilter(data.optionValue, targetFilters, 'all'))}
-                >
-                  <Option value="all">All targets</Option>
-                  <Option value="delta">Delta</Option>
-                </Dropdown>
-              </Field>
-              <Field label="Last run status">
-                <Dropdown
-                  selectedOptions={[lastRunFilter]}
-                  value={toFilterLabel(lastRunFilter)}
-                  onOptionSelect={(_, data) => setLastRunFilter(parseFilter(data.optionValue, lastRunFilters, 'all'))}
-                >
-                  <Option value="all">All run statuses</Option>
-                  <Option value="passed">Passed</Option>
-                  <Option value="failed">Failed</Option>
-                  <Option value="warned">Warned</Option>
-                  <Option value="error">Error</Option>
-                </Dropdown>
-              </Field>
-              <Caption1 className={styles.resultCount}>Showing {filteredContracts.length} of {displayedContracts.length} contracts</Caption1>
-            </div>
+              ) : null}
+            </>
+          ) : error ? (
+            <ErrorBanner
+              message={error}
+              onRetry={() => {
+                void refresh();
+              }}
+            />
+          ) : null}
 
-            {selectedContracts.length > 0 ? (
-              <div className={styles.bulkBar}>
-                <Body1>{selectedContracts.length} selected</Body1>
-                <div className={styles.bulkActions}>
-                  <Button disabled={bulkBusy} appearance="primary" onClick={() => { void handleBulkRun(); }}>Run all</Button>
-                  <Button disabled={bulkBusy} onClick={() => { void handleBulkExport(); }}>Export YAML</Button>
-                  <Button disabled={bulkBusy} appearance="subtle" onClick={() => setSelectedItems(new Set())}>Clear</Button>
-                </div>
+          <TemplateDialog
+            open={templatesOpen}
+            onOpenChange={setTemplatesOpen}
+            openTemplate={(yaml) => {
+              setTemplatesOpen(false);
+              openTemplate(yaml);
+            }}
+          />
+
+          {!loading && !federatedLoading && displayedContracts.length > 0 ? (
+            <>
+              <div className={styles.filters}>
+                <Field label="Search contracts">
+                  <SearchBox
+                    aria-label="Search contracts"
+                    placeholder="Search name, owner, target, or id"
+                    value={searchInput}
+                    onChange={(_, data) => setSearchInput(data.value)}
+                  />
+                </Field>
+                <Field label="Status">
+                  <Dropdown
+                    selectedOptions={[statusFilter]}
+                    value={toFilterLabel(statusFilter)}
+                    onOptionSelect={(_, data) =>
+                      setStatusFilter(parseFilter(data.optionValue, statusFilters, 'all'))
+                    }
+                  >
+                    <Option value="all">All statuses</Option>
+                    <Option value="active">Active</Option>
+                    <Option value="draft">Draft</Option>
+                    <Option value="deprecated">Deprecated</Option>
+                  </Dropdown>
+                </Field>
+                <Field label="Target type">
+                  <Dropdown
+                    selectedOptions={[targetFilter]}
+                    value={targetFilter === 'delta' ? 'Delta' : 'All targets'}
+                    onOptionSelect={(_, data) =>
+                      setTargetFilter(parseFilter(data.optionValue, targetFilters, 'all'))
+                    }
+                  >
+                    <Option value="all">All targets</Option>
+                    <Option value="delta">Delta</Option>
+                  </Dropdown>
+                </Field>
+                <Field label="Last run status">
+                  <Dropdown
+                    selectedOptions={[lastRunFilter]}
+                    value={toFilterLabel(lastRunFilter)}
+                    onOptionSelect={(_, data) =>
+                      setLastRunFilter(parseFilter(data.optionValue, lastRunFilters, 'all'))
+                    }
+                  >
+                    <Option value="all">All run statuses</Option>
+                    <Option value="passed">Passed</Option>
+                    <Option value="failed">Failed</Option>
+                    <Option value="warned">Warned</Option>
+                    <Option value="error">Error</Option>
+                  </Dropdown>
+                </Field>
+                <Caption1 className={styles.resultCount}>
+                  Showing {filteredContracts.length} of {displayedContracts.length} contracts
+                </Caption1>
               </div>
-            ) : null}
 
-            {filteredContracts.length === 0 ? (
-              <EmptyState
-                actionLabel="Clear filters"
-                description="Broaden the search or reset filters to see more contracts."
-                icon={<DocumentBulletListRegular />}
-                title="No contracts match your filters"
-                onAction={() => clearFilters(setSearchInput, setStatusFilter, setTargetFilter, setLastRunFilter, setSearchParams)}
-              />
-            ) : (
-              <>
-                <DataGrid
-                  sortable
-                  columns={columns}
-                  getRowId={(item) => item.id}
-                  items={pagedContracts}
-                  selectedItems={selectedItems}
-                  selectionMode="multiselect"
-                  onSelectionChange={(_, data) => setSelectedItems(new Set(data.selectedItems))}
-                >
-                  <DataGridHeader>
-                    <DataGridRow selectionCell={{ checkboxIndicator: { 'aria-label': 'Select all contracts' } }}>
-                      {({ renderHeaderCell }) => (
-                        <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
-                      )}
-                    </DataGridRow>
-                  </DataGridHeader>
-                  <DataGridBody<ContractSummary>>
-                    {({ item, rowId }) => (
-                      <DataGridRow<ContractSummary>
-                        key={rowId}
-                        selectionCell={{ checkboxIndicator: { 'aria-label': `Select ${item.name}` } }}
-                      >
-                        {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-                      </DataGridRow>
-                    )}
-                  </DataGridBody>
-                </DataGrid>
-                {pageCount > 1 ? (
-                  <div className={styles.pagination} aria-label="Contract list pagination">
+              {selectedContracts.length > 0 ? (
+                <div className={styles.bulkBar}>
+                  <Body1>{selectedContracts.length} selected</Body1>
+                  <div className={styles.bulkActions}>
                     <Button
-                      aria-label="Previous page"
-                      disabled={boundedPage === 1}
-                      icon={<ChevronLeftRegular />}
-                      onClick={() => setPage(boundedPage - 1, setSearchParams)}
-                    />
-                    {getPageButtons(boundedPage, pageCount).map((page) => (
-                      <Button
-                        key={page}
-                        appearance={page === boundedPage ? 'primary' : 'secondary'}
-                        aria-current={page === boundedPage ? 'page' : undefined}
-                        onClick={() => setPage(page, setSearchParams)}
-                      >
-                        {page}
-                      </Button>
-                    ))}
+                      disabled={bulkBusy}
+                      appearance="primary"
+                      onClick={() => {
+                        void handleBulkRun();
+                      }}
+                    >
+                      Run all
+                    </Button>
                     <Button
-                      aria-label="Next page"
-                      disabled={boundedPage === pageCount}
-                      icon={<ChevronRightRegular />}
-                      onClick={() => setPage(boundedPage + 1, setSearchParams)}
-                    />
+                      disabled={bulkBusy}
+                      onClick={() => {
+                        void handleBulkExport();
+                      }}
+                    >
+                      Export YAML
+                    </Button>
+                    <Button
+                      disabled={bulkBusy}
+                      appearance="subtle"
+                      onClick={() => setSelectedItems(new Set())}
+                    >
+                      Clear
+                    </Button>
                   </div>
-                ) : null}
-              </>
-            )}
-            {filtersAreActive ? null : null}
-          </>
-        ) : null}
-      </div>
+                </div>
+              ) : null}
+
+              {filteredContracts.length === 0 ? (
+                <EmptyState
+                  actionLabel="Clear filters"
+                  description="Broaden the search or reset filters to see more contracts."
+                  icon={<DocumentBulletListRegular />}
+                  title="No contracts match your filters"
+                  onAction={() =>
+                    clearFilters(
+                      setSearchInput,
+                      setStatusFilter,
+                      setTargetFilter,
+                      setLastRunFilter,
+                      setSearchParams,
+                    )
+                  }
+                />
+              ) : (
+                <>
+                  <DataGrid
+                    sortable
+                    columns={columns}
+                    getRowId={(item) => item.id}
+                    items={pagedContracts}
+                    selectedItems={selectedItems}
+                    selectionMode="multiselect"
+                    onSelectionChange={(_, data) => setSelectedItems(new Set(data.selectedItems))}
+                  >
+                    <DataGridHeader>
+                      <DataGridRow
+                        selectionCell={{
+                          checkboxIndicator: { 'aria-label': 'Select all contracts' },
+                        }}
+                      >
+                        {({ renderHeaderCell }) => (
+                          <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                        )}
+                      </DataGridRow>
+                    </DataGridHeader>
+                    <DataGridBody<ContractSummary>>
+                      {({ item, rowId }) => (
+                        <DataGridRow<ContractSummary>
+                          key={rowId}
+                          selectionCell={{
+                            checkboxIndicator: { 'aria-label': `Select ${item.name}` },
+                          }}
+                        >
+                          {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                        </DataGridRow>
+                      )}
+                    </DataGridBody>
+                  </DataGrid>
+                  {pageCount > 1 ? (
+                    <div className={styles.pagination} aria-label="Contract list pagination">
+                      <Button
+                        aria-label="Previous page"
+                        disabled={boundedPage === 1}
+                        icon={<ChevronLeftRegular />}
+                        onClick={() => setPage(boundedPage - 1, setSearchParams)}
+                      />
+                      {getPageButtons(boundedPage, pageCount).map((page) => (
+                        <Button
+                          key={page}
+                          appearance={page === boundedPage ? 'primary' : 'secondary'}
+                          aria-current={page === boundedPage ? 'page' : undefined}
+                          onClick={() => setPage(page, setSearchParams)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      <Button
+                        aria-label="Next page"
+                        disabled={boundedPage === pageCount}
+                        icon={<ChevronRightRegular />}
+                        onClick={() => setPage(boundedPage + 1, setSearchParams)}
+                      />
+                    </div>
+                  ) : null}
+                </>
+              )}
+              {filtersAreActive ? null : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </ItemEditor>
   );
@@ -686,14 +792,20 @@ function TemplateDialog({
           <DialogContent>
             <div className={styles.templateGrid}>
               {aiDescriptionTemplates.slice(0, 6).map((template) => (
-                <Button key={template.id} appearance="secondary" onClick={() => openTemplate(template.yaml)}>
+                <Button
+                  key={template.id}
+                  appearance="secondary"
+                  onClick={() => openTemplate(template.yaml)}
+                >
                   {template.label}
                 </Button>
               ))}
             </div>
           </DialogContent>
           <DialogActions>
-            <Button appearance="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button appearance="secondary" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
           </DialogActions>
         </DialogBody>
       </DialogSurface>
@@ -711,11 +823,22 @@ function filterContracts(
   const query = searchValue.trim().toLowerCase();
 
   return contracts.filter((contract) => {
-    const matchesSearch = query.length === 0 || [contract.name, getOwner(contract), getTargetText(contract), contract.id, contract.contractId ?? '']
-      .some((value) => value.toLowerCase().includes(query));
+    const matchesSearch =
+      query.length === 0 ||
+      [
+        contract.name,
+        getOwner(contract),
+        getTargetText(contract),
+        contract.id,
+        contract.contractId ?? '',
+      ].some((value) => value.toLowerCase().includes(query));
     const matchesStatus = statusFilter === 'all' || contract.status.toLowerCase() === statusFilter;
-    const matchesTarget = targetFilter === 'all' || contract.targetType === 'lakehouse' || getTargetText(contract).toLowerCase().includes('delta');
-    const matchesLastRun = lastRunFilter === 'all' || contract.lastRunStatus?.toLowerCase() === lastRunFilter;
+    const matchesTarget =
+      targetFilter === 'all' ||
+      contract.targetType === 'lakehouse' ||
+      getTargetText(contract).toLowerCase().includes('delta');
+    const matchesLastRun =
+      lastRunFilter === 'all' || contract.lastRunStatus?.toLowerCase() === lastRunFilter;
 
     return matchesSearch && matchesStatus && matchesTarget && matchesLastRun;
   });
@@ -751,8 +874,11 @@ function getDateTime(value: string | null | undefined) {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
-
-function parseFilter<T extends string>(value: string | null | undefined, allowed: readonly T[], fallback: T) {
+function parseFilter<T extends string>(
+  value: string | null | undefined,
+  allowed: readonly T[],
+  fallback: T,
+) {
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
@@ -761,7 +887,12 @@ function toFilterLabel(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function setDefaultedParam(params: URLSearchParams, key: string, value: string, defaultValue: string) {
+function setDefaultedParam(
+  params: URLSearchParams,
+  key: string,
+  value: string,
+  defaultValue: string,
+) {
   if (!value || value === defaultValue) {
     params.delete(key);
   } else {
@@ -798,15 +929,18 @@ function clearFilters(
   setStatusFilter('all');
   setTargetFilter('all');
   setLastRunFilter('all');
-  setSearchParams((current) => {
-    const next = new URLSearchParams(current);
-    next.delete('q');
-    next.delete('status');
-    next.delete('target');
-    next.delete('lastRun');
-    next.delete('page');
-    return next;
-  }, { replace: true });
+  setSearchParams(
+    (current) => {
+      const next = new URLSearchParams(current);
+      next.delete('q');
+      next.delete('status');
+      next.delete('target');
+      next.delete('lastRun');
+      next.delete('page');
+      return next;
+    },
+    { replace: true },
+  );
 }
 
 async function runWithConcurrency<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>) {
@@ -830,7 +964,12 @@ async function runWithConcurrency<T, R>(items: T[], limit: number, task: (item: 
 }
 
 function safeFileName(value: string) {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'contract';
+  return (
+    value
+      .trim()
+      .replace(/[^a-z0-9._-]+/gi, '-')
+      .replace(/^-+|-+$/g, '') || 'contract'
+  );
 }
 
 function triggerDownload(blob: Blob, fileName: string) {

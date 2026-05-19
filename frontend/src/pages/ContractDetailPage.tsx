@@ -2,10 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   Badge,
   Body1,
-  Breadcrumb,
-  BreadcrumbButton,
-  BreadcrumbDivider,
-  BreadcrumbItem,
   Button,
   Caption1,
   Card,
@@ -104,237 +100,270 @@ export function ContractDetailPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const sortedVersions = useMemo(() => [...versions].sort(compareContractVersions), [versions]);
   const previousVersionByVersion = useMemo(
-    () => new Map(sortedVersions.map((version, index) => [version.version, sortedVersions[index - 1]?.version ?? null])),
+    () =>
+      new Map(
+        sortedVersions.map((version, index) => [
+          version.version,
+          sortedVersions[index - 1]?.version ?? null,
+        ]),
+      ),
     [sortedVersions],
   );
 
-  const openWorkloadRoute = useCallback(async (path: string) => {
-    if (!(await sdk.openWorkloadRoute(path))) {
-      navigate(path);
-    }
-  }, [navigate, sdk]);
-
-  const handleStatusChange = useCallback(async (status: string) => {
-    if (!contract) {
-      return;
-    }
-
-    setStatusUpdating(true);
-    try {
-      await client.updateStatus(contract.id, status);
-      await sdk.notifySuccess('Status updated', `Contract moved to ${status}.`);
-      await refresh();
-    } catch (statusError) {
-      if (statusError instanceof ContractClientError && statusError.status === 404) {
-        await sdk.notifyInfo('Status workflow not yet enabled on the server', 'The frontend workflow is ready, but the API endpoint is not deployed yet.');
-      } else {
-        const message = statusError instanceof Error ? statusError.message : 'Unable to update contract status.';
-        await sdk.notifyError('Status update failed', message);
+  const openWorkloadRoute = useCallback(
+    async (path: string) => {
+      if (!(await sdk.openWorkloadRoute(path))) {
+        navigate(path);
       }
-    } finally {
-      setStatusUpdating(false);
-    }
-  }, [client, contract, refresh, sdk]);
+    },
+    [navigate, sdk],
+  );
+
+  const handleStatusChange = useCallback(
+    async (status: string) => {
+      if (!contract) {
+        return;
+      }
+
+      setStatusUpdating(true);
+      try {
+        await client.updateStatus(contract.id, status);
+        await sdk.notifySuccess('Status updated', `Contract moved to ${status}.`);
+        await refresh();
+      } catch (statusError) {
+        if (statusError instanceof ContractClientError && statusError.status === 404) {
+          await sdk.notifyInfo(
+            'Status workflow not yet enabled on the server',
+            'The frontend workflow is ready, but the API endpoint is not deployed yet.',
+          );
+        } else {
+          const message =
+            statusError instanceof Error
+              ? statusError.message
+              : 'Unable to update contract status.';
+          await sdk.notifyError('Status update failed', message);
+        }
+      } finally {
+        setStatusUpdating(false);
+      }
+    },
+    [client, contract, refresh, sdk],
+  );
 
   const columns = useMemo(
-    () =>
-      [
-        createTableColumn<ContractVersion>({
-          columnId: 'version',
-          compare: compareContractVersions,
-          renderCell: (item) => item.version,
-          renderHeaderCell: () => 'Version',
-        }),
-        createTableColumn<ContractVersion>({
-          columnId: 'createdAt',
-          renderCell: (item) => formatDate(item.createdAt),
-          renderHeaderCell: () => 'Created',
-        }),
-        createTableColumn<ContractVersion>({
-          columnId: 'commitMessage',
-          renderCell: (item) => item.commitMessage ?? '—',
-          renderHeaderCell: () => 'Commit message',
-        }),
-        createTableColumn<ContractVersion>({
-          columnId: 'actions',
-          renderCell: (item) => {
-            const previousVersion = previousVersionByVersion.get(item.version);
-            const contractId = contract?.id ?? id;
-            const comparePath = contractId && previousVersion
+    () => [
+      createTableColumn<ContractVersion>({
+        columnId: 'version',
+        compare: compareContractVersions,
+        renderCell: (item) => item.version,
+        renderHeaderCell: () => 'Version',
+      }),
+      createTableColumn<ContractVersion>({
+        columnId: 'createdAt',
+        renderCell: (item) => formatDate(item.createdAt),
+        renderHeaderCell: () => 'Created',
+      }),
+      createTableColumn<ContractVersion>({
+        columnId: 'commitMessage',
+        renderCell: (item) => item.commitMessage ?? '—',
+        renderHeaderCell: () => 'Commit message',
+      }),
+      createTableColumn<ContractVersion>({
+        columnId: 'actions',
+        renderCell: (item) => {
+          const previousVersion = previousVersionByVersion.get(item.version);
+          const contractId = contract?.id ?? id;
+          const comparePath =
+            contractId && previousVersion
               ? `/contracts/${encodeURIComponent(contractId)}/runs?compare=1&right=${encodeURIComponent(item.version)}&left=${encodeURIComponent(previousVersion)}`
               : null;
 
-            return (
-              <Tooltip
-                content={previousVersion ? 'Compare this version with the previous version.' : 'No older version to compare.'}
-                relationship="label"
+          return (
+            <Tooltip
+              content={
+                previousVersion
+                  ? 'Compare this version with the previous version.'
+                  : 'No older version to compare.'
+              }
+              relationship="label"
+            >
+              <Button
+                appearance="subtle"
+                aria-disabled={!previousVersion}
+                disabled={!previousVersion}
+                size="small"
+                onClick={() => {
+                  if (comparePath) {
+                    void openWorkloadRoute(comparePath);
+                  }
+                }}
               >
-                <Button
-                  appearance="subtle"
-                  aria-disabled={!previousVersion}
-                  disabled={!previousVersion}
-                  size="small"
-                  onClick={() => {
-                    if (comparePath) {
-                      void openWorkloadRoute(comparePath);
-                    }
-                  }}
-                >
-                  Compare with previous
-                </Button>
-              </Tooltip>
-            );
-          },
-          renderHeaderCell: () => 'Actions',
-        }),
-      ],
+                Compare with previous
+              </Button>
+            </Tooltip>
+          );
+        },
+        renderHeaderCell: () => 'Actions',
+      }),
+    ],
     [contract?.id, id, openWorkloadRoute, previousVersionByVersion],
   );
 
-  const homeToolbarActions: RibbonAction[] = useMemo(() => [
-    {
-      key: 'back',
-      label: 'Contracts',
-      onClick: () => { void openWorkloadRoute('/contracts'); },
-    },
-    ...(contract ? [{
-      key: 'edit',
-      label: 'Edit contract',
-      icon: <EditRegular />,
-      appearance: 'primary' as const,
-      onClick: () => { void openWorkloadRoute(`/contracts/${contract.id}/edit`); },
-    }] : []),
-  ], [contract, openWorkloadRoute]);
+  const homeToolbarActions: RibbonAction[] = useMemo(
+    () => [
+      {
+        key: 'back',
+        label: 'Contracts',
+        onClick: () => {
+          void openWorkloadRoute('/contracts');
+        },
+      },
+      ...(contract
+        ? [
+            {
+              key: 'edit',
+              label: 'Edit contract',
+              icon: <EditRegular />,
+              appearance: 'primary' as const,
+              onClick: () => {
+                void openWorkloadRoute(`/contracts/${contract.id}/edit`);
+              },
+            },
+          ]
+        : []),
+    ],
+    [contract, openWorkloadRoute],
+  );
 
   const statusSlot = contract ? <StatusBadge status={contract.status} /> : null;
 
   return (
     <ItemEditor
       title={contract?.name ?? 'Contract detail'}
-      subtitle={contract?.targetTablePath ?? 'Review contract metadata and compare immutable versions.'}
+      subtitle={
+        contract?.targetTablePath ?? 'Review contract metadata and compare immutable versions.'
+      }
       homeToolbarActions={homeToolbarActions}
       statusSlot={statusSlot}
     >
       <div className={styles.root}>
-      <Breadcrumb>
-        <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => { void openWorkloadRoute('/contracts'); }}>Contracts</BreadcrumbButton>
-        </BreadcrumbItem>
-        <BreadcrumbDivider />
-        <BreadcrumbItem>
-          <BreadcrumbButton current>{contract?.name ?? id ?? 'Contract'}</BreadcrumbButton>
-        </BreadcrumbItem>
-      </Breadcrumb>
+        {loading ? <Spinner label="Loading contract…" /> : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
-      {loading ? <Spinner label="Loading contract…" /> : null}
-      {error ? <ErrorBanner message={error} /> : null}
-
-      {contract ? (
-        <>
-          <div className={styles.metadata}>
-            <Card className={styles.card}>
-              <Caption1>Status</Caption1>
-              <StatusBadge status={contract.status} />
-            </Card>
-            <Card className={styles.card}>
-              <Caption1>Owner</Caption1>
-              <Body1>{contract.ownerEmail}</Body1>
-            </Card>
-            <Card className={styles.card}>
-              <Caption1>Target</Caption1>
-              <Body1>{contract.targetTablePath}</Body1>
-            </Card>
-            <Card className={styles.card}>
-              <Caption1>Version</Caption1>
-              <Body1>{contract.version}</Body1>
-            </Card>
-          </div>
-
-          <Card className={styles.card}>
-            <div className={styles.lifecycleActions}>
-              <div>
-                <Subtitle2Stronger>Lifecycle status</Subtitle2Stronger>
-                <Caption1>Draft → Review → Active → Deprecated → Archived</Caption1>
-              </div>
-              <div className={styles.lifecycleButtons}>
-                <Button
-                  appearance="primary"
-                  disabled={statusUpdating || !getPrimaryStatusAction(contract.status)}
-                  onClick={() => {
-                    const action = getPrimaryStatusAction(contract.status);
-                    if (action) void handleStatusChange(action.status);
-                  }}
-                >
-                  {getPrimaryStatusAction(contract.status)?.label ?? 'Activate'}
-                </Button>
-                <Menu>
-                  <MenuTrigger disableButtonEnhancement>
-                    <MenuButton disabled={statusUpdating || getSecondaryStatusActions(contract.status).length === 0}>More</MenuButton>
-                  </MenuTrigger>
-                  <MenuPopover>
-                    <MenuList>
-                      {getSecondaryStatusActions(contract.status).map((action) => (
-                        <MenuItem
-                          key={action.status}
-                          onClick={() => {
-                            void handleStatusChange(action.status);
-                          }}
-                        >
-                          {action.label}
-                        </MenuItem>
-                      ))}
-                    </MenuList>
-                  </MenuPopover>
-                </Menu>
-              </div>
+        {contract ? (
+          <>
+            <div className={styles.metadata}>
+              <Card className={styles.card}>
+                <Caption1>Status</Caption1>
+                <StatusBadge status={contract.status} />
+              </Card>
+              <Card className={styles.card}>
+                <Caption1>Owner</Caption1>
+                <Body1>{contract.ownerEmail}</Body1>
+              </Card>
+              <Card className={styles.card}>
+                <Caption1>Target</Caption1>
+                <Body1>{contract.targetTablePath}</Body1>
+              </Card>
+              <Card className={styles.card}>
+                <Caption1>Version</Caption1>
+                <Body1>{contract.version}</Body1>
+              </Card>
             </div>
-            <div className={styles.statusFlow} aria-label="Contract lifecycle status flow">
-              {statusFlow.map((status, index) => (
-                <StatusFlowStep
-                  key={status}
-                  currentStatus={contract.status}
-                  index={index}
-                  status={status}
-                  styles={styles}
-                />
-              ))}
-            </div>
-          </Card>
 
-          <Card className={styles.card}>
-            <Subtitle2Stronger>Version history</Subtitle2Stronger>
-            <Body1>Tip: open any run to view a side-by-side schema diff between any two versions.</Body1>
-            <DataGrid items={sortedVersions} columns={columns}>
-              <DataGridHeader>
-                <DataGridRow>
-                  {({ renderHeaderCell }) => (
-                    <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
-                  )}
-                </DataGridRow>
-              </DataGridHeader>
-              <DataGridBody<ContractVersion>>
-                {({ item, rowId }) => (
-                  <DataGridRow<ContractVersion> key={rowId}>
-                    {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+            <Card className={styles.card}>
+              <div className={styles.lifecycleActions}>
+                <div>
+                  <Subtitle2Stronger>Lifecycle status</Subtitle2Stronger>
+                  <Caption1>Draft → Review → Active → Deprecated → Archived</Caption1>
+                </div>
+                <div className={styles.lifecycleButtons}>
+                  <Button
+                    appearance="primary"
+                    disabled={statusUpdating || !getPrimaryStatusAction(contract.status)}
+                    onClick={() => {
+                      const action = getPrimaryStatusAction(contract.status);
+                      if (action) void handleStatusChange(action.status);
+                    }}
+                  >
+                    {getPrimaryStatusAction(contract.status)?.label ?? 'Activate'}
+                  </Button>
+                  <Menu>
+                    <MenuTrigger disableButtonEnhancement>
+                      <MenuButton
+                        disabled={
+                          statusUpdating || getSecondaryStatusActions(contract.status).length === 0
+                        }
+                      >
+                        More
+                      </MenuButton>
+                    </MenuTrigger>
+                    <MenuPopover>
+                      <MenuList>
+                        {getSecondaryStatusActions(contract.status).map((action) => (
+                          <MenuItem
+                            key={action.status}
+                            onClick={() => {
+                              void handleStatusChange(action.status);
+                            }}
+                          >
+                            {action.label}
+                          </MenuItem>
+                        ))}
+                      </MenuList>
+                    </MenuPopover>
+                  </Menu>
+                </div>
+              </div>
+              <div className={styles.statusFlow} aria-label="Contract lifecycle status flow">
+                {statusFlow.map((status, index) => (
+                  <StatusFlowStep
+                    key={status}
+                    currentStatus={contract.status}
+                    index={index}
+                    status={status}
+                    styles={styles}
+                  />
+                ))}
+              </div>
+            </Card>
+
+            <Card className={styles.card}>
+              <Subtitle2Stronger>Version history</Subtitle2Stronger>
+              <Body1>
+                Tip: open any run to view a side-by-side schema diff between any two versions.
+              </Body1>
+              <DataGrid items={sortedVersions} columns={columns}>
+                <DataGridHeader>
+                  <DataGridRow>
+                    {({ renderHeaderCell }) => (
+                      <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                    )}
                   </DataGridRow>
-                )}
-              </DataGridBody>
-            </DataGrid>
-          </Card>
+                </DataGridHeader>
+                <DataGridBody<ContractVersion>>
+                  {({ item, rowId }) => (
+                    <DataGridRow<ContractVersion> key={rowId}>
+                      {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                    </DataGridRow>
+                  )}
+                </DataGridBody>
+              </DataGrid>
+            </Card>
 
-          <Card className={styles.card}>
-            <Subtitle2Stronger>Current YAML</Subtitle2Stronger>
-            <div className={styles.yaml}>
-              <MonacoYamlEditor
-                readOnly
-                themeMode={sdk.themeMode}
-                value={contract.odcsYaml}
-                onChange={() => undefined}
-              />
-            </div>
-          </Card>
-        </>
-      ) : null}
+            <Card className={styles.card}>
+              <Subtitle2Stronger>Current YAML</Subtitle2Stronger>
+              <div className={styles.yaml}>
+                <MonacoYamlEditor
+                  readOnly
+                  themeMode={sdk.themeMode}
+                  value={contract.odcsYaml}
+                  onChange={() => undefined}
+                />
+              </div>
+            </Card>
+          </>
+        ) : null}
       </div>
     </ItemEditor>
   );
@@ -398,7 +427,10 @@ function toStatusLabel(status: string) {
 }
 
 function compareContractVersions(left: ContractVersion, right: ContractVersion) {
-  return left.version.localeCompare(right.version, undefined, { numeric: true, sensitivity: 'base' });
+  return left.version.localeCompare(right.version, undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
 }
 
 function formatDate(value: string | null | undefined) {
