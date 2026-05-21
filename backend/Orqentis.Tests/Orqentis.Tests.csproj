@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.0.0" />
-    <PackageReference Include="WireMock.Net" Version="1.6.7" />
+    <PackageReference Include="WireMock.Net" Version="2.6.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="Bogus" Version="35.6.1" />
     <!-- Override transitive vulnerability GHSA-4cv2-4hjh-77rx (CVE-2024-51417) -->
